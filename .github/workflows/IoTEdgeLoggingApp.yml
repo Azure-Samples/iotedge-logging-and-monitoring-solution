@@ -17,7 +17,7 @@ env:
   WORKING_DIRECTORY: FunctionApp/FunctionApp
   PUBLISH_DIRECTORY: FunctionApp/FunctionApp/bin/Publish
   EVENTHUBS_FUNCTION: CollectMetrics.cs
-  FLOW_EMAIL: no-reply@microsoft.com
+  FLOW_EMAIL: magar@microsoft.com
   FLOW_NAME: "github workflow"
 jobs:
   build-and-package:
