@@ -1,0 +1,38 @@
+{
+  "content": {
+    "modulesContent": {
+      "$edgeAgent": {
+        "properties.desired.modules.pythonsamplelogs": {
+          "settings": {
+            "image": "marvingarcia/pythonsamplelogs:latest",
+            "createOptions": ""
+          },
+          "env": {
+            "SLEEP_TIME": {
+              "value": "60"
+            }
+          },
+          "type": "docker",
+          "status": "running",
+          "restartPolicy": "always",
+          "version": "1.0"
+        },
+        "properties.desired.modules.csharpsamplelogs": {
+          "settings": {
+            "image": "marvingarcia/csharpsamplelogs:latest",
+            "createOptions": ""
+          },
+          "env": {
+            "SLEEP_TIME": {
+              "value": "60"
+            }
+          },
+          "type": "docker",
+          "status": "running",
+          "restartPolicy": "always",
+          "version": "1.0"
+        }
+      }
+    }
+  }
+}

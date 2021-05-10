@@ -348,3 +348,7 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+/FunctionApp/FunctionApp/Properties
+Templates/azuredeploy.parameters.json
+EdgeSolution/monitoring.deployment.json

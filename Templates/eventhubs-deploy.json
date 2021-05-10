@@ -1,0 +1,209 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "createNamespace": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Whether to create event hub."
+            }
+        },
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Event hubs namespace location."
+            }
+        },
+        "namespaceName": {
+            "type": "string",
+            "metadata": {
+                "description": "Event hubs namespace name."
+            }
+        },
+        "eventHubsName": {
+            "type": "string",
+            "metadata": {
+                "description": "Event hubs name."
+            }
+        },
+        "sku": {
+            "type": "string",
+            "defaultValue": "Standard",
+            "allowedValues": [
+                "Standard",
+                "Basic"
+            ],
+            "metadata": {
+                "description": "Event hubs tier plan."
+            }
+        },
+        "skuCapacity": {
+            "type": "int",
+            "defaultValue": 1,
+            "minValue": 0,
+            "maxValue": 20,
+            "metadata": {
+                "description": "Event hubs throughput units."
+            }
+        },
+        "autoInflate": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Value that indicates whether AutoInflate is enabled for eventhub namespace."
+            }
+        },
+        "maxThroughput": {
+            "type": "int",
+            "defaultValue": 0,
+            "minValue": 0,
+            "maxValue": 20,
+            "metadata": {
+                "description": "Upper limit of throughput units when AutoInflate is enabled."
+            }
+        },
+        "retentionInDays": {
+            "type": "int",
+            "defaultValue": 1,
+            "minValue": 1,
+            "maxValue": 7,
+            "metadata": {
+                "description": "Number of days to retain the events for this Event Hub."
+            }
+        },
+        "partitionCount": {
+            "type": "int",
+            "defaultValue": 4,
+            "minValue": 1,
+            "maxValue": 32,
+            "metadata": {
+                "description": "Number of partitions created for the Event Hub."
+            }
+        },
+        "listenPolicyName": {
+            "type": "string",
+            "metadata": {
+                "description": "Event hubs listen policy name."
+            }
+        },
+        "sendPolicyName": {
+            "type": "string",
+            "metadata": {
+                "description": "Event hubs send policy name."
+            }
+        }
+    },
+    "variables": {
+        "NamespaceId": "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaceName'))]",
+        "instanceId": "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaceName'), parameters('eventHubsName'))]",
+        "namespaceListenRuleId": "[resourceId('Microsoft.EventHub/namespaces/AuthorizationRules', parameters('namespaceName'), parameters('listenPolicyName'))]",
+        "instanceSendRuleId": "[resourceId('Microsoft.EventHub/namespaces/eventhubs/AuthorizationRules', parameters('namespaceName'), parameters('eventHubsName'), parameters('sendPolicyName'))]",
+        "namespaceApiVersion": "[providers('Microsoft.EventHub', 'namespaces').apiVersions[0]]",
+        "namespaceAuthRulesApiVersion": "[providers('Microsoft.EventHub', 'namespaces/authorizationRules').apiVersions[0]]",
+        "instanceApiVersion": "[providers('Microsoft.EventHub', 'namespaces/eventhubs').apiVersions[0]]",
+        "instanceAuthRulesApiVersion": "[providers('Microsoft.EventHub', 'namespaces/eventhubs/authorizationRules').apiVersions[0]]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "name": "ehDummyTemplate",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": []
+                },
+                "parameters": {}
+            }
+        },
+        {
+            "comments": "Azure Event Hub Namespace",
+            "condition": "[parameters('createNamespace')]",
+            "type": "Microsoft.EventHub/namespaces",
+            "apiVersion": "[variables('namespaceApiVersion')]",
+            "name": "[parameters('namespaceName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [],
+            "sku": {
+                "name": "[parameters('sku')]",
+                "tier": "[parameters('sku')]",
+                "capacity": "[parameters('skuCapacity')]"
+            },
+            "properties": {
+                "isAutoInflateEnabled": "[parameters('autoInflate')]",
+                "maximumThroughputUnits": "[parameters('maxThroughput')]"
+            }
+        },
+        {
+            "comments": "Azure Event Hub for collected metrics",
+            "type": "Microsoft.EventHub/namespaces/eventhubs",
+            "name": "[concat(parameters('namespaceName'), '/', parameters('eventHubsName'))]",
+            "apiVersion": "[variables('instanceApiVersion')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[if(parameters('createNamespace'), variables('NamespaceId'), 'ehDummyTemplate')]"
+            ],
+            "properties": {
+                "messageRetentionInDays": "[parameters('retentionInDays')]",
+                "partitionCount": "[parameters('partitionCount')]",
+                "status": "Active"
+            }
+        },
+        {
+            "comments": "azure Event Hub namespace listen authorization rule",
+            "type": "Microsoft.EventHub/namespaces/authorizationRules",
+            "name": "[concat(parameters('namespaceName'), '/', parameters('listenPolicyName'))]",
+            "apiVersion": "[variables('namespaceAuthRulesApiVersion')]",
+            "dependsOn": [
+                "[if(parameters('createNamespace'), variables('NamespaceId'), 'ehDummyTemplate')]"
+            ],
+            "properties": {
+                "rights": [
+                    "Listen"
+                ]
+            }
+        },
+        {
+            "comments": "azure Event Hub instance send authorization rule",
+            "type": "Microsoft.EventHub/namespaces/eventhubs/authorizationRules",
+            "name": "[concat(parameters('namespaceName'), '/', parameters('eventHubsName'), '/', parameters('sendPolicyName'))]",
+            "apiVersion": "[variables('instanceAuthRulesApiVersion')]",
+            "dependsOn": [
+                "[variables('instanceId')]"
+            ],
+            "properties": {
+                "rights": [
+                    "Send"
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "namespaceResourceId": {
+            "type": "string",
+            "value": "[variables('NamespaceId')]"
+        },
+        "instanceResourceId": {
+            "type": "string",
+            "value": "[variables('instanceId')]"
+        },
+        "endpoint": {
+            "type": "string",
+            "value": "[split(split(split(reference(variables('NamespaceId'), variables('namespaceApiVersion')).serviceBusEndpoint, '://')[1], ':')[0], '/')[0]]"
+        },
+        "namespaceListenKey": {
+            "type": "string",
+            "value": "[listKeys(variables('namespaceListenRuleId'), variables('namespaceAuthRulesApiVersion')).primaryKey]"
+        },
+        "instanceSendKey": {
+            "type": "string",
+            "value": "[listKeys(variables('instanceSendRuleId'), variables('instanceAuthRulesApiVersion')).primaryKey]"
+        }
+    }
+}

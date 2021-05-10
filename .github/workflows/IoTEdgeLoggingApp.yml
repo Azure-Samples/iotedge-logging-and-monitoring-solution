@@ -1,0 +1,72 @@
+name: Build and publish .NET Core Function App zip package
+on:
+  push:
+    # branches:
+    # - master
+    paths:
+    - 'FunctionApp/**'
+    - '!FunctionApp/FunctionApp/deploy.zip'
+    - '!FunctionApp/FunctionApp/deploy_no_eh.zip'
+  workflow_dispatch:
+    inputs:
+      comment:
+        description: "Run comments"
+        required: false
+env:
+  DOTNET_CORE_VERSION: 3.1.x
+  WORKING_DIRECTORY: FunctionApp/FunctionApp
+  PUBLISH_DIRECTORY: FunctionApp/FunctionApp/bin/Publish
+  EVENTHUBS_FUNCTION: CollectMetrics.cs
+  FLOW_EMAIL: no-reply@microsoft.com
+  FLOW_NAME: "github workflow"
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Switching Git from HTTPS to SSH
+      run: git remote set-url origin ${{ secrets.SSH }}
+    - name: check current branch
+      run: echo "BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV && echo ${{ env.BRANCH }}
+    - name: Check for changes
+      run: git status
+    - name: Build
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+    - name: Restore
+      run: dotnet restore ${{ env.WORKING_DIRECTORY }}
+    - name: Build
+      run: dotnet build /p:DeployOnBuild=true /p:DeployTarget=Package ${{ env.WORKING_DIRECTORY }} --no-restore
+    - name: Publish
+      run: dotnet publish /p:CreatePackageOnPublish=true -o ${{ env.PUBLISH_DIRECTORY }} ${{ env.WORKING_DIRECTORY }}
+    - name: Package
+      shell: pwsh
+      run: Compress-Archive -Path ${{ env.PUBLISH_DIRECTORY }}/*  -DestinationPath ${{ env.WORKING_DIRECTORY }}/deploy.zip -Update
+    - name: Create temp folder
+      run: echo "TEMP_DIR=$(mktemp -d)" >> $GITHUB_ENV
+    - name: Move event hubs trigger function
+      run: mv ${{ env.WORKING_DIRECTORY }}/${{ env.EVENTHUBS_FUNCTION }} ${{ env.TEMP_DIR }}/
+    - name: Build without event hubs trigger function
+      run: dotnet build /p:DeployOnBuild=true /p:DeployTarget=Package ${{ env.WORKING_DIRECTORY }} --no-restore
+    - name: Publish without event hubs trigger function
+      run: dotnet publish /p:CreatePackageOnPublish=true -o ${{ env.PUBLISH_DIRECTORY }} ${{ env.WORKING_DIRECTORY }}
+    - name: Package without event hubs trigger function
+      shell: pwsh
+      run: Compress-Archive -Path ${{ env.PUBLISH_DIRECTORY }}/*  -DestinationPath ${{ env.WORKING_DIRECTORY }}/deploy_no_eh.zip -Update
+    - name: Move event hubs trigger function back
+      run: mv ${{ env.TEMP_DIR }}/${{ env.EVENTHUBS_FUNCTION }} ${{ env.WORKING_DIRECTORY }}/
+    - name: Writing SSH private key to local disk
+      run: mkdir -p ~/.ssh && echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+    - name: Check for changes
+      run: git status
+    - name: Stage changed files
+      run: git add ${{ env.WORKING_DIRECTORY }}/deploy*.zip
+    - name: Set flow email in Git config
+      run: git config --global user.email ${{ env.FLOW_EMAIL }}
+    - name: Set flow name in Git config
+      run: git config --global user.name ${{ env.FLOW_NAME }}
+    - name: Commit changed files
+      run: git commit -m "Adding Function App zip deploy package"
+    - name: Push code
+      run: git push

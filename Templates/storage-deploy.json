@@ -1,0 +1,163 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "createStorageAccount": {
+            "type": "bool"
+        },
+        "storageAccountLocation": {
+            "type": "string"
+        },
+        "storageAccountName": {
+            "type": "string"
+        },
+        "storageAccountSku": {
+            "type": "string"
+        },
+        "storageContainerName": {
+            "type": "string"
+        },
+        "storageQueueName": {
+            "type": "string"
+        },
+        "createEventGridSystemTopic": {
+            "type": "bool"
+        },
+        "eventGridSystemTopicName": {
+            "type": "string"
+        },
+        "eventGridSubscriptionName": {
+            "type": "string"
+        },
+        "eventGridSubscriptionFilter": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+        "storageAccountApiVersion": "[providers('Microsoft.Storage', 'StorageAccounts').apiVersions[0]]",
+        "systemTopicId": "[resourceId('Microsoft.EventGrid/systemTopics', parameters('eventGridSystemTopicName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "name": "saDummyTemplate",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": []
+                },
+                "parameters": {}
+            }
+        },
+        {
+            "comments": "Logs storage account",
+            "condition": "[parameters('createStorageAccount')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[parameters('storageAccountName')]",
+            "apiVersion": "2019-04-01",
+            "location": "[parameters('storageAccountLocation')]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "[parameters('storageAccountSku')]"
+            },
+            "properties": {
+                "isHnsEnabled": true,
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [
+                    ],
+                    "ipRules": [
+                    ],
+                    "defaultAction": "Allow"
+                },
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "services": {
+                        "file": {
+                            "enabled": true
+                        },
+                        "blob": {
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                }
+            }
+        },
+        {
+            "comments": "Log storage account container",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "name": "[concat(parameters('storageAccountName'), '/default/', parameters('storageContainerName'))]",
+            "apiVersion": "2019-06-01",
+            "dependsOn": [
+                "[if(parameters('createStorageAccount'), variables('storageAccountId'), 'saDummyTemplate')]"
+            ]
+        },
+        {
+            "comments": "Log storage account queue",
+            "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
+            "name": "[concat(parameters('storageAccountName'), '/default/', parameters('storageQueueName'))]",
+            "apiVersion": "2021-01-01",
+            "dependsOn": [
+                "[if(parameters('createStorageAccount'), variables('storageAccountId'), 'saDummyTemplate')]"
+            ]
+        },
+        {
+            "comments": "Event grid system topic for logs storage account",
+            "condition": "[parameters('createEventGridSystemTopic')]",
+            "type": "Microsoft.EventGrid/systemTopics",
+            "apiVersion": "2020-10-15-preview",
+            "name": "[parameters('eventGridSystemTopicName')]",
+            "location": "[parameters('storageAccountLocation')]",
+            "dependsOn": [
+                "[if(parameters('createStorageAccount'), variables('storageAccountId'), 'saDummyTemplate')]"
+            ],
+            "properties": {
+                "topicType": "microsoft.storage.storageaccounts",
+                "source": "[variables('storageAccountId')]"
+            }
+        },
+        {
+            "comments": "Event grid subscription for storage queue",
+            "type": "Microsoft.EventGrid/systemTopics/eventSubscriptions",
+            "apiVersion": "2020-10-15-preview",
+            "name": "[concat(parameters('eventGridSystemTopicName'), '/', parameters('eventGridSubscriptionName'))]",
+            "dependsOn": [
+                "[if(parameters('createEventGridSystemTopic'), variables('systemTopicId'), 'saDummyTemplate')]"
+            ],
+            "properties": {
+                "destination": {
+                    "properties": {
+                        "resourceId": "[variables('storageAccountId')]",
+                        "queueName": "[parameters('storageQueueName')]"
+                    },
+                    "endpointType": "StorageQueue"
+                },
+                "filter": {
+                    "subjectBeginsWith": "[parameters('eventGridSubscriptionFilter')]",
+                    "includedEventTypes": [
+                        "Microsoft.Storage.BlobCreated"
+                    ]
+                },
+                "eventDeliverySchema": "EventGridSchema",
+                "retryPolicy": {
+                    "maxDeliveryAttempts": 30,
+                    "eventTimeToLiveInMinutes": 1440
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "storageAccountKey": {
+            "type": "string",
+            "value": "[listkeys(variables('storageAccountId'), variables('storageAccountApiVersion')).keys[0].value]"
+        }
+    }
+}
