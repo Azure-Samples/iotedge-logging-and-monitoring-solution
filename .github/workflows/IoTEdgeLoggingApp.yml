@@ -1,8 +1,6 @@
 name: Build and publish .NET Core Function App zip package
 on:
   push:
-    # branches:
-    # - master
     paths:
     - 'FunctionApp/**'
     - '!FunctionApp/FunctionApp/deploy.zip'
@@ -18,18 +16,19 @@ env:
   PUBLISH_DIRECTORY: FunctionApp/FunctionApp/bin/Publish
   EVENTHUBS_FUNCTION: CollectMetrics.cs
   FLOW_EMAIL: no-reply@microsoft.com
-  FLOW_NAME: "github workflow"
+  FLOW_NAME: "github-actions"
 jobs:
   build-and-package:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: Switching Git from HTTPS to SSH
-      run: git remote set-url origin ${{ secrets.SSH }}
+    - uses: actions/checkout@V2
+      with:
+        persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+        fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+    # - name: Switching Git from HTTPS to SSH
+    #   run: git remote set-url origin ${{ secrets.SSH }}
     - name: check current branch
-      run: echo "BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV && echo ${{ env.BRANCH }}
-    - name: Check for changes
-      run: git status
+      run: git rev-parse --abbrev-ref HEAD
     - name: Build
       uses: actions/setup-dotnet@v1
       with:
@@ -56,17 +55,19 @@ jobs:
       run: Compress-Archive -Path ${{ env.PUBLISH_DIRECTORY }}/*  -DestinationPath ${{ env.WORKING_DIRECTORY }}/deploy_no_eh.zip -Update
     - name: Move event hubs trigger function back
       run: mv ${{ env.TEMP_DIR }}/${{ env.EVENTHUBS_FUNCTION }} ${{ env.WORKING_DIRECTORY }}/
-    - name: Writing SSH private key to local disk
-      run: mkdir -p ~/.ssh && echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+    # - name: Writing SSH private key to local disk
+    #   run: mkdir -p ~/.ssh && echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
     - name: Check for changes
       run: git status
     - name: Stage changed files
       run: git add ${{ env.WORKING_DIRECTORY }}/deploy*.zip
-    - name: Set flow email in Git config
-      run: git config --global user.email ${{ env.FLOW_EMAIL }}
-    - name: Set flow name in Git config
-      run: git config --global user.name ${{ env.FLOW_NAME }}
-    - name: Commit changed files
-      run: git commit -m "Adding Function App zip deploy package"
-    - name: Push code
-      run: git push
+    - name: Commit changes
+      run: |
+        git config --local user.email ${{ env.FLOW_EMAIL }}
+        git config --local user.name ${{ env.FLOW_NAME }}
+        git commit -m "Adding Function App zip deploy packages"
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
