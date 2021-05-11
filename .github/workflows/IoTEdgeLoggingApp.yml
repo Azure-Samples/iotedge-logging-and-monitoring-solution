@@ -21,12 +21,10 @@ jobs:
   build-and-package:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@V2
+    - uses: actions/checkout@v2
       with:
         persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
         fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-    # - name: Switching Git from HTTPS to SSH
-    #   run: git remote set-url origin ${{ secrets.SSH }}
     - name: check current branch
       run: git rev-parse --abbrev-ref HEAD
     - name: Build
@@ -55,8 +53,6 @@ jobs:
       run: Compress-Archive -Path ${{ env.PUBLISH_DIRECTORY }}/*  -DestinationPath ${{ env.WORKING_DIRECTORY }}/deploy_no_eh.zip -Update
     - name: Move event hubs trigger function back
       run: mv ${{ env.TEMP_DIR }}/${{ env.EVENTHUBS_FUNCTION }} ${{ env.WORKING_DIRECTORY }}/
-    # - name: Writing SSH private key to local disk
-    #   run: mkdir -p ~/.ssh && echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
     - name: Check for changes
       run: git status
     - name: Stage changed files
