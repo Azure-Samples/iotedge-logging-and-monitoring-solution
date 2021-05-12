@@ -462,13 +462,24 @@
     },
     "logsEncoding": {
       "type": "string",
-      "defaultValue": "none",
+      "defaultValue": "gzip",
       "allowedValues": [
         "none",
         "gzip"
       ],
       "metadata": {
         "description": "Logs encoding format."
+      }
+    },
+    "metricsEncoding": {
+      "type": "string",
+      "defaultValue": "gzip",
+      "allowedValues": [
+        "none",
+        "gzip"
+      ],
+      "metadata": {
+        "description": "Metrics encoding format."
       }
     },
     "templateUrl": {
@@ -990,6 +1001,10 @@
             {
               "name": "LogsEncoding",
               "value": "[parameters('logsEncoding')]"
+            },
+            {
+              "name": "MetricsEncoding",
+              "value": "[parameters('metricsEncoding')]"
             },
             {
               "name": "LogsMaxSizeMB",

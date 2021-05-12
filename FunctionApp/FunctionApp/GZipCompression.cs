@@ -1,37 +1,31 @@
-﻿using System;
+﻿using System.IO;
+using System.Text;
 using System.IO.Compression;
-using System.Collections.Generic;
-using System.IO;
-using Microsoft.Extensions.Logging;
 
 namespace FunctionApp
 {
     public class GZipCompression
     {
-        private ILogger _log;
-
-        public GZipCompression(ILogger log)
+        public static string Decompress(Stream compressedStream)
         {
-            this._log = log;
+            using GZipStream decompressionStream = new GZipStream(compressedStream, CompressionMode.Decompress);
+            StreamReader reader = new StreamReader(decompressionStream);
+            string decompressedText = reader.ReadToEnd();
+
+            return decompressedText;
         }
 
-        public Stream Decompress(Stream compressedStream)
+        public static string Decompress(byte[] compressedBytes)
         {
-            try
-            {
-                Stream decompressedStream = new MemoryStream();
-                using (GZipStream decompressionStream = new GZipStream(compressedStream, CompressionMode.Decompress))
-                {
-                    decompressionStream.CopyTo(decompressedStream);
-                }
+            using Stream compressedStream = new MemoryStream(compressedBytes);
+            using GZipStream decompressionStream = new GZipStream(compressedStream, CompressionMode.Decompress);
+            using MemoryStream resultStream = new MemoryStream();
+            decompressionStream.CopyTo(resultStream);
 
-                return decompressedStream;
-            }
-            catch (Exception e)
-            {
-                this._log.LogError(e.ToString());
-                return null;
-            }
+            byte[] decompressedBytes = resultStream.ToArray();
+            string decompressedText = Encoding.UTF8.GetString(decompressedBytes);
+
+            return decompressedText;
         }
     }
 }

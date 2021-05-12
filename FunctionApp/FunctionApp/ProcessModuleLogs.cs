@@ -64,15 +64,18 @@ namespace FunctionApp
 
                 // Read the blob's contents
                 Stream blobStream = await blobClient.OpenReadAsync();
-                
+
                 // Decompress if encoding is gzip
+                string logsString = string.Empty;
                 if (string.Equals(_logsEncoding, "gzip", StringComparison.OrdinalIgnoreCase))
+                    logsString = GZipCompression.Decompress(blobStream);
+                else
                 {
-                    // TODO: decompress logs
+                    StreamReader reader = new StreamReader(blobStream);
+                    logsString = reader.ReadToEnd();
                 }
 
-                StreamReader reader = new StreamReader(blobStream);
-                IoTEdgeLog[] iotEdgeLogs = JsonConvert.DeserializeObject<IoTEdgeLog[]>(reader.ReadToEnd());
+                IoTEdgeLog[] iotEdgeLogs = JsonConvert.DeserializeObject<IoTEdgeLog[]>(logsString);
 
                 // Convert to logs their final log analytics format
                 LogAnalyticsLog[] logAnalyticsLogs = iotEdgeLogs.Select(x => new LogAnalyticsLog(x)).ToArray();

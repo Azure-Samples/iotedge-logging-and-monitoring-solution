@@ -1,9 +1,11 @@
 using System;
+using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.EventHubs;
 using Microsoft.Extensions.Logging;
 using FunctionApp.Models;
 using FunctionApp.MetricsCollector;
@@ -18,17 +20,25 @@ namespace FunctionApp
         private static string _workspaceKey = Environment.GetEnvironmentVariable("WorkspaceKey");
         private static string _workspaceApiVersion = Environment.GetEnvironmentVariable("WorkspaceApiVersion");
         private static bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
+        private static string _metricsEncoding = Environment.GetEnvironmentVariable("MetricsEncoding");
 
         [FunctionName("CollectMetrics")]
         public static async Task Run(
-            [EventHubTrigger("%EventHubName%", Connection = "EventHubConnectionString", ConsumerGroup = "%EventHubConsumerGroup%")] string eventHubMessages,
+            [EventHubTrigger("%EventHubName%", Connection = "EventHubConnectionString", ConsumerGroup = "%EventHubConsumerGroup%")] EventData eventHubMessages,
             ILogger log)
         {
             try
             {
                 log.LogInformation("CollectMetrics function started.");
 
-                IoTHubMetric[] iotHubMetrics = JsonConvert.DeserializeObject<IoTHubMetric[]>(eventHubMessages);
+                // Decompress if encoding is gzip
+                string metricsString = string.Empty;
+                if (string.Equals(_metricsEncoding, "gzip", StringComparison.OrdinalIgnoreCase))
+                    metricsString = GZipCompression.Decompress(eventHubMessages.Body.ToArray());
+                else
+                    metricsString = Encoding.UTF8.GetString(eventHubMessages.Body);
+
+                IoTHubMetric[] iotHubMetrics = JsonConvert.DeserializeObject<IoTHubMetric[]>(metricsString);
                 IEnumerable<LaMetric> metricsToUpload = iotHubMetrics.Select(m => new LaMetric(m, string.Empty));
                 LaMetricList metricList = new LaMetricList(metricsToUpload);
 
