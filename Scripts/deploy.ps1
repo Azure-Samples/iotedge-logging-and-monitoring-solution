@@ -749,16 +749,18 @@ function New-IoTEnvironment() {
     #endregion
 
     #region function app
-    if ($create_event_hubs) {
-        $zip_package_name = "deploy.zip"
-    }
-    else {
-        $zip_package_name = "deploy_no_eh.zip"
-    }
-
     Write-Host
     Write-Host "Deploying code to Function App $function_app_name"
+    
+    $zip_package_name = "deploy.zip"
     az functionapp deployment source config-zip -g $resource_group -n $function_app_name --src "$($root_path)/FunctionApp/FunctionApp/$($zip_package_name)" | Out-Null
+
+    if (!$create_event_hubs)
+    {
+        # Write-Host
+        # Write-Host "Disabling metrics collector function"
+        az functionapp config appsettings set --resource-group $resource_group --name $function_app_name --settings "AzureWebJobs.CollectMetrics.Disabled=true"
+    }
     #endregion
 
     #region notify of monitoring deployment steps

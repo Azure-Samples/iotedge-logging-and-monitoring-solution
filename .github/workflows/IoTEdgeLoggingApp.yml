@@ -4,7 +4,6 @@ on:
     paths:
     - 'FunctionApp/**'
     - '!FunctionApp/FunctionApp/deploy.zip'
-    - '!FunctionApp/FunctionApp/deploy_no_eh.zip'
   workflow_dispatch:
     inputs:
       comment:
@@ -40,23 +39,10 @@ jobs:
     - name: Package
       shell: pwsh
       run: Compress-Archive -Path ${{ env.PUBLISH_DIRECTORY }}/*  -DestinationPath ${{ env.WORKING_DIRECTORY }}/deploy.zip -Update
-    - name: Create temp folder
-      run: echo "TEMP_DIR=$(mktemp -d)" >> $GITHUB_ENV
-    - name: Move event hubs trigger function
-      run: mv ${{ env.WORKING_DIRECTORY }}/${{ env.EVENTHUBS_FUNCTION }} ${{ env.TEMP_DIR }}/
-    - name: Build without event hubs trigger function
-      run: dotnet build /p:DeployOnBuild=true /p:DeployTarget=Package ${{ env.WORKING_DIRECTORY }} --no-restore
-    - name: Publish without event hubs trigger function
-      run: dotnet publish /p:CreatePackageOnPublish=true -o ${{ env.PUBLISH_DIRECTORY }} ${{ env.WORKING_DIRECTORY }}
-    - name: Package without event hubs trigger function
-      shell: pwsh
-      run: Compress-Archive -Path ${{ env.PUBLISH_DIRECTORY }}/*  -DestinationPath ${{ env.WORKING_DIRECTORY }}/deploy_no_eh.zip -Update
-    - name: Move event hubs trigger function back
-      run: mv ${{ env.TEMP_DIR }}/${{ env.EVENTHUBS_FUNCTION }} ${{ env.WORKING_DIRECTORY }}/
     - name: Check for changes
       run: git status
     - name: Stage changed files
-      run: git add ${{ env.WORKING_DIRECTORY }}/deploy*.zip
+      run: git add ${{ env.WORKING_DIRECTORY }}/deploy.zip
     - name: Commit changes
       run: |
         git config --local user.email ${{ env.FLOW_EMAIL }}
