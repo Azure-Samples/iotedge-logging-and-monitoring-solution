@@ -68,7 +68,7 @@ function New-IoTEnvironment() {
     #endregion
 
     #region deployment option
-    $deployment_options = @("Create a sandbox environment for testing (fastest)", "Use existing resources (most flexible)")
+    $deployment_options = @("Create a sandbox environment for testing (fastest)", "Custom deployment (most flexible)")
     Write-Host
     Write-Host "Choose a deployment option from the list (using its Index):"
     for ($index = 0; $index -lt $deployment_options.Count; $index++) {
@@ -562,6 +562,8 @@ function New-IoTEnvironment() {
     # create resource group after location has been defined
     if ($create_resource_group) {
         $resourceGroup = az group create --name $resource_group --location $location | ConvertFrom-Json
+        
+        Write-Host
         Write-Host "Created new resource group $($resource_group) in $($resourceGroup.location)."
     }
 
