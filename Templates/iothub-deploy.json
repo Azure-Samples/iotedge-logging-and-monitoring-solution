@@ -170,8 +170,7 @@
             "maxDeliveryCount": 10
           }
         },
-        "features": "None",
-        "minTlsVersion": "1.2"
+        "features": "None"
       }
     },
     {
