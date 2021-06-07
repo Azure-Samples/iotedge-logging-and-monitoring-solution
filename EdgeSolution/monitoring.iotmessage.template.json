@@ -4,7 +4,7 @@
       "$edgeAgent": {
         "properties.desired.modules.metricsCollector": {
           "settings": {
-            "image": "azureiotedge/azureiotedge-metrics-collector:beta2",
+            "image": "mcr.microsoft.com/azureiotedge-metrics-collector:1.0",
             "createOptions": ""
           },
           "type": "docker",
