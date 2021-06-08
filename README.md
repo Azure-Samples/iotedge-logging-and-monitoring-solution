@@ -38,8 +38,8 @@ If the monitoring option is enabled, the following components will be created in
 
 ### High-level process flow:
 
-1. The **Metrics collector** module will be deployed to the edge devices to scrape metrics from the modules running at the edge in Prometheus format.
-2. The metrics-colletor module supports uploading metrics in two ways:
+1. The [**Metrics collector**](https://aka.ms/edgemon-docs) module will be deployed to the edge devices to scrape metrics from the modules running at the edge in Prometheus format.
+2. The metrics-collector module supports uploading metrics in two ways:
    - **HTTP Post to Azure Monitor** endpoint. This option requires outbound internet connectivity from the edge device(s).
    - To other IoT modules/Hub as **IoT messages**. This option is useful for local consumption.
 3. If the monitoring option is configured to upload metrics as IoT messages, an event hubs namespace and event hub instance will be used to route metric messages from IoT Hub to the Azure function **CollectMetrics**, that will then send them to Log Analytics.
