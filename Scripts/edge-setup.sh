@@ -31,10 +31,6 @@ apt-get install -y --no-install-recommends moby-engine moby-cli libiothsm-std
 apt-get install -y --no-install-recommends iotedge
 echo "Iotedge installed."
 
-echo $dpsConnString >> ./edge-debug.txt
-echo $idScope >> ./edge-debug.txt
-echo $dpsGlobalEndpoint >> ./edge-debug.txt
-
 echo "Provisioning iotedge..."
 sleep 3
 pwsh -File $curdir/edge-setup.ps1 -dpsConnString $dpsConnString -idScope $idScope -dpsGlobalEndpoint $dpsGlobalEndpoint
