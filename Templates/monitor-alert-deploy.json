@@ -1,0 +1,124 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string"
+        },
+        "name": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "severity": {
+            "type": "int",
+            "minValue": 0,
+            "maxValue": 4
+        },
+        "evaluationFrequency": {
+            "type": "string",
+            "metadata": {
+                "description": "Evaluation frequency provided in ISO 8601 duration format"
+            }
+        },
+        "windowSize": {
+            "type": "string",
+            "metadata": {
+                "description": "Time window size provided in ISO 8601 duration format"
+            }
+        },
+        "scope": {
+            "type": "String",
+            "metadata": {
+                "description": "External resource Id to scope the alert to"
+            }
+        },
+        "dimensions": {
+            "type": "array"
+        },
+        "query": {
+            "type": "string"
+        },
+        "timeAggregation": {
+            "type": "string",
+            "allowedValues": [
+                "Count",
+                "Total",
+                "Average",
+                "Maximum",
+                "Minimum"
+            ]
+        },
+        "metricMeasureColumn": {
+            "type": "string",
+            "allowedValues": [
+                "",
+                "AggregatedValue",
+                "Table rows"
+            ]
+        },
+        "operator": {
+            "type": "string",
+            "allowedValues": [
+                "GreaterThan",
+                "GreaterThanOrEqualTo",
+                "LessThan",
+                "LessThanOrEqualTo",
+                "Equals"
+            ]
+        },
+        "threshold": {
+            "type": "int"
+        },
+        "actionGroupId": {
+            "type": "string",
+            "metadata": {
+                "description": "Resource Id of the action group to link the alert to"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-02-01-preview",
+            "name": "[parameters('name')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "enabled": true,
+                "autoMitigate": false,
+                "description": "[parameters('description')]",
+                "severity": "[parameters('severity')]",
+                "evaluationFrequency": "[parameters('evaluationFrequency')]",
+                "scopes": [
+                    "[parameters('scope')]"
+                ],
+                "targetResourceTypes": [],
+                "windowSize": "[parameters('windowSize')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "[parameters('query')]",
+                            "timeAggregation": "[parameters('timeAggregation')]",
+                            "metricMeasureColumn": "[parameters('metricMeasureColumn')]",
+                            "dimensions": "[parameters('dimensions')]",
+                            "operator": "[parameters('operator')]",
+                            "threshold": "[parameters('threshold')]",
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "actions": {
+                    "actionGroups": [
+                        "[parameters('actionGroupId')]"
+                    ]
+                }
+            }
+        }
+    ]
+}
