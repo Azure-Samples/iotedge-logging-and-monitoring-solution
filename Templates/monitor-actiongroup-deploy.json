@@ -1,72 +1,58 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "name": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 12
-        },
-        "displayName": {
-            "type": "string"
-        },
-        "emailReceivers": {
-            "type": "array"
-        },
-        "functionAppName": {
-            "type": "string"
-        },
-        "functionAppId": {
-            "type": "string"
-        },
-        "functionName": {
-            "type": "string"
-        },
-        "functionHttpTriggerUrl": {
-            "type": "string"
-        },
-        "useCommonAlertSchema": {
-            "type": "bool",
-            "defaultValue": true
-        }
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 12
     },
-    "variables": {},
-    "resources": [
-        {
-            "type": "microsoft.insights/actionGroups",
-            "apiVersion": "2019-06-01",
-            "name": "[parameters('displayName')]",
-            "location": "Global",
-            "properties": {
-                "groupShortName": "[parameters('name')]",
-                "enabled": true,
-                "copy": [
-                    {
-                        "name": "emailReceivers",
-                        "count": "[length(parameters('emailReceivers'))]",
-                        "input": {
-                            "name": "[concat('EmailAction-', copyIndex('emailReceivers'))]",
-                            "emailAddress": "[parameters('emailReceivers')[copyIndex('emailReceivers')]]",
-                            "useCommonAlertSchema": false
-                        }
-                    }
-                ],
-                "azureFunctionReceivers": [
-                    {
-                        "name": "[parameters('functionAppName')]",
-                        "functionAppResourceId": "[parameters('functionAppId')]",
-                        "functionName": "[parameters('functionName')]",
-                        "httpTriggerUrl": "[parameters('functionHttpTriggerUrl')]",
-                        "useCommonAlertSchema": "[parameters('useCommonAlertSchema')]"
-                    }
-                ]
-            }
-        }
-    ],
-    "outputs": {
-        "resourceId": {
-            "type": "string",
-            "value": "[resourceId('microsoft.insights/actionGroups', parameters('name'))]"
-        }
+    "displayName": {
+      "type": "string"
+    },
+    "functionAppName": {
+      "type": "string"
+    },
+    "functionAppId": {
+      "type": "string"
+    },
+    "functionName": {
+      "type": "string"
+    },
+    "functionHttpTriggerUrl": {
+      "type": "string"
+    },
+    "useCommonAlertSchema": {
+      "type": "bool",
+      "defaultValue": true
     }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "microsoft.insights/actionGroups",
+      "apiVersion": "2019-06-01",
+      "name": "[parameters('displayName')]",
+      "location": "Global",
+      "properties": {
+        "groupShortName": "[parameters('name')]",
+        "enabled": true,
+        "azureFunctionReceivers": [
+          {
+            "name": "[parameters('functionAppName')]",
+            "functionAppResourceId": "[parameters('functionAppId')]",
+            "functionName": "[parameters('functionName')]",
+            "httpTriggerUrl": "[parameters('functionHttpTriggerUrl')]",
+            "useCommonAlertSchema": "[parameters('useCommonAlertSchema')]"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "resourceId": {
+      "type": "string",
+      "value": "[resourceId('microsoft.insights/actionGroups', parameters('name'))]"
+    }
+  }
 }
