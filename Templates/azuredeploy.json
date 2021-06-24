@@ -895,6 +895,7 @@
       "apiVersion": "[variables('functionApiVersion')]",
       "name": "[parameters('functionAppName')]",
       "tags": {
+        "elms": "true",
         "iotHub": "[resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/IotHubs', parameters('iotHubName'))]",
         "storageAccount": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
         "logAnalyticsWorkspace": "[variables('workspaceId')]",
