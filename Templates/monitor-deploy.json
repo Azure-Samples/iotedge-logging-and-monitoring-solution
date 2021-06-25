@@ -134,12 +134,12 @@
   },
   "variables": {
     "linkedDeploymentApiVersion": "2020-10-01",
-    
+
     "queueSizeAlertDeploymentName": "[concat('queuesizealert-', parameters('environmentHashId'))]",
     "queueSizeAlertName": "[concat('ELMS edge hub queue size ', parameters('environmentHashId'))]",
     "queueSizeAlertDescription": "Tracks the number of times a device's edge Hub queue size (sum) was over the configured threshold during the evaluation period.",
     "queueSizeAlertQuery": "// IoT Edge: Edge Hub queue size over threshold\n// Number of times a device's Edge Hub queue size (sum) was over the configured threshold during the evaluation period.\n// To create an alert for this query, click '+ New alert'\nlet qlenThreshold = 100;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgehub_queue_length\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend ep = tostring(dimensions.endpoint)\n| extend qlen = toint(Val)\n| project device, qlen, ep, TimeGenerated, _ResourceId\n| summarize sum(qlen) by TimeGenerated, device, _ResourceId\n| where sum_qlen >= qlenThreshold\n| project-away sum_qlen",
-    
+
     "deviceDiskSpaceAlertDeploymentName": "[concat('devicediskspacealert-', parameters('environmentHashId'))]",
     "deviceDiskSpaceAlertName": "[concat('ELMS device disk space ', parameters('environmentHashId'))]",
     "deviceDiskSpaceAlertDescription": "Tracks total used disk space percentage of total disk space for an IoT edge device.",
@@ -169,6 +169,23 @@
     "actionGroups": "[if(parameters('createFunctionActionGroup'), if(not(empty(parameters('additionalActionGroup'))), variables('actionGroupDual'), variables('actionGroupInternal')), if(not(empty(parameters('additionalActionGroup'))), variables('actionGroupExternal'), variables('actionGroupNone')))]"
   },
   "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "monitorDummyTemplate",
+      "dependsOn": [],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "variables": {},
+          "resources": []
+        },
+        "parameters": {}
+      }
+    },
     {
       "comments": "action group",
       "condition": "[parameters('createFunctionActionGroup')]",
@@ -217,7 +234,7 @@
       "apiVersion": "[variables('linkedDeploymentApiVersion')]",
       "name": "[variables('queueSizeAlertDeploymentName')]",
       "dependsOn": [
-        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), '')]"
+        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), 'monitorDummyTemplate')]"
       ],
       "tags": {
         "elms": "true",
@@ -293,7 +310,7 @@
       "apiVersion": "[variables('linkedDeploymentApiVersion')]",
       "name": "[variables('deviceDiskSpaceAlertDeploymentName')]",
       "dependsOn": [
-        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), '')]"
+        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), 'monitorDummyTemplate')]"
       ],
       "tags": {
         "elms": "true",
@@ -372,7 +389,7 @@
       "apiVersion": "[variables('linkedDeploymentApiVersion')]",
       "name": "[variables('deviceOfflineAlertDeploymentName')]",
       "dependsOn": [
-        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), '')]"
+        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), 'monitorDummyTemplate')]"
       ],
       "tags": {
         "elms": "true",
