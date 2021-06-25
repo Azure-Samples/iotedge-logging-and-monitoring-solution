@@ -25,7 +25,8 @@ function New-IoTEnvironment() {
     $logs_regex = "\b(WRN?|ERR?|CRIT?)\b"
     $logs_encoding = "gzip"
     $metrics_encoding = "gzip"
-    $invoke_upload_function_name = "InvokeUploadModuleLogs"
+    $invoke_log_upload_function_name = "InvokeUploadModuleLogs"
+    $schedule_log_upload_function_name = "ScheduleUploadModuleLogs"
     $alert_function_name = "MonitorAlerts"
     $zip_package_name = "deploy.zip"
     $zip_package_path = "$($root_path)/FunctionApp/FunctionApp/$($zip_package_name)"
@@ -402,7 +403,10 @@ function New-IoTEnvironment() {
             Write-Host "The function app $($function_app.name) in resource group $($function_app.resourceGroup) is linked to your IoT hub. However, it lacks some of the latest tags that help identify the resource as part of your ELMS deployment."
             Write-Host "Updating resource tags..."
 
-            $null = az resource tag --ids $function_app.id --tags elms=true -i | ConvertFrom-Json
+            az resource tag `
+                --ids $function_app.id `
+                --tags elms=true `
+                -i | Out-Null
         }
         #endregion
 
@@ -414,7 +418,7 @@ function New-IoTEnvironment() {
         Write-Host "ELMS periodically pulls logs from IoT edge modules by default, but this deployment of Monitor alerts has the ability to proactively pull the most recent logs only when IoT edge devices trigger the alerts; optimizing network bandwidth and storage in Log Analytics."
         Write-Host
         Write-Host "Please choose an option from the list (using its Index):"
-        $logs_pull_options = @("Pull IoT edge module logs periodically", "Pull IoT edge module logs only when alerts are triggered")
+        $logs_pull_options = @("Continue pulling IoT edge module logs periodically", "Pull IoT edge module logs only when alerts are triggered")
         for ($index = 0; $index -lt $logs_pull_options.Count; $index++) {
             Write-Host "$($index + 1): $($logs_pull_options[$index])"
         }
@@ -481,8 +485,8 @@ function New-IoTEnvironment() {
             
             $create_action_group = $true
 
-            Write-Host
-            Write-Host -ForegroundColor Yello "NOTE: The periodic log pull functionality will be disabled after the Monitor alert deployment finishes."
+            # Write-Host
+            # Write-Host -ForegroundColor Yello "NOTE: The periodic log pull functionality will be disabled after the Monitor alert deployment finishes."
         }
 
         $action_group_id = ""
@@ -585,9 +589,22 @@ function New-IoTEnvironment() {
 
         #region disable periodic log pull if desired
         if ($create_action_group) {
-            Write-Host
-            Write-Host "Disabling periodic log pull functionality"
-            $null = az functionapp config appsettings set --resource-group $function_app.resourceGroup --name $function_app.name --settings "AzureWebJobs.ScheduleUploadModuleLogs.Disabled=true"
+            $schedule_log_upload_function = az functionapp show `
+                --resource-group $function_app.resourceGroup `
+                --name $function_app.name `
+                --function-name $schedule_log_upload_function_name | ConvertFrom-Json
+            
+            if (!$schedule_log_upload_function.isDisabled) {
+                Write-Host
+                Write-Host -ForegroundColor Yellow "NOTE: The function '$schedule_log_upload_function_name' will be disabled in your function app in order to turn off the periodic log pull functionality. You can always turn it back on by going to the 'Functions' section of your function app in the Azure Portal."
+                az functionapp config appsettings set `
+                    --resource-group $function_app.resourceGroup `
+                    --name $function_app.name `
+                    --settings "AzureWebJobs.$($schedule_log_upload_function_name).Disabled=true" | Out-Null
+
+                Write-Host
+                Write-Host "Function disabled."
+            }
             #endregion
         }
 
@@ -923,7 +940,7 @@ function New-IoTEnvironment() {
         "eventHubsListenPolicyName"   = @{ "value" = $event_hubs_listen_rule }
         "eventHubsSendPolicyName"     = @{ "value" = $event_hubs_send_rule }
         "functionAppName"             = @{ "value" = $function_app_name }
-        "httpTriggerFunction"         = @{ "value" = $invoke_upload_function_name }
+        "httpTriggerFunction"         = @{ "value" = $invoke_log_upload_function_name }
         "logsRegex"                   = @{ "value" = $logs_regex }
         "logsSince"                   = @{ "value" = "15m" }
         "logsEncoding"                = @{ "value" = $logs_encoding }
@@ -1085,7 +1102,7 @@ function New-IoTEnvironment() {
     Write-Host "Invoking first module logs pull request"
     $attemps = 3
     do {
-        $response = Invoke-WebRequest -Uri "https://$($function_app_hostname)/api/$($invoke_upload_function_name)?code=$($function_key)" -ErrorAction Ignore
+        $response = Invoke-WebRequest -Uri "https://$($function_app_hostname)/api/$($invoke_log_upload_function_name)?code=$($function_key)" -ErrorAction Ignore
         $attemps--
 
         if ($response.StatusCode -eq 200) {
