@@ -4,6 +4,7 @@ function New-IoTEnvironment() {
     
     $root_path = Split-Path $PSScriptRoot -Parent
     
+    #region script variables
     $create_iot_hub = $false
     $ask_for_location = $false
     $create_workspace = $false
@@ -19,11 +20,16 @@ function New-IoTEnvironment() {
     $event_hubs_route = "monitoringmetrics-$($env_hash)"
     $event_hubs_route_condition = "id = 'origin-iotedge-metrics-collector'"
     $deployment_condition = "tags.logPullEnabled='true'"
+    $device_query = "SELECT * FROM devices WHERE $($deployment_condition)"
     $function_app_name = "iotedgelogsapp-$($env_hash)"
     $logs_regex = "\b(WRN?|ERR?|CRIT?)\b"
     $logs_encoding = "gzip"
     $metrics_encoding = "gzip"
-    $http_trigger_function = "InvokeUploadModuleLogs"
+    $invoke_upload_function_name = "InvokeUploadModuleLogs"
+    $alert_function_name = "MonitorAlerts"
+    $zip_package_name = "deploy.zip"
+    $zip_package_path = "$($root_path)/FunctionApp/FunctionApp/$($zip_package_name)"
+    #endregion
 
     Write-Host
     Write-Host "################################################"
@@ -42,33 +48,8 @@ function New-IoTEnvironment() {
     Write-Host "Press Enter to continue."
     Read-Host
 
-    #region obtain resource group name
-    $create_resource_group = $false
-    $resource_group = $null
-    $first = $true
-    while ([string]::IsNullOrEmpty($resource_group) -or ($resource_group -notmatch "^[a-z0-9-_]*$")) {
-        if ($first -eq $false) {
-            Write-Host "Use alphanumeric characters as well as '-' or '_'."
-        }
-        else {
-            Write-Host "Provide a name for the resource group to host all the new resources that will be deployed as part of your solution."
-            $first = $false
-        }
-        $resource_group = Read-Host -Prompt ">"
-    }
-
-    $resourceGroup = az group list | ConvertFrom-Json | Where-Object { $_.name -eq $resource_group }
-    if (!$resourceGroup) {
-        Write-Host "Resource group '$resource_group' does not exist. It will be created later in the deployment."
-        $create_resource_group = $true
-    }
-    else {
-        Write-Host "Resource group '$resource_group' already exists in current subscription."
-    }
-    #endregion
-
     #region deployment option
-    $deployment_options = @("Create a sandbox environment for testing (fastest)", "Custom deployment (most flexible)")
+    $deployment_options = @("Create a sandbox environment for testing (fastest)", "Custom deployment (most flexible)", "Deploy Monitor Alerts (requires an existing deployment and the metrics collector solution running at the edge)")
     Write-Host
     Write-Host "Choose a deployment option from the list (using its Index):"
     for ($index = 0; $index -lt $deployment_options.Count; $index++) {
@@ -88,6 +69,34 @@ function New-IoTEnvironment() {
     }
     #endregion
 
+    #region obtain resource group name
+    if ($deployment_option -eq 1 -or $deployment_option -eq 2) {
+        $create_resource_group = $false
+        $resource_group = $null
+        $first = $true
+        while ([string]::IsNullOrEmpty($resource_group) -or ($resource_group -notmatch "^[a-z0-9-_]*$")) {
+            if ($first -eq $false) {
+                Write-Host "Use alphanumeric characters as well as '-' or '_'."
+            }
+            else {
+                Write-Host
+                Write-Host "Provide a name for the resource group to host all the new resources that will be deployed as part of your solution."
+                $first = $false
+            }
+            $resource_group = Read-Host -Prompt ">"
+        }
+
+        $resourceGroup = az group list | ConvertFrom-Json | Where-Object { $_.name -eq $resource_group }
+        if (!$resourceGroup) {
+            Write-Host "Resource group '$resource_group' does not exist. It will be created later in the deployment."
+            $create_resource_group = $true
+        }
+        else {
+            Write-Host "Resource group '$resource_group' already exists in current subscription."
+        }
+    }
+    #endregion
+
     if ($deployment_option -eq 1) {
         $ask_for_location = $true
 
@@ -100,7 +109,7 @@ function New-IoTEnvironment() {
         $create_event_hubs_namespace = $true
         $monitoring_mode = "IoTMessage"
     }
-    else {
+    elseif ($deployment_option -eq 2) {
         #region iot hub
         $iot_hubs = az iot hub list | ConvertFrom-Json | Sort-Object -Property id
         if ($iot_hubs.Count -gt 0) {
@@ -320,6 +329,272 @@ function New-IoTEnvironment() {
             $create_workspace = $true
         }
         #endregion
+    }
+    elseif ($deployment_option -eq 3) {
+        #region find iot hub
+        $iot_hubs = az iot hub list | ConvertFrom-Json | Sort-Object -Property id
+        Write-Host
+        Write-Host "Choose an IoT hub to use from this list (using its Index):"
+        for ($index = 0; $index -lt $iot_hubs.Count; $index++) {
+            Write-Host
+            Write-Host "$($index + 1): $($iot_hubs[$index].id)"
+        }
+        while ($true) {
+            $option = Read-Host -Prompt ">"
+            try {
+                if ([int]$option -ge 1 -and [int]$option -le $iot_hubs.Count) {
+                    break
+                }
+            }
+            catch {
+                Write-Host "Invalid index '$($option)' provided."
+            }
+            Write-Host "Choose from the list using an index between 1 and $($iot_hubs.Count)."
+        }
+
+        $iot_hub_id = $iot_hubs[$option - 1].id
+        $iot_hub_name = $iot_hubs[$option - 1].name
+        $iot_hub_resource_group = $iot_hubs[$option - 1].resourcegroup
+        $location = $iot_hubs[$option - 1].location
+        $iot_hub_location = $location
+        #endregion
+
+        #region ELMS function app
+        $function_app = az functionapp list | ConvertFrom-Json | Sort-Object -Property id | Where-Object { $_.tags.iotHub -eq $iot_hub_id }
+        
+        if ($function_app.Count -gt 1) {
+            Write-Host
+            Write-Host "Found multiple function apps linked to your IoT hub. Choose the one your want to use from this list (using its Index):"
+            for ($index = 0; $index -lt $function_app.Count; $index++) {
+                Write-Host
+                Write-Host "$($index + 1): $($function_app[$index].id)"
+            }
+            while ($true) {
+                $option = Read-Host -Prompt ">"
+                try {
+                    if ([int]$option -ge 1 -and [int]$option -le $function_app.Count) {
+                        break
+                    }
+                }
+                catch {
+                    Write-Host "Invalid index '$($option)' provided."
+                }
+                Write-Host "Choose from the list using an index between 1 and $($function_app.Count)."
+            }
+
+            $function_app = $function_app[$option - 1]
+        }
+
+        elseif ($function_app.Count -eq 1) {
+            Write-Host
+            Write-Host "The function app '$($function_app.name)' in resource group '$($function_app.resourceGroup)' is linked to your IoT hub."
+        }
+        else {
+            Write-Host
+            Write-Host "Unable to find an ELMS function app associated to your IoT hub. Please deploy the ELMS solution linking it to your IoT hub before attempting to set up Monitor alerts."
+
+            return
+        }
+
+        #region update tags in function app (if needed)
+        if (!$function_app.tags.elms) {
+            Write-Host
+            Write-Host "The function app $($function_app.name) in resource group $($function_app.resourceGroup) is linked to your IoT hub. However, it lacks some of the latest tags that help identify the resource as part of your ELMS deployment."
+            Write-Host "Updating resource tags..."
+
+            $null = az resource tag --ids $function_app.id --tags elms=true -i | ConvertFrom-Json
+        }
+        #endregion
+
+        $env_hash = $function_app.name.Split('-')[1]
+        #endregion
+
+        #region monitor action groups
+        Write-Host
+        Write-Host "ELMS periodically pulls logs from IoT edge modules by default, but this deployment of Monitor alerts has the ability to proactively pull the most recent logs only when IoT edge devices trigger the alerts; optimizing network bandwidth and storage in Log Analytics."
+        Write-Host
+        Write-Host "Please choose an option from the list (using its Index):"
+        $logs_pull_options = @("Pull IoT edge module logs periodically", "Pull IoT edge module logs only when alerts are triggered")
+        for ($index = 0; $index -lt $logs_pull_options.Count; $index++) {
+            Write-Host "$($index + 1): $($logs_pull_options[$index])"
+        }
+        while ($true) {
+            $option = Read-Host -Prompt ">"
+            try {
+                if ([int]$option -ge 1 -and [int]$option -le $logs_pull_options.Count) {
+                    break
+                }
+            }
+            catch {
+                Write-Host "Invalid index '$($option)' provided."
+            }
+            Write-Host "Choose from the list using an index between 1 and $($logs_pull_options.Count)."
+        }
+
+        if ($option -eq 1) {
+            $create_action_group = $false
+        }
+        elseif ($option -eq 2) {
+            
+            #region verify the function app contains monitor alerts function
+            $function = az functionapp function show --name $function_app.name --resource-group $function_app.resourceGroup --function-name $alert_function_name | ConvertFrom-Json
+            if (!$function.name) {
+                Write-Host
+                $upgrade_function_options = @("Yes", "No")
+                
+                Write-Host
+                Write-Host "An update to your function app is required to handle Monitor alerts. Do you want to update it now?"
+                for ($index = 0; $index -lt $upgrade_function_options.Count; $index++) {
+                    Write-Host "$($index + 1): $($upgrade_function_options[$index])"
+                }
+                while ($true) {
+                    $option = Read-Host -Prompt ">"
+                    try {
+                        if ([int]$option -ge 1 -and [int]$option -le $upgrade_function_options.Count) {
+                            break
+                        }
+                    }
+                    catch {
+                        Write-Host "Invalid index '$($option)' provided."
+                    }
+                    Write-Host "Choose from the list using an index between 1 and $($upgrade_function_options.Count)."
+                }
+                
+                if ($option -eq 1) {
+                    Write-Host
+                    Write-Host "Updating function app $($function_app.name)"
+                    Write-Host
+                    
+                    az functionapp deployment source config-zip -g $function_app.resourceGroup -n $function_app.name --src $zip_package_path | Out-Null
+                    
+                    Write-Host
+                    Write-Host "Function app updated successfully."
+                }
+                else {
+                    Write-Host
+                    Write-Host "No problem. Come back when you are ready to update your application."
+
+                    return
+                }
+            }
+            #endregion
+            
+            $create_action_group = $true
+
+            Write-Host
+            Write-Host -ForegroundColor Yello "NOTE: The periodic log pull functionality will be disabled after the Monitor alert deployment finishes."
+        }
+
+        $action_group_id = ""
+        $action_groups = az monitor action-group list | ConvertFrom-Json
+        if ($action_groups.Count -gt 0) {
+            $action_group_options = @("Yes", "No")
+            
+            Write-Host
+            Write-Host "Do you want to link an existing Monitor action group to the ELMS alerts? Choose an option from the list (using its Index):"
+            for ($index = 0; $index -lt $action_group_options.Count; $index++) {
+                Write-Host "$($index + 1): $($action_group_options[$index])"
+            }
+            while ($true) {
+                $option = Read-Host -Prompt ">"
+                try {
+                    if ([int]$option -ge 1 -and [int]$option -le $action_group_options.Count) {
+                        break
+                    }
+                }
+                catch {
+                    Write-Host "Invalid index '$($option)' provided."
+                }
+                Write-Host "Choose from the list using an index between 1 and $($action_group_options.Count)."
+            }
+
+            #region additional monitor action group
+            if ($option -eq 1) {
+                Write-Host
+                Write-Host "Choose an action group from this list (using its Index):"
+                for ($index = 0; $index -lt $action_groups.Count; $index++) {
+                    Write-Host
+                    Write-Host "$($index + 1): $($action_groups[$index].id)"
+                }
+                while ($true) {
+                    $option = Read-Host -Prompt ">"
+                    try {
+                        if ([int]$option -ge 1 -and [int]$option -le $action_groups.Count) {
+                            break
+                        }
+                    }
+                    catch {
+                        Write-Host "Invalid index '$($option)' provided."
+                    }
+                    Write-Host "Choose from the list using an index between 1 and $($action_groups.Count)."
+                }
+
+                $action_group_id = $action_groups[$option - 1].id
+            }
+            #endregion
+        }
+        #endregion
+
+        #region deploy Monitor template
+        $severity = 3
+        $function_key = az functionapp keys list -g $function_app.resourceGroup -n $function_app.name --query 'functionKeys.default' -o tsv
+        $alert_function_url = "https://$($function_app.defaultHostName)/api/$($alert_function_name)?code=$($function_key)"
+
+        $platform_parameters = @{
+            "location"                          = @{ "value" = $location }
+            "environmentHashId"                 = @{ "value" = $env_hash }
+            "scope"                             = @{ "value" = $iot_hub_id }
+            "severity"                          = @{ "value" = $severity }
+            
+            "queueSizeAlertEvaluationFrequency" = @{ "value" = "PT30M" }
+            "queueSizeAlertWindowSize"          = @{ "value" = "PT30M" }
+            "queueSizeAlertThreshold"           = @{ "value" = 10 }
+            
+            "deviceDiskSpaceAlertEvaluationFrequency" = @{ "value" = "PT30M" }
+            "deviceDiskSpaceAlertWindowSize"          = @{ "value" = "PT30M" }
+            "deviceDiskSpaceAlertThreshold"           = @{ "value" = 75 }
+            
+            "deviceOfflineAlertEvaluationFrequency" = @{ "value" = "PT30M" }
+            "deviceOfflineAlertWindowSize"          = @{ "value" = "PT30M" }
+            "deviceOfflineAlertThreshold"           = @{ "value" = 10 }
+            
+            "createFunctionActionGroup"         = @{ "value" = $create_action_group }
+            "additionalActionGroup"             = @{ "value" = $action_group_id }
+            "functionAppName"                   = @{ "value" = $function_app.name }
+            "functionAppResourceId"             = @{ "value" = $function_app.id }
+            "alertFunctionName"                 = @{ "value" = $alert_function_name }
+            "functionHttpTriggerUrl"            = @{ "value" = $alert_function_url }
+            "templateUrl"                       = @{ "value" = "https://raw.githubusercontent.com/Azure-Samples/iotedge-logging-and-monitoring-solution" }
+            "branchName"                        = @{ "value" = $(git rev-parse --abbrev-ref HEAD) }
+        }
+        Set-Content -Path "$($root_path)/Templates/monitor-deploy.parameters.json" -Value (ConvertTo-Json $platform_parameters -Depth 5)
+
+        Write-Host
+        Write-Host "Creating resource group deployment."
+        $deployment_output = az deployment group create `
+            --resource-group $function_app.resourceGroup `
+            --name "ELMSAlerts-$($env_hash)" `
+            --mode Incremental `
+            --template-file "$($root_path)/Templates/monitor-deploy.json" `
+            --parameters "$($root_path)/Templates/monitor-deploy.parameters.json" | ConvertFrom-Json
+            
+        if (!$deployment_output) {
+            throw "Something went wrong with the resource group deployment. Ending script."
+        }
+        #endregion
+
+        #region disable periodic log pull if desired
+        if ($create_action_group) {
+            Write-Host
+            Write-Host "Disabling periodic log pull functionality"
+            $null = az functionapp config appsettings set --resource-group $function_app.resourceGroup --name $function_app.name --settings "AzureWebJobs.ScheduleUploadModuleLogs.Disabled=true"
+            #endregion
+        }
+
+        Write-Host
+        Write-Host "Deployment completed."
+
+        return
     }
 
     #region new resources details
@@ -559,15 +834,14 @@ function New-IoTEnvironment() {
     }
     #endregion
 
-    # create resource group after location has been defined
+    #region create resource group after location has been defined
     if ($create_resource_group) {
         $resourceGroup = az group create --name $resource_group --location $location | ConvertFrom-Json
         
         Write-Host
         Write-Host "Created new resource group $($resource_group) in $($resourceGroup.location)."
     }
-
-    $device_query = "SELECT * FROM devices WHERE $($deployment_condition)"
+    #endregion
 
     #region create IoT platform
 
@@ -606,8 +880,6 @@ function New-IoTEnvironment() {
     $vnet_prefix = "10.0.0.0/16"
     $edge_subnet_name = "iotedge"
     $edge_subnet_prefix = "10.0.0.0/24"
-    #endregion
-
     #endregion
 
     $platform_parameters = @{
@@ -651,11 +923,11 @@ function New-IoTEnvironment() {
         "eventHubsListenPolicyName"   = @{ "value" = $event_hubs_listen_rule }
         "eventHubsSendPolicyName"     = @{ "value" = $event_hubs_send_rule }
         "functionAppName"             = @{ "value" = $function_app_name }
-        "httpTriggerFunction"         = @{ "value" = $http_trigger_function }
+        "httpTriggerFunction"         = @{ "value" = $invoke_upload_function_name }
         "logsRegex"                   = @{ "value" = $logs_regex }
         "logsSince"                   = @{ "value" = "15m" }
         "logsEncoding"                = @{ "value" = $logs_encoding }
-        "metricsEncoding"                = @{ "value" = $metrics_encoding }
+        "metricsEncoding"             = @{ "value" = $metrics_encoding }
         "templateUrl"                 = @{ "value" = "https://raw.githubusercontent.com/Azure-Samples/iotedge-logging-and-monitoring-solution" }
         "branchName"                  = @{ "value" = $(git rev-parse --abbrev-ref HEAD) }
     }
@@ -691,7 +963,7 @@ function New-IoTEnvironment() {
         $compress_for_upload = "true"
     }
     else {
-          $compress_for_upload = "false"
+        $compress_for_upload = "false"
     }
     $monitoring_template = "$($root_path)/EdgeSolution/monitoring.$($monitoring_mode.ToLower()).template.json"
     $monitoring_manifest = "$($root_path)/EdgeSolution/monitoring.deployment.json"
@@ -752,11 +1024,9 @@ function New-IoTEnvironment() {
     Write-Host
     Write-Host "Deploying code to Function App $function_app_name"
     
-    $zip_package_name = "deploy.zip"
-    az functionapp deployment source config-zip -g $resource_group -n $function_app_name --src "$($root_path)/FunctionApp/FunctionApp/$($zip_package_name)" | Out-Null
+    az functionapp deployment source config-zip -g $resource_group -n $function_app_name --src $zip_package_path | Out-Null
 
-    if (!$create_event_hubs)
-    {
+    if (!$create_event_hubs) {
         # Write-Host
         # Write-Host "Disabling metrics collector function"
         az functionapp config appsettings set --resource-group $resource_group --name $function_app_name --settings "AzureWebJobs.CollectMetrics.Disabled=true"
@@ -815,7 +1085,7 @@ function New-IoTEnvironment() {
     Write-Host "Invoking first module logs pull request"
     $attemps = 3
     do {
-        $response = Invoke-WebRequest -Uri "https://$($function_app_hostname)/api/$($http_trigger_function)?code=$($function_key)" -ErrorAction Ignore
+        $response = Invoke-WebRequest -Uri "https://$($function_app_hostname)/api/$($invoke_upload_function_name)?code=$($function_key)" -ErrorAction Ignore
         $attemps--
 
         if ($response.StatusCode -eq 200) {
@@ -828,6 +1098,7 @@ function New-IoTEnvironment() {
     } while ($response.StatusCode -ne 200 -and $attemps -gt 0)
     #endregion
 
+    #region completion message
     Write-Host
     Write-Host -ForegroundColor Green "Resource Group: $($resource_group)"
     Write-Host -ForegroundColor Green "Environment unique id: $($env_hash)"
@@ -852,6 +1123,7 @@ function New-IoTEnvironment() {
     Write-Host -ForegroundColor Green "##############################################"
     Write-Host -ForegroundColor Green "##############################################"
     Write-Host
+    #endregion
 }
 
 Function New-Password() {

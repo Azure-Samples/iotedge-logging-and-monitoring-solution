@@ -1,0 +1,460 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Specifies the deployment location."
+      }
+    },
+    "environmentHashId": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique alphanumeric id to assign to multiple resource names."
+      }
+    },
+    "scope": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource Id of the resource to scope the alert to."
+      }
+    },
+    "severity": {
+      "type": "int",
+      "metadata": {
+        "description": "Monitor alerts severity level: 0 - Critical, 1 - Error, 2 - Warning, 3 - Informational, 4 - Verbose."
+      }
+    },
+    "queueSizeAlertEvaluationFrequency": {
+      "type": "string",
+      "metadata": {
+        "description": "Evaluation frequency for IoT edge hub queue size alert in ISO 8601 duration format."
+      }
+    },
+    "queueSizeAlertWindowSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Window size for IoT edge hub queue size alert in ISO 8601 duration format."
+      }
+    },
+    "queueSizeAlertThreshold": {
+      "type": "int",
+      "metadata": {
+        "description": "Limit value to trigger the IoT edge hub queue size alert."
+      }
+    },
+    "deviceDiskSpaceAlertEvaluationFrequency": {
+      "type": "string",
+      "metadata": {
+        "description": "Evaluation frequency for IoT edge device disk space alert in ISO 8601 duration format."
+      }
+    },
+    "deviceDiskSpaceAlertWindowSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Window size for IoT edge device disk space alert in ISO 8601 duration format."
+      }
+    },
+    "deviceDiskSpaceAlertThreshold": {
+      "type": "int",
+      "metadata": {
+        "description": "Limit value to trigger the IoT edge device disk space alert."
+      }
+    },
+    "deviceOfflineAlertEvaluationFrequency": {
+      "type": "string",
+      "metadata": {
+        "description": "Evaluation frequency for IoT edge device offline alert in ISO 8601 duration format."
+      }
+    },
+    "deviceOfflineAlertWindowSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Window size for IoT edge device offline alert in ISO 8601 duration format."
+      }
+    },
+    "deviceOfflineAlertThreshold": {
+      "type": "int",
+      "metadata": {
+        "description": "Limit value to trigger the IoT edge device offline alert."
+      }
+    },
+    "createFunctionActionGroup": {
+      "type": "bool",
+      "metadata": {
+        "description": "Whether to create an internal action group to invoke an Azure function."
+      }
+    },
+    "additionalActionGroup": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource Id of an additional Monitor action group to add to the alert actions."
+      }
+    },
+    "functionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Function App to be used in the Monitor action group."
+      }
+    },
+    "functionAppResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource If of the function App to be used in the Monitor action group."
+      }
+    },
+    "alertFunctionName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Azure Function that will be added to the Monitor action group."
+      }
+    },
+    "functionHttpTriggerUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "HTTP Url of the Azure function that will be added to the Monitor action group."
+      }
+    },
+    "templateUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "GitHub repo URL."
+      }
+    },
+    "branchName": {
+      "type": "string",
+      "defaultValue": "master",
+      "metadata": {
+        "description": "GitHub repo branch name."
+      }
+    }
+  },
+  "variables": {
+    "linkedDeploymentApiVersion": "2020-10-01",
+    
+    "queueSizeAlertDeploymentName": "[concat('queuesizealert-', parameters('environmentHashId'))]",
+    "queueSizeAlertName": "[concat('ELMS edge hub queue size ', parameters('environmentHashId'))]",
+    "queueSizeAlertDescription": "Tracks the number of times a device's edge Hub queue size (sum) was over the configured threshold during the evaluation period.",
+    "queueSizeAlertQuery": "// IoT Edge: Edge Hub queue size over threshold\n// Number of times a device's Edge Hub queue size (sum) was over the configured threshold during the evaluation period.\n// To create an alert for this query, click '+ New alert'\nlet qlenThreshold = 100;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgehub_queue_length\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend ep = tostring(dimensions.endpoint)\n| extend qlen = toint(Val)\n| project device, qlen, ep, TimeGenerated, _ResourceId\n| summarize sum(qlen) by TimeGenerated, device, _ResourceId\n| where sum_qlen >= qlenThreshold\n| project-away sum_qlen",
+    
+    "deviceDiskSpaceAlertDeploymentName": "[concat('devicediskspacealert-', parameters('environmentHashId'))]",
+    "deviceDiskSpaceAlertName": "[concat('ELMS device disk space ', parameters('environmentHashId'))]",
+    "deviceDiskSpaceAlertDescription": "Tracks total used disk space percentage of total disk space for an IoT edge device.",
+    "deviceDiskSpaceAlertQuery": "// IoT Edge: Total device disk space percent used\n// Percentage of total disk space used for an IoT Edge device.\n// To create an alert for this query, click '+ New alert'\nlet totalBytesByDevice = InsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgeAgent_total_disk_space_bytes\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend iothub = tostring(dimensions.iothub)\n| extend value = tolong(Val)\n| extend diskname = tostring(dimensions.disk_name)\n| extend id = strcat(iothub, \"::\", device)\n| project device, id, diskname, value, TimeGenerated, _ResourceId\n| top-nested of id by Ignore0=max(1),\ntop-nested 1 of TimeGenerated by Ignore1=max(TimeGenerated),\ntop-nested of diskname by Ignore2=max(1),\ntop-nested of value by Ignore3=max(1)\n| project-away Ignore*\n| summarize Bytes=max(value) by id, diskname\n| summarize totalBytes=sum(Bytes) by id;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgeAgent_available_disk_space_bytes\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend iothub = tostring(dimensions.iothub)\n| extend value = tolong(Val)\n| extend diskname = tostring(dimensions.disk_name)\n| extend id = strcat(iothub, \"::\", device)\n| project device, id, diskname, value, TimeGenerated, _ResourceId\n| summarize Bytes=max(value) by device, diskname, TimeGenerated, id,\n_ResourceId\n| summarize availBytes=sum(Bytes) by id, device, TimeGenerated, _ResourceId\n| join kind=leftouter totalBytesByDevice\non $left.id == $right.id\n| extend percentUsed = round((todouble(totalBytes) - todouble(availBytes)) /\ntodouble(totalBytes) * 100, 0)\n| project TimeGenerated, device, percentUsed, _ResourceId\n| summarize AggregatedValue = max(percentUsed) by bin(TimeGenerated, 30m),\ndevice, _ResourceId",
+    "deviceDiskSpaceAlertMetricMeasureColumn": "AggregatedValue",
+
+    "deviceOfflineAlertDeploymentName": "[concat('deviceofflinealert-', parameters('environmentHashId'))]",
+    "deviceOfflineAlertName": "[concat('ELMS device offline ', parameters('environmentHashId'))]",
+    "deviceOfflineAlertDescription": "Tracks IoT edge devices that are not sending D2C messages to IoT Hub at an expected rate during a 30 minute period.",
+    "deviceOfflineAlertQuery": "// IoT Edge: Device offline or not sending messages upstream at expected rate\n// Identify IoT Edge devices seen in the last 2 days that are not sending D2C messages to IoT Hub at an expected rate during a 30 minute period.\n// To create an alert for this query, click '+ New alert rule'\nlet targetReceiver = \"upstream\";\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgehub_messages_sent_total\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend target = trim_start(@\"[^/]+/\", extractjson(\"$.to\",\ntostring(dimensions), typeof(string)))\n| where target contains targetReceiver\n| extend source = strcat(device, \"::\", trim_start(@\"[^/]+/\",\ntostring(dimensions.from)))\n| extend messages = toint(Val)\n| extend timeUtc = TimeGenerated\n| extend sourceTarget = strcat(source, \"::\", target)\n| project timeUtc, source, sourceTarget, messages, device, _ResourceId\n| order by device, sourceTarget, timeUtc\n| serialize\n| extend nextCount = next(messages, 1)\n| extend nextSourceTarget= next(sourceTarget, 1)\n| extend diff = iff((messages - nextCount) >= 0, messages - nextCount, 0)\n| where sourceTarget == nextSourceTarget and diff >= 0\n| project TimeGenerated = timeUtc, source, sourceTarget, messages, diff,\ndevice, _ResourceId\n| make-series sum(diff) default=0 on TimeGenerated from ago(2d) to now()\nstep 30m by device, _ResourceId\n| mv-expand sum_diff, TimeGenerated\n| project TimeGenerated=todatetime(TimeGenerated), device,\nAggregatedValue=toint(sum_diff), _ResourceId",
+    "deviceOfflineAlertMetricMeasureColumn": "AggregatedValue",
+
+    "actionGroupDeploymentName": "[concat('actiongroup-', parameters('environmentHashId'))]",
+    "actionGroupName": "ELMSGroup",
+    "actionGroupDisplayName": "[concat('ELMS Monitor Action Group ', parameters('environmentHashId'))]",
+    "actionGroupInternal": [
+      "[resourceId('microsoft.insights/actionGroups', variables('actionGroupName'))]"
+    ],
+    "actionGroupExternal": [
+      "[parameters('additionalActionGroup')]"
+    ],
+    "actionGroupDual": [
+      "[resourceId('microsoft.insights/actionGroups', variables('actionGroupName'))]",
+      "[parameters('additionalActionGroup')]"
+    ],
+    "actionGroupNone": [],
+    "actionGroups": "[if(parameters('createFunctionActionGroup'), if(not(empty(parameters('additionalActionGroup'))), variables('actionGroupDual'), variables('actionGroupInternal')), if(not(empty(parameters('additionalActionGroup'))), variables('actionGroupExternal'), variables('actionGroupNone')))]"
+  },
+  "resources": [
+    {
+      "comments": "action group",
+      "condition": "[parameters('createFunctionActionGroup')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+      "name": "[variables('actionGroupDeploymentName')]",
+      "dependsOn": [],
+      "tags": {
+        "elms": "true",
+        "scope": "[parameters('scope')]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "contentVersion": "1.0.0.0",
+          "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/monitor-actiongroup-deploy.json')]"
+        },
+        "parameters": {
+          "name": {
+            "value": "[variables('actionGroupName')]"
+          },
+          "displayName": {
+            "value": "[variables('actionGroupDisplayName')]"
+          },
+          "functionAppName": {
+            "value": "[parameters('functionAppName')]"
+          },
+          "functionAppId": {
+            "value": "[parameters('functionAppResourceId')]"
+          },
+          "functionName": {
+            "value": "[parameters('alertFunctionName')]"
+          },
+          "functionHttpTriggerUrl": {
+            "value": "[parameters('functionHttpTriggerUrl')]"
+          },
+          "useCommonAlertSchema": {
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "comments": "queue size alert",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+      "name": "[variables('queueSizeAlertDeploymentName')]",
+      "dependsOn": [
+        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), '')]"
+      ],
+      "tags": {
+        "elms": "true",
+        "scope": "[parameters('scope')]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "contentVersion": "1.0.0.0",
+          "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/monitor-alert-deploy.json')]"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "name": {
+            "value": "[variables('queueSizeAlertName')]"
+          },
+          "description": {
+            "value": "[variables('queueSizeAlertDescription')]"
+          },
+          "severity": {
+            "value": "[parameters('severity')]"
+          },
+          "evaluationFrequency": {
+            "value": "[parameters('queueSizeAlertEvaluationFrequency')]"
+          },
+          "windowSize": {
+            "value": "[parameters('queueSizeAlertWindowSize')]"
+          },
+          "scope": {
+            "value": "[parameters('scope')]"
+          },
+          "dimensions": {
+            "value": [
+              {
+                "name": "device",
+                "operator": "Include",
+                "values": [
+                  "*"
+                ]
+              },
+              {
+                "name": "_ResourceId",
+                "operator": "Include",
+                "values": [
+                  "[parameters('scope')]"
+                ]
+              }
+            ]
+          },
+          "query": {
+            "value": "[variables('queueSizeAlertQuery')]"
+          },
+          "timeAggregation": {
+            "value": "Count"
+          },
+          "operator": {
+            "value": "GreaterThan"
+          },
+          "threshold": {
+            "value": "[parameters('queueSizeAlertThreshold')]"
+          },
+          "actionGroupIds": {
+            "value": "[variables('actionGroups')]"
+          }
+        }
+      }
+    },
+    {
+      "comments": "device disk space alert",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+      "name": "[variables('deviceDiskSpaceAlertDeploymentName')]",
+      "dependsOn": [
+        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), '')]"
+      ],
+      "tags": {
+        "elms": "true",
+        "scope": "[parameters('scope')]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "contentVersion": "1.0.0.0",
+          "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/monitor-alert-deploy.json')]"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "name": {
+            "value": "[variables('deviceDiskSpaceAlertName')]"
+          },
+          "description": {
+            "value": "[variables('deviceDiskSpaceAlertDescription')]"
+          },
+          "severity": {
+            "value": "[parameters('severity')]"
+          },
+          "evaluationFrequency": {
+            "value": "[parameters('deviceDiskSpaceAlertEvaluationFrequency')]"
+          },
+          "windowSize": {
+            "value": "[parameters('deviceDiskSpaceAlertWindowSize')]"
+          },
+          "scope": {
+            "value": "[parameters('scope')]"
+          },
+          "dimensions": {
+            "value": [
+              {
+                "name": "device",
+                "operator": "Include",
+                "values": [
+                  "*"
+                ]
+              },
+              {
+                "name": "_ResourceId",
+                "operator": "Include",
+                "values": [
+                  "[parameters('scope')]"
+                ]
+              }
+            ]
+          },
+          "query": {
+            "value": "[variables('deviceDiskSpaceAlertQuery')]"
+          },
+          "metricMeasureColumn": {
+            "value": "[variables('deviceDiskSpaceAlertMetricMeasureColumn')]"
+          },
+          "timeAggregation": {
+            "value": "Total"
+          },
+          "operator": {
+            "value": "GreaterThan"
+          },
+          "threshold": {
+            "value": "[parameters('deviceDiskSpaceAlertThreshold')]"
+          },
+          "actionGroupIds": {
+            "value": "[variables('actionGroups')]"
+          }
+        }
+      }
+    },
+    {
+      "comments": "device offline alert",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+      "name": "[variables('deviceOfflineAlertDeploymentName')]",
+      "dependsOn": [
+        "[if(parameters('createFunctionActionGroup'), variables('actionGroupDeploymentName'), '')]"
+      ],
+      "tags": {
+        "elms": "true",
+        "scope": "[parameters('scope')]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "contentVersion": "1.0.0.0",
+          "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/monitor-alert-deploy.json')]"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "name": {
+            "value": "[variables('deviceOfflineAlertName')]"
+          },
+          "description": {
+            "value": "[variables('deviceOfflineAlertDescription')]"
+          },
+          "severity": {
+            "value": "[parameters('severity')]"
+          },
+          "evaluationFrequency": {
+            "value": "[parameters('deviceOfflineAlertEvaluationFrequency')]"
+          },
+          "windowSize": {
+            "value": "[parameters('deviceOfflineAlertWindowSize')]"
+          },
+          "scope": {
+            "value": "[parameters('scope')]"
+          },
+          "dimensions": {
+            "value": [
+              {
+                "name": "device",
+                "operator": "Include",
+                "values": [
+                  "*"
+                ]
+              },
+              {
+                "name": "_ResourceId",
+                "operator": "Include",
+                "values": [
+                  "[parameters('scope')]"
+                ]
+              }
+            ]
+          },
+          "metricMeasureColumn": {
+            "value": "[variables('deviceOfflineAlertMetricMeasureColumn')]"
+          },
+          "query": {
+            "value": "[variables('deviceOfflineAlertQuery')]"
+          },
+          "timeAggregation": {
+            "value": "Total"
+          },
+          "operator": {
+            "value": "GreaterThan"
+          },
+          "threshold": {
+            "value": "[parameters('deviceOfflineAlertThreshold')]"
+          },
+          "actionGroupIds": {
+            "value": "[variables('actionGroups')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "resourceIds": {
+      "type": "array",
+      "value": [
+        "[if(parameters('createFunctionActionGroup'), reference(variables('actionGroupDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.resourceId.value, '')]",
+        "[reference(variables('deviceDiskSpaceAlertDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.resourceId.value]",
+        "[reference(variables('deviceOfflineAlertDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.resourceId.value]",
+        "[reference(variables('queueSizeAlertDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.resourceId.value]"
+      ]
+    }
+  }
+}
