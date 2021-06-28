@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -7,16 +9,15 @@ using Azure.Storage.Blobs;
 using Microsoft.Azure.Devices;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
-using FunctionApp.Models;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using FunctionApp.Models;
 
 namespace FunctionApp
 {
     public static class InvokeUploadModuleLogs
     {
-        private static ServiceClient _serviceClient;
         private static string _iotHubConnectionString = Environment.GetEnvironmentVariable("HubConnectionString");
         private static string _iotDeviceQuery = Environment.GetEnvironmentVariable("DeviceQuery");
         private static string _logsIdRegex = Environment.GetEnvironmentVariable("LogsIdRegex");
@@ -31,14 +32,14 @@ namespace FunctionApp
 
         [FunctionName("InvokeUploadModuleLogs")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
             try
             {
                 log.LogInformation("InvokeUploadModuleLogs function started.");
 
-                /// It is important to set as null the values that won't be used 
+                /// It is important to set as null the values that won't be used
                 /// so the serialization done later in this code ignores them
                 #region cast and fix payload property types
                 int? logLevel = null;
@@ -53,11 +54,45 @@ namespace FunctionApp
                     _logsRegex = null;
 
                 if (string.IsNullOrEmpty(_logsEncoding))
-                    _logsEncoding = "none";
+                    _logsEncoding = "gzip";
 
                 if (string.IsNullOrEmpty(_logsContentType))
                     _logsContentType = "json";
                 #endregion
+
+                // Check payload to see if a specific resource is requested
+                string[] deviceIds = null;
+
+                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                dynamic dynamicData = JsonConvert.DeserializeObject(requestBody);
+                string windowSize = dynamicData?.windowSize;
+                if (!string.IsNullOrEmpty(windowSize))
+                {
+                    AlertSummary alertSummary = JsonConvert.DeserializeObject<AlertSummary>(requestBody);
+
+                    // create devices list with the device that triggered the alert
+                    deviceIds = alertSummary.Dimensions.Select(x => x.Device.DeviceId).ToArray();
+
+                    // verify if window size was provided in the alert
+                    if (!string.IsNullOrEmpty(alertSummary.WindowSize))
+                        _logsSince = $"{System.Xml.XmlConvert.ToTimeSpan(alertSummary.WindowSize).Minutes}m";
+                    else
+                        _logsSince = "1h";
+
+                    // overwrite direct method parameters to retrieve the most information possible
+                    _logsIdRegex = ".*";
+                    _logsRegex = ".*";
+                    logLevel = null;
+                    logsTail = null;
+                }
+                else
+                {
+                    // query IoT edge devices
+                    var registryManager = RegistryManager.CreateFromConnectionString(_iotHubConnectionString);
+                    var query = registryManager.CreateQuery(_iotDeviceQuery);
+                    var devices = (await query.GetNextAsJsonAsync()).ToArray();
+                    deviceIds = devices.Select(x => JsonConvert.DeserializeObject<JObject>(x).GetValue("deviceId").ToString()).ToArray();
+                }
 
                 // get container SAS token URL
                 BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
@@ -65,20 +100,15 @@ namespace FunctionApp
                 DateTimeOffset expiresOn = new DateTimeOffset(DateTime.UtcNow.AddHours(12));
                 Uri sasUri = container.GenerateSasUri(permissions, expiresOn);
 
-                // query IoT devices
-                var registryManager = RegistryManager.CreateFromConnectionString(_iotHubConnectionString);
-                var query = registryManager.CreateQuery(_iotDeviceQuery);
-                var devices = await query.GetNextAsJsonAsync();
-                _serviceClient = ServiceClient.CreateFromConnectionString(_iotHubConnectionString);
-
                 // invoke direct method on every device
                 string moduleId = "$edgeAgent";
                 string methodName = "UploadModuleLogs";
+                ServiceClient _serviceClient = ServiceClient.CreateFromConnectionString(_iotHubConnectionString);
 
-                foreach (var device in devices)
+                foreach (string deviceId in deviceIds)
                 {
-                    JObject deviceJson = JsonConvert.DeserializeObject<JObject>(device);
-                    string deviceId = deviceJson.GetValue("deviceId").ToString();
+                    //JObject deviceJson = JsonConvert.DeserializeObject<JObject>(device);
+                    //string deviceId = deviceJson.GetValue("deviceId").ToString();
 
                     var data = new UploadModuleLogs()
                     {
@@ -113,8 +143,15 @@ namespace FunctionApp
                     var deviceMethod = new CloudToDeviceMethod(methodName);
                     deviceMethod.SetPayloadJson(serializedData);
 
-                    var result = await _serviceClient.InvokeDeviceMethodAsync(deviceId, moduleId, deviceMethod);
-                    log.LogInformation($"InvokeUploadModuleLogs: Method '{methodName}' on module '{moduleId}' on device '{deviceId}': Status code: {result.Status}. Response: {result.GetPayloadAsJson()}");
+                    try
+                    {
+                        var result = await _serviceClient.InvokeDeviceMethodAsync(deviceId, moduleId, deviceMethod);
+                        log.LogInformation($"InvokeUploadModuleLogs: Method '{methodName}' on module '{moduleId}' on device '{deviceId}': Status code: {result.Status}. Response: {result.GetPayloadAsJson()}");
+                    }
+                    catch (Exception e)
+                    {
+                        log.LogInformation($"InvokeUploadModuleLogs: Method '{methodName}' on module '{moduleId}' on device '{deviceId}' failed with exception: {e.Message}");
+                    }
                 }
 
                 return new OkResult();

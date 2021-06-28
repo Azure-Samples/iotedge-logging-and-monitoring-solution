@@ -8,9 +8,9 @@ namespace FunctionApp
 {
     public class ScheduleUploadModuleLogs
     {
-        private string _hostKey = Environment.GetEnvironmentVariable("HostKey");
-        private string _hostUrl = Environment.GetEnvironmentVariable("HostUrl");
-        private string _httpTriggerFunction = Environment.GetEnvironmentVariable("HttpTriggerFunction");
+        private readonly string _hostKey = Environment.GetEnvironmentVariable("HostKey");
+        private readonly string _hostUrl = Environment.GetEnvironmentVariable("HostUrl");
+        private readonly string _invokeModuleLogUploadFunction = Environment.GetEnvironmentVariable("HttpTriggerFunction");
         public HttpClient _httpClient;
 
         public ScheduleUploadModuleLogs(HttpClient httpClient)
@@ -25,9 +25,9 @@ namespace FunctionApp
             {
                 log.LogInformation($"ScheduleUploadModuleLogs function executed at: {DateTime.Now}");
 
-                string url = $"{this._hostUrl}/api/{this._httpTriggerFunction}?code={this._hostKey}";
+                string url = $"{this._hostUrl}/api/{this._invokeModuleLogUploadFunction}?code={this._hostKey}";
                 log.LogInformation($"Calling endpoint {url} to invoke module logs upload method");
-                var response = await this._httpClient.GetAsync(url);
+                var response = await this._httpClient.PostAsJsonAsync<object>(url, new { });
 
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
