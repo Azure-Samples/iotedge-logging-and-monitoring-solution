@@ -3,12 +3,12 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "name": {
+      "type": "string"
+    },
+    "shortName": {
       "type": "string",
       "minLength": 3,
       "maxLength": 12
-    },
-    "displayName": {
-      "type": "string"
     },
     "functionAppName": {
       "type": "string"
@@ -32,10 +32,10 @@
     {
       "type": "microsoft.insights/actionGroups",
       "apiVersion": "2019-06-01",
-      "name": "[parameters('displayName')]",
+      "name": "[parameters('name')]",
       "location": "Global",
       "properties": {
-        "groupShortName": "[parameters('name')]",
+        "groupShortName": "[parameters('shortName')]",
         "enabled": true,
         "azureFunctionReceivers": [
           {

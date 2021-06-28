@@ -153,8 +153,8 @@
     "deviceOfflineAlertMetricMeasureColumn": "AggregatedValue",
 
     "actionGroupDeploymentName": "[concat('actiongroup-', parameters('environmentHashId'))]",
-    "actionGroupName": "ELMSGroup",
-    "actionGroupDisplayName": "[concat('ELMS Monitor Action Group ', parameters('environmentHashId'))]",
+    "actionGroupName": "[concat('ELMS Monitor Action Group ', parameters('environmentHashId'))]",
+    "actionGroupShortName": "ELMSGroup",
     "actionGroupInternal": [
       "[resourceId('microsoft.insights/actionGroups', variables('actionGroupName'))]"
     ],
@@ -205,10 +205,10 @@
         },
         "parameters": {
           "name": {
-            "value": "[variables('actionGroupName')]"
+            "value": "[variables('actionGroupShortName')]"
           },
           "displayName": {
-            "value": "[variables('actionGroupDisplayName')]"
+            "value": "[variables('actionGroupName')]"
           },
           "functionAppName": {
             "value": "[parameters('functionAppName')]"
