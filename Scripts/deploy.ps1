@@ -1102,7 +1102,7 @@ function New-IoTEnvironment() {
     Write-Host "Invoking first module logs pull request"
     $attemps = 3
     do {
-        $response = Invoke-WebRequest -Uri "https://$($function_app_hostname)/api/$($invoke_log_upload_function_name)?code=$($function_key)" -ErrorAction Ignore
+        $response = Invoke-WebRequest -Method Post -Uri "https://$($function_app_hostname)/api/$($invoke_log_upload_function_name)?code=$($function_key)" -ErrorAction Ignore
         $attemps--
 
         if ($response.StatusCode -eq 200) {
