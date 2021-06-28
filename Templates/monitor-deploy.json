@@ -204,10 +204,10 @@
           "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/monitor-actiongroup-deploy.json')]"
         },
         "parameters": {
-          "name": {
+          "shortName": {
             "value": "[variables('actionGroupShortName')]"
           },
-          "displayName": {
+          "name": {
             "value": "[variables('actionGroupName')]"
           },
           "functionAppName": {
