@@ -50,7 +50,11 @@ function New-IoTEnvironment() {
     Read-Host
 
     #region deployment option
-    $deployment_options = @("Create a sandbox environment for testing (fastest)", "Custom deployment (most flexible)", "Deploy Monitor Alerts (requires an existing deployment and the metrics collector solution running at the edge)")
+    $deployment_options = @(
+        "Create a sandbox environment for testing (fastest)",
+        "Custom deployment (most flexible)",
+        "Deploy Monitoring alerts (requires an existing ELMS deployment with metrics collection enabled)"
+    )
     Write-Host
     Write-Host "Choose a deployment option from the list (using its Index):"
     for ($index = 0; $index -lt $deployment_options.Count; $index++) {
@@ -111,6 +115,7 @@ function New-IoTEnvironment() {
         $monitoring_mode = "IoTMessage"
     }
     elseif ($deployment_option -eq 2) {
+
         #region iot hub
         $iot_hubs = az iot hub list | ConvertFrom-Json | Sort-Object -Property id
         if ($iot_hubs.Count -gt 0) {
@@ -332,6 +337,13 @@ function New-IoTEnvironment() {
         #endregion
     }
     elseif ($deployment_option -eq 3) {
+        
+        Write-Host
+        Write-Host "Monitoring Alerts feed from built-in metrics from the IoT Edge runtime collected by the metrics-collector module. The pre-configured alert rules monitor three events in your IoT edge devices: offline devices or not sending messages upstream at an expected rate, edge hub queues growing in size over time and percentage of total disk space used per edge device. Additionally, you can choose between pulling logs from edge devices into Log Analytics periodically or whenever an alert is triggered, thus using less bandwidth and overall storage. You can also link an existing Monitoring action group to the pre-configured alerts to get user notifications in real-time. For more information on the Azure Monitor Log alerts associated iwth IoT edge devices, visit https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-alerts?view=iotedge-2020-11."
+        Write-Host
+        Write-Host "Press Enter to continue."
+        Read-Host
+
         #region find iot hub
         $iot_hubs = az iot hub list | ConvertFrom-Json | Sort-Object -Property id
         Write-Host
@@ -400,7 +412,7 @@ function New-IoTEnvironment() {
         #region update tags in function app (if needed)
         if (!$function_app.tags.elms) {
             Write-Host
-            Write-Host "The function app $($function_app.name) in resource group $($function_app.resourceGroup) is linked to your IoT hub. However, it lacks some of the latest tags that help identify the resource as part of your ELMS deployment."
+            Write-Host "The function app '$($function_app.name)' lacks some of the latest tags that help identify the resource as part of your ELMS deployment."
             Write-Host "Updating resource tags..."
 
             az resource tag `
@@ -552,7 +564,7 @@ function New-IoTEnvironment() {
             
             "queueSizeAlertEvaluationFrequency" = @{ "value" = "PT30M" }
             "queueSizeAlertWindowSize"          = @{ "value" = "PT30M" }
-            "queueSizeAlertThreshold"           = @{ "value" = 10 }
+            "queueSizeAlertThreshold"           = @{ "value" = 3 }
             
             "deviceDiskSpaceAlertEvaluationFrequency" = @{ "value" = "PT30M" }
             "deviceDiskSpaceAlertWindowSize"          = @{ "value" = "PT30M" }

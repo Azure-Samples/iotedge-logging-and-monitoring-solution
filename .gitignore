@@ -354,3 +354,4 @@ Templates/azuredeploy.parameters.json
 EdgeSolution/monitoring.deployment.json
 Templates/iotedge-vm-deploy.parameters.json
 Templates/monitor-deploy.parameters.json
+Scripts/package-az-function.ps1
