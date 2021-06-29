@@ -505,13 +505,14 @@
     "functionAppHostingPlanName": "[concat(parameters('functionAppName'), '-plan')]",
     "functionStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'function')]",
     "functionStorageAccountSku": "Standard_LRS",
-    "functionStorageAccountEndpointSuffix": "[if(startsWith(resourceGroup().location, 'usgov'), 'core.usgovcloudapi.net', if(startsWith(resourceGroup().location, 'usdod'), 'core.usgovcloudapi.net', 'core.windows.net'))]",
+    "storageAccountEndpointSuffix": "[if(startsWith(resourceGroup().location, 'usgov'), 'core.usgovcloudapi.net', if(startsWith(resourceGroup().location, 'usdod'), 'core.usgovcloudapi.net', 'core.windows.net'))]",
     "functionFileShareName": "[substring(replace(concat(toLower(parameters('functionAppName')), parameters('environmentHashId')), '-', ''), 0, 25)]",
     "functionAppResourceId": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
     "functionApiVersion": "2018-11-01",
     "appInsightsName": "[parameters('functionAppName')]",
     "workspaceId": "[resourceId(parameters('workspaceResourceGroup'), 'Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
     "workspaceApiVersion": "[providers('microsoft.operationalinsights', 'workspaces').apiVersions[0]]",
+    "workspaceDomain": "[if(startsWith(resourceGroup().location, 'usgov'), 'opinsights.azure.us', if(startsWith(resourceGroup().location, 'usdod'), 'opinsights.azure.us', 'opinsights.azure.com'))]",
     "iotHubDeploymentNames": {
       "true": "[concat('iothub-with-route-', parameters('environmentHashId'))]",
       "false": "[concat('iothub-', parameters('environmentHashId'))]"
@@ -924,11 +925,11 @@
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2018-11-01').keys[0].value, ';EndpointSuffix=', variables('functionStorageAccountEndpointSuffix'))]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2018-11-01').keys[0].value, ';EndpointSuffix=', variables('storageAccountEndpointSuffix'))]"
             },
             {
               "name": "AzureWebJobsDashboard",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2018-11-01').keys[0].value, ';EndpointSuffix=', variables('functionStorageAccountEndpointSuffix'))]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2018-11-01').keys[0].value, ';EndpointSuffix=', variables('storageAccountEndpointSuffix'))]"
             },
             {
               "name": "WEBSITE_CONTENTSHARE",
@@ -936,7 +937,7 @@
             },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2018-11-01').keys[0].value, ';EndpointSuffix=', variables('functionStorageAccountEndpointSuffix'))]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2018-11-01').keys[0].value, ';EndpointSuffix=', variables('storageAccountEndpointSuffix'))]"
             },
             {
               "name": "FUNCTIONS_EXTENSION_VERSION",
@@ -956,7 +957,7 @@
             },
             {
               "name": "StorageConnectionString",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', reference(variables('eventGridDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.storageAccountKey.value, ';')]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', reference(variables('eventGridDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.storageAccountKey.value, ';EndpointSuffix=', variables('storageAccountEndpointSuffix'))]"
             },
             {
               "name": "QueueName",
@@ -1037,6 +1038,10 @@
             {
               "name": "WorkspaceKey",
               "value": "[listKeys(variables('workspaceId'), variables('workspaceApiVersion')).primarySharedKey]"
+            },
+            {
+              "name": "WorkspaceDomain",
+              "value": "[variables('workspaceDomain')]"
             },
             {
               "name": "HttpTriggerFunction",

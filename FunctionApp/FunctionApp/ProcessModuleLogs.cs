@@ -20,6 +20,7 @@ namespace FunctionApp
         private static string _containerName = Environment.GetEnvironmentVariable("ContainerName");
         private static string _workspaceId = Environment.GetEnvironmentVariable("WorkspaceId");
         private static string _workspaceKey = Environment.GetEnvironmentVariable("WorkspaceKey");
+        private static string _workspaceDomain = Environment.GetEnvironmentVariable("WorkspaceDomain");
         private static string _workspaceApiVersion = Environment.GetEnvironmentVariable("WorkspaceApiVersion");
         private static string _logsEncoding = Environment.GetEnvironmentVariable("LogsEncoding");
         private static string _logType = Environment.GetEnvironmentVariable("LogType");
@@ -87,6 +88,7 @@ namespace FunctionApp
                 AzureLogAnalytics logAnalytics = new AzureLogAnalytics(
                     workspaceId: _workspaceId,
                     workspaceKey: _workspaceKey,
+                    workspaceDomain: _workspaceDomain,
                     logger: log,
                     apiVersion: _workspaceApiVersion);
 

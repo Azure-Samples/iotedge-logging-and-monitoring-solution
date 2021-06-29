@@ -18,15 +18,17 @@ namespace FunctionApp
     {
         public string WorkspaceId { get; set; }
         private string _workspaceKey { get; set; }
+        public string WorkspaceDomain { get; set; }
         public string ApiVersion { get; set; }
         public ILogger Logger { get; set; }
         private int failurecount = 0;
         private DateTime lastFailureReportedTime = DateTime.UnixEpoch;
 
-        public AzureLogAnalytics(string workspaceId, string workspaceKey, ILogger logger, string apiVersion = "2016-04-01")
+        public AzureLogAnalytics(string workspaceId, string workspaceKey, string workspaceDomain, ILogger logger, string apiVersion = "2016-04-01")
         {
             this.WorkspaceId = workspaceId;
             this._workspaceKey = workspaceKey;
+            this.WorkspaceDomain = workspaceDomain;
             this.ApiVersion = apiVersion;
             this.Logger = logger;
         }
@@ -44,7 +46,7 @@ namespace FunctionApp
         {
             try
             {
-                string requestUriString = $"https://{WorkspaceId}.ods.{Constants.DefaultLogAnalyticsWorkspaceDomain}/api/logs?api-version={ApiVersion}";
+                string requestUriString = $"https://{WorkspaceId}.ods.{WorkspaceDomain}/api/logs?api-version={ApiVersion}";
                 DateTime dateTime = DateTime.UtcNow;
                 string dateString = dateTime.ToString("r");
                 string signature = GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
@@ -103,7 +105,7 @@ namespace FunctionApp
             try
             {
                 // Lazily generate and register certificate.
-                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = CertGenerator.RegisterAgentWithOMS(this.WorkspaceId, this._workspaceKey, Constants.DefaultLogAnalyticsWorkspaceDomain);
+                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = CertGenerator.RegisterAgentWithOMS(this.WorkspaceId, this._workspaceKey, this.WorkspaceDomain);
                 
                 using (var handler = new HttpClientHandler())
                 {
@@ -112,7 +114,7 @@ namespace FunctionApp
                     handler.PreAuthenticate = true;
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
 
-                    Uri requestUri = new Uri("https://" + this.WorkspaceId + ".ods." + Constants.DefaultLogAnalyticsWorkspaceDomain + "/OperationalData.svc/PostJsonDataItems");
+                    Uri requestUri = new Uri("https://" + this.WorkspaceId + ".ods." + this.WorkspaceDomain + "/OperationalData.svc/PostJsonDataItems");
 
                     using (HttpClient client = new HttpClient(handler))
                     {
