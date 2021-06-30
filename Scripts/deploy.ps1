@@ -339,7 +339,7 @@ function New-IoTEnvironment() {
     elseif ($deployment_option -eq 3) {
         
         Write-Host
-        Write-Host "Monitoring Alerts feed from built-in metrics from the IoT Edge runtime collected by the metrics-collector module. The pre-configured alert rules monitor three events in your IoT edge devices: offline devices or not sending messages upstream at an expected rate, edge hub queues growing in size over time and percentage of total disk space used per edge device. Additionally, you can choose between pulling logs from edge devices into Log Analytics periodically or whenever an alert is triggered, thus using less bandwidth and overall storage. You can also link an existing Monitoring action group to the pre-configured alerts to get user notifications in real-time. For more information on the Azure Monitor Log alerts associated iwth IoT edge devices, visit https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-alerts?view=iotedge-2020-11."
+        Write-Host "Monitoring Alerts feed from built-in metrics from the IoT Edge runtime collected by the metrics-collector module. The pre-configured alert rules monitor three events in your IoT edge devices: offline devices or not sending messages upstream at an expected rate, edge hub queues growing in size over time and percentage of total disk space used per edge device. Additionally, you can choose between pulling logs from edge devices into Log Analytics periodically or whenever an alert is triggered, thus using less bandwidth and overall storage. You can also link an existing Monitoring action group to the pre-configured alerts to get user notifications in real-time. For more information on the Azure Monitor Log alerts associated with IoT edge devices, visit https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-alerts?view=iotedge-2020-11."
         Write-Host
         Write-Host "Press Enter to continue."
         Read-Host
@@ -507,7 +507,8 @@ function New-IoTEnvironment() {
             $action_group_options = @("Yes", "No")
             
             Write-Host
-            Write-Host "Do you want to link an existing Monitor action group to the ELMS alerts? Choose an option from the list (using its Index):"
+            Write-Host "Action Groups in Azure Monitor are a collection of notification preferences defined by the owner of an Azure subscription. Azure Monitor and Service Health alerts use action groups to notify users that an alert has been triggered."
+            Write-Host "Do you want to link an existing action group to the ELMS alerts? Choose an option from the list (using its Index):"
             for ($index = 0; $index -lt $action_group_options.Count; $index++) {
                 Write-Host "$($index + 1): $($action_group_options[$index])"
             }
@@ -601,14 +602,14 @@ function New-IoTEnvironment() {
 
         #region disable periodic log pull if desired
         if ($create_action_group) {
-            $schedule_log_upload_function = az functionapp show `
+            $schedule_log_upload_function = az functionapp function show `
                 --resource-group $function_app.resourceGroup `
                 --name $function_app.name `
                 --function-name $schedule_log_upload_function_name | ConvertFrom-Json
             
             if (!$schedule_log_upload_function.isDisabled) {
                 Write-Host
-                Write-Host -ForegroundColor Yellow "NOTE: The function '$schedule_log_upload_function_name' will be disabled in your function app in order to turn off the periodic log pull functionality. You can always turn it back on by going to the 'Functions' section of your function app in the Azure Portal."
+                Write-Host -ForegroundColor Yellow "NOTE: The timer function '$schedule_log_upload_function_name' will be disabled in your function app in order to turn off the periodic log pull functionality. You can always turn it back on by going to the 'Functions' section of your function app in the Azure Portal."
                 az functionapp config appsettings set `
                     --resource-group $function_app.resourceGroup `
                     --name $function_app.name `
