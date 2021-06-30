@@ -163,7 +163,7 @@ namespace FunctionApp
 
                             if (DateTime.Now - lastFailureReportedTime > TimeSpan.FromMinutes(1))
                             {
-                                this.Logger.LogDebug(
+                                this.Logger.LogError(
                                     "abnormal HTTP response code - " +
                                     "responsecode: " + ((int)response.StatusCode).ToString() + " " +
                                     "reasonphrase: " + response.ReasonPhrase + " " +
