@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Net.Http;
 using Newtonsoft.Json;
 using FunctionApp.Models;
 using Microsoft.Azure.WebJobs;
@@ -13,21 +14,27 @@ using System.Threading.Tasks;
 
 namespace FunctionApp
 {
-    public static class ProcessModuleLogs
+    public class ProcessModuleLogs
     {
-        private static string _hubResourceId = Environment.GetEnvironmentVariable("HubResourceId");
-        private static string _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
-        private static string _containerName = Environment.GetEnvironmentVariable("ContainerName");
-        private static string _workspaceId = Environment.GetEnvironmentVariable("WorkspaceId");
-        private static string _workspaceKey = Environment.GetEnvironmentVariable("WorkspaceKey");
-        private static string _workspaceApiVersion = Environment.GetEnvironmentVariable("WorkspaceApiVersion");
-        private static string _logsEncoding = Environment.GetEnvironmentVariable("LogsEncoding");
-        private static string _logType = Environment.GetEnvironmentVariable("LogType");
-        private static int _logMaxSizeMB = Convert.ToInt32(Environment.GetEnvironmentVariable("LogsMaxSizeMB"));
-        private static bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
+        private string _hubResourceId = Environment.GetEnvironmentVariable("HubResourceId");
+        private string _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
+        private string _containerName = Environment.GetEnvironmentVariable("ContainerName");
+        private string _workspaceId = Environment.GetEnvironmentVariable("WorkspaceId");
+        private string _workspaceKey = Environment.GetEnvironmentVariable("WorkspaceKey");
+        private string _workspaceApiVersion = Environment.GetEnvironmentVariable("WorkspaceApiVersion");
+        private string _logsEncoding = Environment.GetEnvironmentVariable("LogsEncoding");
+        private string _logType = Environment.GetEnvironmentVariable("LogType");
+        private int _logMaxSizeMB = Convert.ToInt32(Environment.GetEnvironmentVariable("LogsMaxSizeMB"));
+        private bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
+        private HttpClient _httpClient;
         
+        public ProcessModuleLogs(HttpClient httpClient)
+        {
+            this._httpClient = httpClient;
+        }
+
         [FunctionName("ProcessModuleLogs")]
-        public static async Task Run(
+        public async Task Run(
             [QueueTrigger("%QueueName%", Connection = "StorageConnectionString")] string queueItem,
             ILogger log)
         {
@@ -85,6 +92,7 @@ namespace FunctionApp
 
                 // initialize log analytics class
                 AzureLogAnalytics logAnalytics = new AzureLogAnalytics(
+                    this._httpClient,
                     workspaceId: _workspaceId,
                     workspaceKey: _workspaceKey,
                     logger: log,

@@ -39,11 +39,13 @@ namespace FunctionApp
                     metricsString = Encoding.UTF8.GetString(eventHubMessages.Body);
 
                 IoTHubMetric[] iotHubMetrics = JsonConvert.DeserializeObject<IoTHubMetric[]>(metricsString);
-                IEnumerable<LaMetric> metricsToUpload = iotHubMetrics.Select(m => new LaMetric(m, string.Empty));
-                LaMetricList metricList = new LaMetricList(metricsToUpload);
+                IEnumerable<UploadMetric> metricsToUpload = iotHubMetrics.Select(m => new UploadMetric(m));
+                //IEnumerable<LaMetric> metricsToUpload = iotHubMetrics.Select(m => new LaMetric(m, string.Empty));
+                //LaMetricList metricList = new LaMetricList(metricsToUpload);
 
                 // initialize log analytics class
                 AzureLogAnalytics logAnalytics = new AzureLogAnalytics(
+                    new System.Net.Http.HttpClient(),
                     workspaceId: _workspaceId,
                     workspaceKey: _workspaceKey,
                     logger: log,
@@ -53,13 +55,16 @@ namespace FunctionApp
                 for (int i = 0; i < Constants.UploadMaxRetries && (!success); i++)
                 {
                     // TODO: split up metricList so that no individual post is greater than 1mb
-                    success = await logAnalytics.PostToInsightsMetricsAsync(JsonConvert.SerializeObject(metricList), _hubResourceId, _compressForUpload);
+                    //success = await logAnalytics.PostToInsightsMetricsAsync(JsonConvert.SerializeObject(metricList), _hubResourceId, _compressForUpload);
+                    success = await logAnalytics.PostAsync(JsonConvert.SerializeObject(metricsToUpload), _hubResourceId);
                 }
 
                 if (success)
-                    log.LogInformation($"Successfully sent {metricList.DataItems.Count()} metrics to fixed set table");
+                    // log.LogInformation($"Successfully sent {metricList.DataItems.Count()} metrics to fixed set table");
+                    log.LogInformation($"Successfully sent {metricsToUpload.Count()} metrics to fixed set table");
                 else
-                    log.LogError($"Failed to send {metricList.DataItems.Count()} metrics to fixed set table after {Constants.UploadMaxRetries} retries");
+                    // log.LogError($"Failed to send {metricList.DataItems.Count()} metrics to fixed set table after {Constants.UploadMaxRetries} retries");
+                    log.LogError($"Failed to send {metricsToUpload.Count()} metrics to fixed set table after {Constants.UploadMaxRetries} retries");
             }
             catch (Exception e)
             {

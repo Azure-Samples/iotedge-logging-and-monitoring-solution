@@ -11,7 +11,7 @@ namespace FunctionApp
         private readonly string _hostKey = Environment.GetEnvironmentVariable("HostKey");
         private readonly string _hostUrl = Environment.GetEnvironmentVariable("HostUrl");
         private readonly string _invokeModuleLogUploadFunction = Environment.GetEnvironmentVariable("HttpTriggerFunction");
-        public HttpClient _httpClient;
+        private HttpClient _httpClient;
 
         public ScheduleUploadModuleLogs(HttpClient httpClient)
         {

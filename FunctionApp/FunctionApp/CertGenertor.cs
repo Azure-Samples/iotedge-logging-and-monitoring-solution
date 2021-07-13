@@ -19,10 +19,18 @@
     using Org.BouncyCastle.Security;
     using Org.BouncyCastle.Utilities;
     using Org.BouncyCastle.Asn1.X509;
+    using Microsoft.Extensions.Logging;
 
-    public static class CertGenerator
+    public class CertGenerator
     {
-        internal static class Constants
+        private ILogger _logger { get; set; }
+
+        public CertGenerator(ILogger logger)
+        {
+            this._logger = logger;
+        }
+
+        internal class Constants
         {
             /// <summary>
             /// constants related to masking the secrets in container environment variable
@@ -32,7 +40,7 @@
             public const string DEFAULT_SIGNATURE_ALOGIRTHM = "SHA256WithRSA";
         }
 
-        private static (X509Certificate2, (string, byte[]), string) CreateSelfSignedCertificate(string agentGuid, string logAnalyticsWorkspaceId)
+        private (X509Certificate2, (string, byte[]), string) CreateSelfSignedCertificate(string agentGuid, string logAnalyticsWorkspaceId)
         {
             var random = new SecureRandom();
 
@@ -108,13 +116,13 @@
         }
 
         // Delete the certificate and key files
-        private static void DeleteCertificateAndKeyFile()
+        private void DeleteCertificateAndKeyFile()
         {
             File.Delete(Environment.GetEnvironmentVariable("CI_CERT_LOCATION"));
             File.Delete(Environment.GetEnvironmentVariable("CI_KEY_LOCATION"));
         }
 
-        private static string Sign(string requestdate, string contenthash, string key)
+        private string Sign(string requestdate, string contenthash, string key)
         {
             var signatureBuilder = new StringBuilder();
             signatureBuilder.Append(requestdate);
@@ -129,7 +137,7 @@
             return Convert.ToBase64String(hKey.ComputeHash(Encoding.UTF8.GetBytes(rawsignature)));
         }
 
-        public static void RegisterWithOms(X509Certificate2 cert, string AgentGuid, string logAnalyticsWorkspaceId, string logAnalyticsWorkspaceKey, string logAnalyticsWorkspaceDomain)
+        public void RegisterWithOms(X509Certificate2 cert, string AgentGuid, string logAnalyticsWorkspaceId, string logAnalyticsWorkspaceKey, string logAnalyticsWorkspaceDomain)
         {
 
             string rawCert = Convert.ToBase64String(cert.GetRawCertData()); //base64 binary
@@ -165,7 +173,7 @@
 
             string url = "https://" + logAnalyticsWorkspaceId + ".oms." + logAnalyticsWorkspaceDomain + "/AgentService.svc/AgentTopologyRequest";
 
-            Console.WriteLine("OMS endpoint Url : {0}", url);
+            this._logger.LogInformation("OMS endpoint Url : {0}", url);
 
             client.DefaultRequestHeaders.Add("x-ms-Date", date);
             client.DefaultRequestHeaders.Add("x-ms-version", "August, 2014");
@@ -177,23 +185,23 @@
             HttpContent httpContent = new StringContent(xmlContent, Encoding.UTF8);
             httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
 
-            Console.WriteLine("sent registration request");
+            this._logger.LogDebug("sent registration request");
             Task<HttpResponseMessage> response = client.PostAsync(new Uri(url), httpContent);
-            Console.WriteLine("waiting response for registration request : {0}", response.Result.StatusCode);
+            this._logger.LogInformation("waiting response for registration request : {0}", response.Result.StatusCode);
             response.Wait();
-            Console.WriteLine("registration request processed");
-            Console.WriteLine("Response result status code : {0}", response.Result.StatusCode);
+            this._logger.LogDebug("registration request processed");
+            this._logger.LogInformation("Response result status code : {0}", response.Result.StatusCode);
             HttpContent responseContent = response.Result.Content;
             string result = responseContent.ReadAsStringAsync().Result;
-            Console.WriteLine("Return Result: " + result);
-            Console.WriteLine(response.Result);
+            this._logger.LogInformation("Return Result: " + result);
+            this._logger.LogInformation(response.Result.ToString());
             if (response.Result.StatusCode != HttpStatusCode.OK)
             {
                 DeleteCertificateAndKeyFile();
             }
         }
 
-        public static void RegisterWithOmsWithBasicRetryAsync(X509Certificate2 cert, string AgentGuid, string logAnalyticsWorkspaceId, string logAnalyticsWorkspaceKey, string logAnalyticsWorkspaceDomain)
+        public void RegisterWithOmsWithBasicRetryAsync(X509Certificate2 cert, string AgentGuid, string logAnalyticsWorkspaceId, string logAnalyticsWorkspaceKey, string logAnalyticsWorkspaceDomain)
         {
             int currentRetry = 0;
 
@@ -219,7 +227,7 @@
                     {
                         // If this isn't a transient error or we shouldn't retry,
                         // rethrow the exception.
-                        Console.WriteLine("exception occurred : {0}", ex.Message);
+                        this._logger.LogError("exception occurred : {0}", ex.Message);
                         throw;
                     }
                 }
@@ -231,7 +239,7 @@
             }
         }
 
-        public static (X509Certificate2 tempCert, (string, byte[]), string) RegisterAgentWithOMS(string logAnalyticsWorkspaceId, string logAnalyticsWorkspaceKey, string logAnalyticsWorkspaceDomain)
+        public (X509Certificate2 tempCert, (string, byte[]), string) RegisterAgentWithOMS(string logAnalyticsWorkspaceId, string logAnalyticsWorkspaceKey, string logAnalyticsWorkspaceDomain)
         {
             X509Certificate2 agentCert = null;
             string certString;
@@ -246,7 +254,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Failed to set env variable (CI_AGENT_GUID)" + ex.Message);
+                this._logger.LogError("Failed to set env variable (CI_AGENT_GUID)" + ex.Message);
             }
 
             try
@@ -258,7 +266,7 @@
                     throw new Exception($"creating self-signed certificate failed for agentGuid : {agentGuid} and workspace: {logAnalyticsWorkspaceId}");
                 }
 
-                Console.WriteLine($"Successfully created self-signed certificate  for agentGuid : {agentGuid} and workspace: {logAnalyticsWorkspaceId}");
+                this._logger.LogInformation($"Successfully created self-signed certificate  for agentGuid : {agentGuid} and workspace: {logAnalyticsWorkspaceId}");
 
                 RegisterWithOmsWithBasicRetryAsync(agentCert, agentGuid,
                     logAnalyticsWorkspaceId,
@@ -267,7 +275,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Registering agent with OMS failed (are the Log Analytics Workspace ID and Key correct?) : {0}", ex.Message);
+                this._logger.LogError("Registering agent with OMS failed (are the Log Analytics Workspace ID and Key correct?) : {0}", ex.Message);
 
                 //Log.LogCritical(ex.ToString());
                 Environment.Exit(1);

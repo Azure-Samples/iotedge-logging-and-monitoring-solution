@@ -16,19 +16,21 @@ namespace FunctionApp
 {
     public class AzureLogAnalytics
     {
-        public string WorkspaceId { get; set; }
+        private HttpClient _client { get; set; }
+        private string _workspaceId { get; set; }
         private string _workspaceKey { get; set; }
-        public string ApiVersion { get; set; }
-        public ILogger Logger { get; set; }
+        private string _apiVersion { get; set; }
+        private ILogger _logger { get; set; }
         private int failurecount = 0;
         private DateTime lastFailureReportedTime = DateTime.UnixEpoch;
 
-        public AzureLogAnalytics(string workspaceId, string workspaceKey, ILogger logger, string apiVersion = "2016-04-01")
+        public AzureLogAnalytics(HttpClient client, string workspaceId, string workspaceKey, ILogger logger, string apiVersion = "2016-04-01")
         {
-            this.WorkspaceId = workspaceId;
+            this._client = client;
+            this._workspaceId = workspaceId;
             this._workspaceKey = workspaceKey;
-            this.ApiVersion = apiVersion;
-            this.Logger = logger;
+            this._apiVersion = apiVersion;
+            this._logger = logger;
         }
 
         /// <summary>
@@ -44,9 +46,8 @@ namespace FunctionApp
         {
             try
             {
-                string requestUriString = $"https://{WorkspaceId}.ods.{Constants.DefaultLogAnalyticsWorkspaceDomain}/api/logs?api-version={ApiVersion}";
-                DateTime dateTime = DateTime.UtcNow;
-                string dateString = dateTime.ToString("r");
+                string requestUriString = $"https://{this._workspaceId}.ods.{Constants.DefaultLogAnalyticsWorkspaceDomain}/api/logs?api-version={this._apiVersion}";
+                string dateString = DateTime.UtcNow.ToString("r");
                 string signature = GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
                 
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(requestUriString);
@@ -82,10 +83,10 @@ namespace FunctionApp
             }
             catch (Exception e)
             {
-                this.Logger.LogError(e.Message);
+                this._logger.LogError(e.Message);
                 if (e.InnerException != null)
                 {
-                    this.Logger.LogError("InnerException - " + e.InnerException.Message);
+                    this._logger.LogError("InnerException - " + e.InnerException.Message);
                 }
             }
 
@@ -103,7 +104,8 @@ namespace FunctionApp
             try
             {
                 // Lazily generate and register certificate.
-                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = CertGenerator.RegisterAgentWithOMS(this.WorkspaceId, this._workspaceKey, Constants.DefaultLogAnalyticsWorkspaceDomain);
+                var certGenerator = new CertGenerator(this._logger);
+                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = certGenerator.RegisterAgentWithOMS(this._workspaceId, this._workspaceKey, Constants.DefaultLogAnalyticsWorkspaceDomain);
                 
                 using (var handler = new HttpClientHandler())
                 {
@@ -112,7 +114,7 @@ namespace FunctionApp
                     handler.PreAuthenticate = true;
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
 
-                    Uri requestUri = new Uri("https://" + this.WorkspaceId + ".ods." + Constants.DefaultLogAnalyticsWorkspaceDomain + "/OperationalData.svc/PostJsonDataItems");
+                    Uri requestUri = new Uri("https://" + this._workspaceId + ".ods." + Constants.DefaultLogAnalyticsWorkspaceDomain + "/OperationalData.svc/PostJsonDataItems");
 
                     using (HttpClient client = new HttpClient(handler))
                     {
@@ -143,7 +145,7 @@ namespace FunctionApp
 
                         if (contentLength > 1024 * 1024)
                         {
-                            this.Logger.LogDebug(
+                            this._logger.LogDebug(
                                 "HTTP post content greater than 1mb" + " " +
                                 "Length - " + contentLength.ToString());
                         }
@@ -152,7 +154,7 @@ namespace FunctionApp
 
                         var response = await client.PostAsync(requestUri, contentMsg).ConfigureAwait(false);
                         var responseMsg = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        this.Logger.LogDebug(
+                        this._logger.LogDebug(
                             ((int)response.StatusCode).ToString() + " " +
                             response.ReasonPhrase + " " +
                         responseMsg);
@@ -163,7 +165,7 @@ namespace FunctionApp
 
                             if (DateTime.Now - lastFailureReportedTime > TimeSpan.FromMinutes(1))
                             {
-                                this.Logger.LogError(
+                                this._logger.LogError(
                                     "abnormal HTTP response code - " +
                                     "responsecode: " + ((int)response.StatusCode).ToString() + " " +
                                     "reasonphrase: " + response.ReasonPhrase + " " +
@@ -185,14 +187,51 @@ namespace FunctionApp
             }
             catch (Exception e)
             {
-                this.Logger.LogError(e.Message);
+                this._logger.LogError(e.Message);
                 if (e.InnerException != null)
                 {
-                    this.Logger.LogError("InnerException - " + e.InnerException.Message);
+                    this._logger.LogError("InnerException - " + e.InnerException.Message);
                 }
             }
 
             return false;
+        }
+
+        public async Task<bool> PostAsync(string content, string armResourceId)
+        {
+            try
+            {
+                string dateString = DateTime.UtcNow.ToString("r");
+                Uri requestUri = new Uri($"https://{this._workspaceId}.ods.{Constants.DefaultLogAnalyticsWorkspaceDomain}/api/logs?api-version={this._apiVersion}");
+                string signature = this.GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
+
+                this._client.DefaultRequestHeaders.Add("Authorization", signature);
+                this._client.DefaultRequestHeaders.Add("Accept", "application/json");
+                this._client.DefaultRequestHeaders.Add("Log-Type", Constants.LogAnalyticsLogType);
+                this._client.DefaultRequestHeaders.Add("x-ms-date", dateString);
+                this._client.DefaultRequestHeaders.Add("x-ms-AzureResourceId", armResourceId);
+
+                var contentMsg = new StringContent(content, Encoding.UTF8);
+                contentMsg.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                this._logger.LogDebug(
+                    this._client.DefaultRequestHeaders.ToString() +
+                    contentMsg.Headers +
+                    contentMsg.ReadAsStringAsync().Result);
+
+                var response = await this._client.PostAsync(requestUri, contentMsg).ConfigureAwait(false);
+                var responseMsg = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                this._logger.LogDebug(
+                    ((int)response.StatusCode).ToString() + " " +
+                    response.ReasonPhrase + " " +
+                    responseMsg);
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                this._logger.LogError(e.Message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -210,7 +249,7 @@ namespace FunctionApp
             byte[] bytes = Encoding.UTF8.GetBytes(message);
             using (HMACSHA256 encryptor = new HMACSHA256(Convert.FromBase64String(_workspaceKey)))
             {
-                return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
+                return $"SharedKey {this._workspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
             }
         }
 
