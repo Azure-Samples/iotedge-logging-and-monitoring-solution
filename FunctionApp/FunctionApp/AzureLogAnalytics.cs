@@ -19,16 +19,18 @@ namespace FunctionApp
         private HttpClient _client { get; set; }
         private string _workspaceId { get; set; }
         private string _workspaceKey { get; set; }
+        private string _workspaceDomain { get; set; }
         private string _apiVersion { get; set; }
         private ILogger _logger { get; set; }
         private int failurecount = 0;
         private DateTime lastFailureReportedTime = DateTime.UnixEpoch;
 
-        public AzureLogAnalytics(HttpClient client, string workspaceId, string workspaceKey, ILogger logger, string apiVersion = "2016-04-01")
+        public AzureLogAnalytics(HttpClient client, string workspaceId, string workspaceKey, string workspaceDomain, ILogger logger, string apiVersion = "2016-04-01")
         {
             this._client = client;
             this._workspaceId = workspaceId;
             this._workspaceKey = workspaceKey;
+            this._workspaceDomain = workspaceDomain;
             this._apiVersion = apiVersion;
             this._logger = logger;
         }
@@ -46,7 +48,7 @@ namespace FunctionApp
         {
             try
             {
-                string requestUriString = $"https://{this._workspaceId}.ods.{Constants.DefaultLogAnalyticsWorkspaceDomain}/api/logs?api-version={this._apiVersion}";
+                string requestUriString = $"https://{this._workspaceId}.ods.{this._workspaceDomain}/api/logs?api-version={this._apiVersion}";
                 string dateString = DateTime.UtcNow.ToString("r");
                 string signature = GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
                 
@@ -105,7 +107,7 @@ namespace FunctionApp
             {
                 // Lazily generate and register certificate.
                 var certGenerator = new CertGenerator(this._logger);
-                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = certGenerator.RegisterAgentWithOMS(this._workspaceId, this._workspaceKey, Constants.DefaultLogAnalyticsWorkspaceDomain);
+                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = certGenerator.RegisterAgentWithOMS(this._workspaceId, this._workspaceKey, this._workspaceDomain);
                 
                 using (var handler = new HttpClientHandler())
                 {
@@ -114,7 +116,7 @@ namespace FunctionApp
                     handler.PreAuthenticate = true;
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
 
-                    Uri requestUri = new Uri("https://" + this._workspaceId + ".ods." + Constants.DefaultLogAnalyticsWorkspaceDomain + "/OperationalData.svc/PostJsonDataItems");
+                    Uri requestUri = new Uri("https://" + this._workspaceId + ".ods." + this._workspaceDomain + "/OperationalData.svc/PostJsonDataItems");
 
                     using (HttpClient client = new HttpClient(handler))
                     {
@@ -202,7 +204,7 @@ namespace FunctionApp
             try
             {
                 string dateString = DateTime.UtcNow.ToString("r");
-                Uri requestUri = new Uri($"https://{this._workspaceId}.ods.{Constants.DefaultLogAnalyticsWorkspaceDomain}/api/logs?api-version={this._apiVersion}");
+                Uri requestUri = new Uri($"https://{this._workspaceId}.ods.{this._workspaceDomain}/api/logs?api-version={this._apiVersion}");
                 string signature = this.GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
 
                 this._client.DefaultRequestHeaders.Add("Authorization", signature);

@@ -11,7 +11,6 @@ namespace FunctionApp.MetricsCollector
         public static readonly string MetricUploadDataType = "INSIGHTS_METRICS_BLOB";
         public static readonly string IoTUploadMessageIdentifier = "Microsoft.Azure.Devices.Azure.Monitor";
         public static readonly int UploadMaxRetries = 3;
-        public const string DefaultLogAnalyticsWorkspaceDomain = "opinsights.azure.com";
         public const string ProductInfo = "Microsoft.Azure.Devices.Azure.Monitor";
     }
 }

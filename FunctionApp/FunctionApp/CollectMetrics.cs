@@ -18,6 +18,7 @@ namespace FunctionApp
         private static string _containerName = Environment.GetEnvironmentVariable("ContainerName");
         private static string _workspaceId = Environment.GetEnvironmentVariable("WorkspaceId");
         private static string _workspaceKey = Environment.GetEnvironmentVariable("WorkspaceKey");
+        private static string _workspaceDomain = Environment.GetEnvironmentVariable("WorkspaceDomain");
         private static string _workspaceApiVersion = Environment.GetEnvironmentVariable("WorkspaceApiVersion");
         private static bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
         private static string _metricsEncoding = Environment.GetEnvironmentVariable("MetricsEncoding");
@@ -54,6 +55,7 @@ namespace FunctionApp
                     new System.Net.Http.HttpClient(),
                     workspaceId: _workspaceId,
                     workspaceKey: _workspaceKey,
+                    workspaceDomain: _workspaceDomain,
                     logger: log,
                     apiVersion: _workspaceApiVersion);
 
