@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using FunctionApp.MetricsCollector;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using ICSharpCode.SharpZipLib.Zip.Compression;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using System.Security.Cryptography.X509Certificates;
@@ -21,17 +22,19 @@ namespace FunctionApp
         private string _workspaceKey { get; set; }
         private string _workspaceDomain { get; set; }
         private string _apiVersion { get; set; }
+        private CertGenerator _certGenerator { get; set; }
         private ILogger _logger { get; set; }
         private int failurecount = 0;
         private DateTime lastFailureReportedTime = DateTime.UnixEpoch;
 
-        public AzureLogAnalytics(HttpClient client, string workspaceId, string workspaceKey, string workspaceDomain, ILogger logger, string apiVersion = "2016-04-01")
+        public AzureLogAnalytics(IConfiguration configuration, HttpClient client, CertGenerator certGenerator, ILogger<AzureLogAnalytics> logger)
         {
             this._client = client;
-            this._workspaceId = workspaceId;
-            this._workspaceKey = workspaceKey;
-            this._workspaceDomain = workspaceDomain;
-            this._apiVersion = apiVersion;
+            this._workspaceId = configuration["WorkspaceId"];
+            this._workspaceKey = configuration["WorkspaceKey"];
+            this._workspaceDomain = configuration["WorkspaceDomain"];
+            this._apiVersion = configuration["WorkspaceApiVersion"];
+            this._certGenerator = certGenerator;
             this._logger = logger;
         }
 
@@ -106,8 +109,7 @@ namespace FunctionApp
             try
             {
                 // Lazily generate and register certificate.
-                var certGenerator = new CertGenerator(this._logger);
-                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = certGenerator.RegisterAgentWithOMS(this._workspaceId, this._workspaceKey, this._workspaceDomain);
+                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = this._certGenerator.RegisterAgentWithOMS();
                 
                 using (var handler = new HttpClientHandler())
                 {

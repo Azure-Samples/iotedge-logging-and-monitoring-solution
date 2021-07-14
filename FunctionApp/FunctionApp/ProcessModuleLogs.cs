@@ -27,11 +27,11 @@ namespace FunctionApp
         private string _logType = Environment.GetEnvironmentVariable("LogType");
         private int _logMaxSizeMB = Convert.ToInt32(Environment.GetEnvironmentVariable("LogsMaxSizeMB"));
         private bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
-        private HttpClient _httpClient;
+        private AzureLogAnalytics _azureLogAnalytics;
         
-        public ProcessModuleLogs(HttpClient httpClient)
+        public ProcessModuleLogs(AzureLogAnalytics azureLogAnalytics)
         {
-            this._httpClient = httpClient;
+            this._azureLogAnalytics = azureLogAnalytics;
         }
 
         [FunctionName("ProcessModuleLogs")]
@@ -91,15 +91,6 @@ namespace FunctionApp
                 if (logAnalyticsLogs.Length == 0)
                     return;
 
-                // initialize log analytics class
-                AzureLogAnalytics logAnalytics = new AzureLogAnalytics(
-                    this._httpClient,
-                    workspaceId: _workspaceId,
-                    workspaceKey: _workspaceKey,
-                    workspaceDomain: _workspaceDomain,
-                    logger: log,
-                    apiVersion: _workspaceApiVersion);
-
                 // because log analytics supports messages up to 30MB,
                 // we have to break logs in chunks to fit in on each request
                 byte[] logBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(logAnalyticsLogs));
@@ -119,7 +110,7 @@ namespace FunctionApp
                     try
                     {
                         //logAnalytics.Post(JsonConvert.SerializeObject(logsChunk), _logType, _hubResourceId);
-                        bool success = logAnalytics.PostToCustomTable(JsonConvert.SerializeObject(logsChunk), _logType, _hubResourceId);
+                        bool success = this._azureLogAnalytics.PostToCustomTable(JsonConvert.SerializeObject(logsChunk), _logType, _hubResourceId);
                         if (success)
                             log.LogInformation("ProcessModuleLogs request to log analytics completed successfully");
                         else
