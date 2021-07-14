@@ -31,6 +31,12 @@ namespace FunctionApp
             {
                 log.LogInformation("CollectMetrics function started.");
 
+                if (eventHubMessages.Body.Count == 0)
+                {
+                    log.LogInformation("CollectMetrics method ended because event body is empty");
+                    return;
+                }
+
                 // Decompress if encoding is gzip
                 string metricsString = string.Empty;
                 if (string.Equals(_metricsEncoding, "gzip", StringComparison.OrdinalIgnoreCase))
