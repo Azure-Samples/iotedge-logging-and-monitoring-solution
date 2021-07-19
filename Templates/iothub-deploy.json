@@ -45,31 +45,40 @@
       "type": "string"
     },
     "edgeVmName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "edgeVmDnsName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "edgeVmSize": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "adminUsername": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "adminPassword": {
-      "type": "securestring"
+      "type": "securestring",
+      "defaultValue": ""
     },
     "vnetName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "vnetAddressPrefix": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "edgeSubnetName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "edgeSubnetAddressRange": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "templateUrl": {
       "type": "string"
