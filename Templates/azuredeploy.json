@@ -94,7 +94,7 @@
     },
     "vnetName": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "[concat('iot-vnet-', parameters('environmentHashId'))]",
       "metadata": {
         "description": "Name for the virtual network."
       }
@@ -115,14 +115,14 @@
     },
     "edgeSubnetAddressRange": {
       "type": "string",
-      "defaultValue": "10.0.1.0/24",
+      "defaultValue": "10.0.0.0/24",
       "metadata": {
         "description": "Address range for the IoT edge VM subnet."
       }
     },
     "edgeVmName": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "[concat('iotedgevm-', parameters('environmentHashId'))]",
       "metadata": {
         "description": "IoT edge virtual machine name."
       }
@@ -136,7 +136,7 @@
     },
     "adminUsername": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "azureuser",
       "metadata": {
         "description": "Specifies a username for the Virtual Machine."
       }
@@ -848,10 +848,10 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2018-11-01",
+      "apiVersion": "2019-04-01",
       "name": "[variables('functionStorageAccountName')]",
       "location": "[parameters('location')]",
-      "kind": "Storage",
+      "kind": "StorageV2",
       "sku": {
         "name": "[variables('functionStorageAccountSku')]"
       }
