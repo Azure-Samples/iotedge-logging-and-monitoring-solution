@@ -1,4 +1,5 @@
 ﻿using System;
+using FunctionApp.CertificateGenerator;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;

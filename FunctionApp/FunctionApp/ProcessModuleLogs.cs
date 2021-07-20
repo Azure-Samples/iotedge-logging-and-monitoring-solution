@@ -19,10 +19,6 @@ namespace FunctionApp
         private string _hubResourceId = Environment.GetEnvironmentVariable("HubResourceId");
         private string _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
         private string _containerName = Environment.GetEnvironmentVariable("ContainerName");
-        private string _workspaceId = Environment.GetEnvironmentVariable("WorkspaceId");
-        private string _workspaceKey = Environment.GetEnvironmentVariable("WorkspaceKey");
-        private string _workspaceDomain = Environment.GetEnvironmentVariable("WorkspaceDomain");
-        private string _workspaceApiVersion = Environment.GetEnvironmentVariable("WorkspaceApiVersion");
         private string _logsEncoding = Environment.GetEnvironmentVariable("LogsEncoding");
         private string _logType = Environment.GetEnvironmentVariable("LogType");
         private int _logMaxSizeMB = Convert.ToInt32(Environment.GetEnvironmentVariable("LogsMaxSizeMB"));

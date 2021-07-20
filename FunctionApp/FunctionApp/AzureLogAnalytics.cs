@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using FunctionApp.MetricsCollector;
+using FunctionApp.CertificateGenerator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using ICSharpCode.SharpZipLib.Zip.Compression;
@@ -20,10 +21,11 @@ namespace FunctionApp
         private HttpClient _client { get; set; }
         private string _workspaceId { get; set; }
         private string _workspaceKey { get; set; }
-        private string _workspaceDomain { get; set; }
+        private string _workspaceDomainSuffix { get; set; }
         private string _apiVersion { get; set; }
         private CertGenerator _certGenerator { get; set; }
         private ILogger _logger { get; set; }
+        private X509Certificate2 cert;
         private int failurecount = 0;
         private DateTime lastFailureReportedTime = DateTime.UnixEpoch;
 
@@ -32,7 +34,7 @@ namespace FunctionApp
             this._client = client;
             this._workspaceId = configuration["WorkspaceId"];
             this._workspaceKey = configuration["WorkspaceKey"];
-            this._workspaceDomain = configuration["WorkspaceDomain"];
+            this._workspaceDomainSuffix = configuration["WorkspaceDomainSuffix"];
             this._apiVersion = configuration["WorkspaceApiVersion"];
             this._certGenerator = certGenerator;
             this._logger = logger;
@@ -51,7 +53,7 @@ namespace FunctionApp
         {
             try
             {
-                string requestUriString = $"https://{this._workspaceId}.ods.{this._workspaceDomain}/api/logs?api-version={this._apiVersion}";
+                string requestUriString = $"https://{this._workspaceId}.{Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOds}.{this._workspaceDomainSuffix}/api/logs?api-version={this._apiVersion}";
                 string dateString = DateTime.UtcNow.ToString("r");
                 string signature = GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
                 
@@ -109,8 +111,11 @@ namespace FunctionApp
             try
             {
                 // Lazily generate and register certificate.
-                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = this._certGenerator.RegisterAgentWithOMS();
-                
+                if (cert == null)
+                {
+                    (X509Certificate2 tempCert, (string certString, byte[] certBuf), string keyString) = this._certGenerator.RegisterAgentWithOMS(Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOms);
+                    cert = tempCert;
+                }
                 using (var handler = new HttpClientHandler())
                 {
                     handler.ClientCertificates.Add(cert);
@@ -118,7 +123,7 @@ namespace FunctionApp
                     handler.PreAuthenticate = true;
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
 
-                    Uri requestUri = new Uri("https://" + this._workspaceId + ".ods." + this._workspaceDomain + "/OperationalData.svc/PostJsonDataItems");
+                    Uri requestUri = new Uri("https://" + this._workspaceId + Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOds + this._workspaceDomainSuffix + "/OperationalData.svc/PostJsonDataItems");
 
                     using (HttpClient client = new HttpClient(handler))
                     {
@@ -161,7 +166,7 @@ namespace FunctionApp
                         this._logger.LogDebug(
                             ((int)response.StatusCode).ToString() + " " +
                             response.ReasonPhrase + " " +
-                        responseMsg);
+                            responseMsg);
 
                         if ((int)response.StatusCode != 200)
                         {
@@ -174,8 +179,6 @@ namespace FunctionApp
                                     "responsecode: " + ((int)response.StatusCode).ToString() + " " +
                                     "reasonphrase: " + response.ReasonPhrase + " " +
                                     "responsemsg: " + responseMsg + " " +
-                                    "requestheaders: " + client.DefaultRequestHeaders.ToString() + contentMsg.Headers + " " +
-                                    "requestcontent: " + contentMsg.ReadAsStringAsync().Result + " " +
                                     "count: " + failurecount);
                                 failurecount = 0;
                                 lastFailureReportedTime = DateTime.Now;
@@ -206,7 +209,7 @@ namespace FunctionApp
             try
             {
                 string dateString = DateTime.UtcNow.ToString("r");
-                Uri requestUri = new Uri($"https://{this._workspaceId}.ods.{this._workspaceDomain}/api/logs?api-version={this._apiVersion}");
+                Uri requestUri = new Uri($"https://{this._workspaceId}.{Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOds}.{this._workspaceDomainSuffix}/api/logs?api-version={this._apiVersion}");
                 string signature = this.GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
 
                 this._client.DefaultRequestHeaders.Add("Authorization", signature);

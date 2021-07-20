@@ -15,11 +15,6 @@ namespace FunctionApp
     public class CollectMetrics
     {
         private string _hubResourceId = Environment.GetEnvironmentVariable("HubResourceId");
-        private string _containerName = Environment.GetEnvironmentVariable("ContainerName");
-        private string _workspaceId = Environment.GetEnvironmentVariable("WorkspaceId");
-        private string _workspaceKey = Environment.GetEnvironmentVariable("WorkspaceKey");
-        private string _workspaceDomain = Environment.GetEnvironmentVariable("WorkspaceDomain");
-        private string _workspaceApiVersion = Environment.GetEnvironmentVariable("WorkspaceApiVersion");
         private bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
         private string _metricsEncoding = Environment.GetEnvironmentVariable("MetricsEncoding");
         private AzureLogAnalytics _azureLogAnalytics { get; set; }
