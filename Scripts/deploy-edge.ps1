@@ -85,16 +85,26 @@ function New-IoTEnvironment() {
         }
     }
 
-    Write-Host
-    Write-Host "Using DPS '$($dps.name)' since it is connected to IoT hub '$($iot_hub_name)'"
+    if (!!$dps) {
+        Write-Host
+        Write-Host "Using DPS '$($dps.name)' since it is connected to IoT hub '$($iot_hub_name)'"
 
-    $dps_id_scope = $dps.properties.idScope
-    $dps_access_policy = az iot dps access-policy list -g $dps.resourceGroup --dps-name $dps.name | ConvertFrom-Json | Where-Object { $_.rights -like '*DeviceConnect*' }
-    
-    Write-Host
-    Write-Host "Using DPS access policy '$($dps_access_policy.keyName)'"
+        $dps_id_scope = $dps.properties.idScope
+        $dps_access_policy = az iot dps access-policy list -g $dps.resourceGroup --dps-name $dps.name | ConvertFrom-Json | Where-Object { $_.rights -like '*DeviceConnect*' }
+        
+        Write-Host
+        Write-Host "Using DPS access policy '$($dps_access_policy.keyName)'"
 
-    $dps_conn_string = "HostName=$($dps.properties.serviceOperationsHostName);SharedAccessKeyName=$($dps_access_policy.keyName);SharedAccessKey=$($dps_access_policy.primaryKey)"
+        $dps_conn_string = "HostName=$($dps.properties.serviceOperationsHostName);SharedAccessKeyName=$($dps_access_policy.keyName);SharedAccessKey=$($dps_access_policy.primaryKey)"
+    }
+    else {
+        Write-Host
+        Write-Host -ForegroundColor Yellow "IMPORTANT: Could not find any DPS connected to IoT hub '$($iot_hub_name)'. The edge virtual machine creation will proceed but you must finish the IoT edge device registration and connection manually."
+        
+        $dps_access_policy = "no-dps-found"
+        $dps_id_scope = "no-dps-found"
+        $dps_conn_string = "no-dps-found"
+    }
     #endregion
 
     #region virtual network
