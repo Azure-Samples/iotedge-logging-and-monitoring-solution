@@ -451,7 +451,7 @@ function Set-ELMSAlerts {
     #region monitor action groups
     if (!$new_deployment) {
         $option = Get-InputSelection `
-            -options @("Continue pulling IoT edge module logs periodically", "Pull IoT edge module logs only when alerts are triggered") `
+            -options @("Pull IoT edge module logs periodically", "Pull IoT edge module logs only when alerts are triggered") `
             -text @("ELMS periodically pulls logs from IoT edge modules by default, but this deployment of Monitor alerts has the ability to proactively pull the most recent logs only when IoT edge devices trigger the alerts; optimizing network bandwidth and storage in Log Analytics.", "Please choose an option from the list (using its Index):")
 
         if ($option -eq 1) {
@@ -564,12 +564,12 @@ function Set-ELMSAlerts {
     #endregion
 
     #region disable periodic log pull if desired
+    $schedule_log_upload_function = az functionapp function show `
+        --resource-group $function_app.resourceGroup `
+        --name $function_app.name `
+        --function-name $schedule_log_upload_function_name | ConvertFrom-Json
+
     if ($create_action_group) {
-        $schedule_log_upload_function = az functionapp function show `
-            --resource-group $function_app.resourceGroup `
-            --name $function_app.name `
-            --function-name $schedule_log_upload_function_name | ConvertFrom-Json
-        
         if (!$schedule_log_upload_function.isDisabled) {
             Write-Host
             Write-Host -ForegroundColor Yellow "NOTE: The timer function '$schedule_log_upload_function_name' will be disabled in your function app in order to turn off the periodic log pull functionality. You can always turn it back on by going to the 'Functions' section of your function app in the Azure Portal."
@@ -577,6 +577,19 @@ function Set-ELMSAlerts {
                 --resource-group $function_app.resourceGroup `
                 --name $function_app.name `
                 --settings "AzureWebJobs.$($schedule_log_upload_function_name).Disabled=true" | Out-Null
+
+            Write-Host
+            Write-Host "Function disabled."
+        }
+    }
+    else {
+        if ($schedule_log_upload_function.isDisabled) {
+            Write-Host
+            Write-Host -ForegroundColor Yellow "NOTE: The timer function '$schedule_log_upload_function_name' will be enabled in your function app in order to resume the periodic log pull functionality. You can change the function's state at any time by going to the 'Functions' section of your function app in the Azure Portal."
+            az functionapp config appsettings set `
+                --resource-group $function_app.resourceGroup `
+                --name $function_app.name `
+                --settings "AzureWebJobs.$($schedule_log_upload_function_name).Disabled=false" | Out-Null
 
             Write-Host
             Write-Host "Function disabled."
