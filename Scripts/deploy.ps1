@@ -15,8 +15,8 @@ function Set-AzureAccount {
     $account = az account show | ConvertFrom-Json
 
     $option = Get-InputSelection `
-        -options @("Stay in this subscription", "Switch to another subscription") `
-        -text "You are currently using the Azure subscription '$($account.name)'. What would you like to do?"
+        -options @("Yes", "No. I want to use a different subscription") `
+        -text "You are currently using the Azure subscription '$($account.name)'. Do you want to keep using it?"
     
     if ($option -eq 2) {
         $accounts = az account list | ConvertFrom-Json | Sort-Object -Property name
