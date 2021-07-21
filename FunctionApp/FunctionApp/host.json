@@ -1,5 +1,17 @@
 {
   "version": "2.0",
+  "extensions": {
+    "eventHubs": {
+      "batchCheckpointFrequency": 5,
+      "eventProcessorOptions": {
+        "maxBatchSize": 256,
+        "prefetchCount": 512
+      },
+      "initialOffsetOptions": {
+        "type": "fromStart"
+      }
+    }
+  },
   "logging": {
     "applicationInsights": {
       "samplingSettings": {
@@ -8,9 +20,7 @@
       }
     },
     "logLevel": {
-      "default": "Information",
-      "FunctionApp.CertGenerator": "Information",
-      "FunctionApp.AzureLogAnalytics": "Information"
+      "default": "Information"
     }
   }
 }

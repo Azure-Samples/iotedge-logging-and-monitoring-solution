@@ -11,37 +11,39 @@ namespace FunctionApp
         private readonly string _hostKey = Environment.GetEnvironmentVariable("HostKey");
         private readonly string _hostUrl = Environment.GetEnvironmentVariable("HostUrl");
         private readonly string _invokeModuleLogUploadFunction = Environment.GetEnvironmentVariable("HttpTriggerFunction");
-        private HttpClient _httpClient;
+        private ILogger _logger { get; set; }
+        private HttpClient _httpClient { get; set; }
 
-        public ScheduleUploadModuleLogs(HttpClient httpClient)
+        public ScheduleUploadModuleLogs(HttpClient httpClient, ILogger<ScheduleUploadModuleLogs> logger)
         {
+            this._logger = logger;
             this._httpClient = httpClient;
         }
 
         [FunctionName("ScheduleUploadModuleLogs")]
-        public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo myTimer, ILogger log)
+        public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo myTimer)
         {
             try
             {
-                log.LogInformation($"ScheduleUploadModuleLogs function executed at: {DateTime.Now}");
+                this._logger.LogInformation($"ScheduleUploadModuleLogs function executed at: {DateTime.Now}");
 
                 string url = $"{this._hostUrl}/api/{this._invokeModuleLogUploadFunction}?code={this._hostKey}";
-                log.LogInformation($"Calling endpoint {url} to invoke module logs upload method");
+                this._logger.LogInformation($"Calling endpoint {url} to invoke module logs upload method");
                 var response = await this._httpClient.PostAsJsonAsync<object>(url, new { });
 
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    log.LogInformation($"HTTP request completed successfully");
+                    this._logger.LogInformation($"HTTP request completed successfully");
                 }
                 else
                 {
                     string responseMessage = await response.Content.ReadAsStringAsync();
-                    log.LogError($"HTTP request failed with status code {response.StatusCode}. Message {responseMessage}");
+                    this._logger.LogError($"HTTP request failed with status code {response.StatusCode}. Message {responseMessage}");
                 }
             }
             catch (Exception e)
             {
-                log.LogError($"ScheduleUploadModuleLogs failed with the following exception: {e}");
+                this._logger.LogError($"ScheduleUploadModuleLogs failed with the following exception: {e}");
             }
         }
     }

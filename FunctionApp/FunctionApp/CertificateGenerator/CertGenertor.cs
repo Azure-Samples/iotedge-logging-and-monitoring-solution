@@ -21,6 +21,7 @@
     using Org.BouncyCastle.Asn1.X509;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Configuration;
+    using Azure.Storage.Blobs;
 
     public class CertGenerator
     {
@@ -29,6 +30,7 @@
         private string _workspaceDomainSuffix { get; set; }
         private string _apiVersion { get; set; }
         private ILogger _logger { get; set; }
+        CloudCertStore _certStore { get; set; }
 
         public CertGenerator(IConfiguration configuration, ILogger<CertGenerator> logger)
         {
@@ -37,6 +39,9 @@
             this._workspaceDomainSuffix = configuration["WorkspaceDomainSuffix"];
             this._apiVersion = configuration["WorkspaceApiVersion"];
             this._logger = logger;
+
+            // storage-based certificate management
+            string storageConnectionString = configuration["StorageConnectionString"];
         }
 
         internal class Constants
@@ -49,8 +54,171 @@
             public const string DEFAULT_SIGNATURE_ALOGIRTHM = "SHA256WithRSA";
         }
 
+        internal class CloudCertStore
+        {
+            // storage-based certificate management
+            private readonly string _containerName = "selfsignedcert";
+            private readonly string _certBlob = "cert.pem";
+            private readonly string _keyBlob = "key.key";
+            private readonly string _pwdBlob = "password.txt";
+            private readonly BlobContainerClient _containerClient;
+            private ILogger _logger { get; set; }
+
+            public CloudCertStore(string connectionString, ILogger logger)
+            {
+                this._logger = logger;
+                BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
+                this._containerClient = blobServiceClient.GetBlobContainerClient(this._containerName);
+                if (!this._containerClient.Exists())
+                    blobServiceClient.CreateBlobContainer(this._containerName);
+            }
+
+            public (X509Certificate2, (string, byte[]), string) GetExistingSelfSignedCertificate()
+            {
+                try
+                {
+                    // Initialize values
+                    X509Certificate2 certificate = null;
+                    byte[] certificateBuffer = new byte[] { };
+                    string certString = string.Empty;
+                    string privateKeyString = string.Empty;
+
+                    // Set local file paths
+                    string localPath = Path.GetTempPath();
+                    string certPath = $"{Path.GetTempFileName()}.pem";
+                    string keyPath = $"{Path.GetTempFileName()}.txt";
+                    string pwdPath = $"{Path.GetTempFileName()}.txt";
+
+                    BlobClient blobClient = this._containerClient.GetBlobClient(this._certBlob);
+                    if (blobClient.Exists())
+                    {
+                        // Get certificate
+                        blobClient.DownloadTo(certPath);
+
+                        // Get certificate password
+                        blobClient = this._containerClient.GetBlobClient(this._pwdBlob);
+                        blobClient.DownloadTo(pwdPath);
+                        string password = File.ReadAllText(pwdPath);
+
+                        certificate = new X509Certificate2(certPath, password);
+                        certString = GetCertInPEMFormat(certificate);
+                        certificateBuffer = certificate.RawData;
+
+                        // Get private key
+                        blobClient = this._containerClient.GetBlobClient(this._keyBlob);
+                        blobClient.DownloadTo(keyPath);
+                        privateKeyString = File.ReadAllText(keyPath);
+                    }
+                    else
+                    {
+                        certificate = null;
+                    }
+
+                    return (certificate, (certString, certificateBuffer), privateKeyString);
+                }
+                catch (Exception e)
+                {
+                    this._logger.LogError($"{e}");
+                    throw e;
+                }
+            }
+
+            public bool StoreSelfSignedCertificate(X509Certificate2 certificate, string password, string privateKeyString)
+            {
+                try
+                {
+                    // Willingly ignoring to update the certificate if it is younger than 5 minutes
+                    DateTimeOffset agentCertLastModified = this.GetSelfSignedCertificateLastModifiedUtc();
+                    if (agentCertLastModified > DateTime.UtcNow.AddMinutes(-5))
+                        return true;
+
+                    // Set local file paths
+                    string localPath = Path.GetTempPath();
+                    string certPath = $"{Path.GetTempFileName()}.pem";
+                    string keyPath = $"{Path.GetTempFileName()}.txt";
+                    string pwdPath = $"{Path.GetTempFileName()}.txt";
+
+                    //Get Certificate in PEM format
+                    string certString = GetCertInPEMFormat(certificate);
+
+                    // Upload certificate
+                    File.WriteAllText(certPath, certString);
+                    //File.WriteAllBytes(certPath, certificate.RawData);
+                    BlobClient blobClient = this._containerClient.GetBlobClient(this._certBlob);
+                    blobClient.Upload(certPath, true);
+
+                    // Upload certificate password
+                    File.WriteAllText(pwdPath, password);
+                    blobClient = this._containerClient.GetBlobClient(this._pwdBlob);
+                    blobClient.Upload(pwdPath, true);
+
+                    // Upload private key
+                    File.WriteAllText(keyPath, privateKeyString);
+                    blobClient = this._containerClient.GetBlobClient(this._keyBlob);
+                    blobClient.Upload(keyPath, true);
+
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    this._logger.LogError($"{e}");
+                    return false;
+                }
+            }
+
+            public DateTimeOffset GetSelfSignedCertificateLastModifiedUtc()
+            {
+                try
+                {
+                    BlobClient blobClient = this._containerClient.GetBlobClient(this._certBlob);
+                    if (blobClient.Exists())
+                    {
+                        var blobProperties = blobClient.GetProperties();
+                        return blobProperties.Value.LastModified;
+                    }
+                    else
+                    {
+                        return new DateTime();
+                    }
+                }
+                catch (Exception e)
+                {
+                    this._logger.LogError($"{e}");
+                    return new DateTime();
+                }
+            }
+
+            public void DeleteCertificateAndKeyBlob()
+            {
+                try
+                {
+                    // Delete certificate
+                    BlobClient blobClient = this._containerClient.GetBlobClient(this._certBlob);
+                    if (blobClient.Exists())
+                        blobClient.Delete();
+
+                    // Delete private key
+                    blobClient = this._containerClient.GetBlobClient(this._keyBlob);
+                    if (blobClient.Exists())
+                        blobClient.Delete();
+                }
+                catch (Exception e)
+                {
+                    this._logger.LogError($"{e}");
+                }
+            }
+        }
+
         private (X509Certificate2, (string, byte[]), string) CreateSelfSignedCertificate(string agentGuid)
         {
+            // storage-based certificate management
+            //DateTimeOffset agentCertLastModified = this._certStore.GetSelfSignedCertificateLastModifiedUtc();
+            //if (agentCertLastModified > DateTime.UtcNow.AddMinutes(-5))
+            //{
+            //    (X509Certificate2 agentCert, (string agentCertString, byte[] agentCertBuf), string agentKeyString) = this._certStore.GetExistingSelfSignedCertificate();
+            //    return (agentCert, (agentCertString, agentCert.RawData), agentKeyString);
+            //}
+
             var random = new SecureRandom();
 
             var certificateGenerator = new X509V3CertificateGenerator();
@@ -114,12 +282,10 @@
             // string resultsTrue = certificate.ToString(true);
 
             //Get Certificate in PEM format
-            StringBuilder builder = new StringBuilder();
-            builder.AppendLine("-----BEGIN CERTIFICATE-----");
-            builder.AppendLine(
-                Convert.ToBase64String(certificate.RawData, Base64FormattingOptions.InsertLineBreaks));
-            builder.AppendLine("-----END CERTIFICATE-----");
-            string certString = builder.ToString();
+            string certString = GetCertInPEMFormat(certificate);
+
+            // storage-based certificate management
+            //this._certStore.StoreSelfSignedCertificate(certificate, exportpw, privateKeyString);
 
             return (certificate, (certString, certificate.RawData), privateKeyString);
         }
@@ -129,6 +295,22 @@
         {
             File.Delete(Environment.GetEnvironmentVariable("CI_CERT_LOCATION"));
             File.Delete(Environment.GetEnvironmentVariable("CI_KEY_LOCATION"));
+
+            // storage-based certificate management
+            //this._certStore.DeleteCertificateAndKeyBlob();
+        }
+
+        private static string GetCertInPEMFormat(X509Certificate2 certificate)
+        {
+            //Get Certificate in PEM format
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine("-----BEGIN CERTIFICATE-----");
+            builder.AppendLine(
+                Convert.ToBase64String(certificate.RawData, Base64FormattingOptions.InsertLineBreaks));
+            builder.AppendLine("-----END CERTIFICATE-----");
+            string certString = builder.ToString();
+
+            return certString;
         }
 
         private string Sign(string requestdate, string contenthash, string key)
@@ -206,6 +388,7 @@
             this._logger.LogDebug(response.Result.ToString());
             if (response.Result.StatusCode != HttpStatusCode.OK)
             {
+                this._logger.LogInformation("Deleting SSL certificate and key");
                 DeleteCertificateAndKeyFile();
             }
         }
@@ -274,15 +457,13 @@
                     throw new Exception($"creating self-signed certificate failed for agentGuid : {agentGuid} and workspace: {this._workspaceId}");
                 }
 
-                this._logger.LogInformation($"Successfully created self-signed certificate  for agentGuid : {agentGuid} and workspace: {this._workspaceId}");
+                this._logger.LogInformation($"Successfully created self-signed certificate for agentGuid : {agentGuid} and workspace: {this._workspaceId}");
 
                 RegisterWithOmsWithBasicRetryAsync(agentCert, agentGuid, logAnalyticsWorkspaceDomainPrefixOms);
             }
             catch (Exception ex)
             {
-                this._logger.LogError("Registering agent with OMS failed (are the Log Analytics Workspace ID and Key correct?) : {0}", ex.Message);
-
-                //Log.LogCritical(ex.ToString());
+                this._logger.LogError($"Registering agent with OMS failed (are the Log Analytics Workspace ID and Key correct?) : {ex}");
                 Environment.Exit(1);
 
                 // to make the code analyzer happy

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using FunctionApp.MetricsCollector;
 using FunctionApp.CertificateGenerator;
@@ -13,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using ICSharpCode.SharpZipLib.Zip.Compression;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using System.Security.Cryptography.X509Certificates;
+using Newtonsoft.Json;
 
 namespace FunctionApp
 {
@@ -53,7 +56,7 @@ namespace FunctionApp
         {
             try
             {
-                string requestUriString = $"https://{this._workspaceId}.{Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOds}.{this._workspaceDomainSuffix}/api/logs?api-version={this._apiVersion}";
+                string requestUriString = $"https://{this._workspaceId}{Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOds}{this._workspaceDomainSuffix}/api/logs?api-version={this._apiVersion}";
                 string dateString = DateTime.UtcNow.ToString("r");
                 string signature = GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
                 
@@ -116,6 +119,7 @@ namespace FunctionApp
                     (X509Certificate2 tempCert, (string certString, byte[] certBuf), string keyString) = this._certGenerator.RegisterAgentWithOMS(Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOms);
                     cert = tempCert;
                 }
+                
                 using (var handler = new HttpClientHandler())
                 {
                     handler.ClientCertificates.Add(cert);
@@ -279,6 +283,36 @@ namespace FunctionApp
                 outStream.Finish();
                 return memoryStream.ToArray();
             }
+        }
+
+        /// <summary>
+        /// Breaks a collection of items into smaller chunks based on size requirements
+        /// </summary>
+        /// <typeparam name="T">Collection type</typeparam>
+        /// <param name="content">The collection</param>
+        /// <param name="chunkSizeMB">Max size in megabytes</param>
+        /// <returns>A nested collection of items</returns>
+        public List<List<T>> CreateContentChunks<T>(IEnumerable<T> content, double chunkSizeMB)
+        {
+            int totalItems = content.Count();
+            int contentLength = ASCIIEncoding.Unicode.GetByteCount(JsonConvert.SerializeObject(content));
+            double chunksCount = Math.Ceiling(contentLength / (chunkSizeMB));
+
+            // get right number of items per chunk
+            int itemsPerChunk = Convert.ToInt32(Math.Ceiling(content.Count() / chunksCount));
+
+            // add chunks to final collection
+            var chunkCollection = new List<List<T>>() { };
+            int count = 0;
+            do
+            {
+                List<T> chunk = content.Skip(count).Take(itemsPerChunk).ToList();
+                chunkCollection.Add(chunk);
+                count += itemsPerChunk;
+            }
+            while (count < content.Count());
+
+            return chunkCollection;
         }
     }
 }

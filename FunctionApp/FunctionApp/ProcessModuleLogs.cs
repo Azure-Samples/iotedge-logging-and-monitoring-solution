@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
 using Azure.Storage.Blobs;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace FunctionApp
 {
@@ -23,17 +24,18 @@ namespace FunctionApp
         private string _logType = Environment.GetEnvironmentVariable("LogType");
         private int _logMaxSizeMB = Convert.ToInt32(Environment.GetEnvironmentVariable("LogsMaxSizeMB"));
         private bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
-        private AzureLogAnalytics _azureLogAnalytics;
+        private ILogger _logger { get; set; }
+        private AzureLogAnalytics _azureLogAnalytics { get; set; }
         
-        public ProcessModuleLogs(AzureLogAnalytics azureLogAnalytics)
+        public ProcessModuleLogs(AzureLogAnalytics azureLogAnalytics, ILogger<ProcessModuleLogs> logger)
         {
+            this._logger = logger;
             this._azureLogAnalytics = azureLogAnalytics;
         }
 
         [FunctionName("ProcessModuleLogs")]
         public async Task Run(
-            [QueueTrigger("%QueueName%", Connection = "StorageConnectionString")] string queueItem,
-            ILogger log)
+            [QueueTrigger("%QueueName%", Connection = "StorageConnectionString")] string queueItem)
         {
             try
             {
@@ -42,20 +44,20 @@ namespace FunctionApp
                 var match = Regex.Match(storageEvent["subject"].ToString(), "/blobServices/default/containers/(.*)/blobs/(.*)", RegexOptions.IgnoreCase);
                 if (!match.Success)
                 {
-                    log.LogWarning($"Unable to parse blob Url from {storageEvent["subject"]}");
+                    this._logger.LogWarning($"Unable to parse blob Url from {storageEvent["subject"]}");
                     return;
                 }
 
                 if (!string.Equals(match.Groups[1].Value, _containerName))
                 {
-                    log.LogDebug($"Ignoring queue item because it is related to container '{match.Groups[1].Value}'");
+                    this._logger.LogDebug($"Ignoring queue item because it is related to container '{match.Groups[1].Value}'");
                     return;
                 }
 
                 string blobName = match.Groups[2].Value;
                 #endregion
 
-                log.LogInformation($"ProcessModuleLogs function received a new queue message from blob {blobName}");
+                this._logger.LogInformation($"ProcessModuleLogs function received a new queue message from blob {blobName}");
                 
                 // Create a BlobServiceClient object which will be used to create a container client
                 BlobServiceClient blobServiceClient = new BlobServiceClient(_connectionString);
@@ -89,44 +91,27 @@ namespace FunctionApp
 
                 // because log analytics supports messages up to 30MB,
                 // we have to break logs in chunks to fit in on each request
-                byte[] logBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(logAnalyticsLogs));
-                double chunks = Math.Ceiling(logBytes.Length / (_logMaxSizeMB * 1024f * 1024f));
+                List<List<LogAnalyticsLog>> logsChunks = this._azureLogAnalytics.CreateContentChunks<LogAnalyticsLog>(logAnalyticsLogs, _logMaxSizeMB * 1024f * 1024f);
 
-                // get right number of items for the logs array
-                int steps = Convert.ToInt32(Math.Ceiling(logAnalyticsLogs.Length / chunks));
+                this._logger.LogInformation($"Separated {logAnalyticsLogs.Length} logs in {logsChunks.Count} chunks of {_logMaxSizeMB} mb");
 
-                int count = 0;
-                do
+                for (int i = 0; i < logsChunks.Count; i++)
                 {
-                    int limit = count + steps < logAnalyticsLogs.Length ? count + steps : logAnalyticsLogs.Length;
+                    this._logger.LogInformation($"Submitting chunk {i + 1} out of {logsChunks.Count} with {logsChunks[i].Count} logs");
 
-                    log.LogInformation($"Submitting data collection request for logs {count + 1} - {limit} / {logAnalyticsLogs.Length}");
-
-                    LogAnalyticsLog[] logsChunk = logAnalyticsLogs.Skip(count).Take(limit).ToArray();
-                    try
-                    {
-                        //logAnalytics.Post(JsonConvert.SerializeObject(logsChunk), _logType, _hubResourceId);
-                        bool success = this._azureLogAnalytics.PostToCustomTable(JsonConvert.SerializeObject(logsChunk), _logType, _hubResourceId);
-                        if (success)
-                            log.LogInformation("ProcessModuleLogs request to log analytics completed successfully");
-                        else
-                            log.LogError("ProcessModuleLogs request to log analytics failed");
-                    }
-                    catch (Exception e)
-                    {
-                        log.LogError($"ProcessModuleLogs failed with exception {e}");
-                    }
-
-                    count += steps;
+                    bool success = this._azureLogAnalytics.PostToCustomTable(JsonConvert.SerializeObject(logsChunks[i]), _logType, _hubResourceId);
+                    if (success)
+                        this._logger.LogInformation("ProcessModuleLogs request to log analytics completed successfully");
+                    else
+                        this._logger.LogError("ProcessModuleLogs request to log analytics failed");
                 }
-                while (count < iotEdgeLogs.Length);
 
                 // Delete blob after being processed
                 await blobClient.DeleteIfExistsAsync(Azure.Storage.Blobs.Models.DeleteSnapshotsOption.IncludeSnapshots);
             }
             catch (Exception e)
             {
-                log.LogError($"ProcessModuleLogs failed with the following exception: {e}");
+                this._logger.LogError($"ProcessModuleLogs failed with the following exception: {e}");
             }
         }
     }
