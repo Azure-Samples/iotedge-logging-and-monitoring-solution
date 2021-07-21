@@ -138,7 +138,7 @@
     "queueSizeAlertDeploymentName": "[concat('queuesizealert-', parameters('environmentHashId'))]",
     "queueSizeAlertName": "[concat('ELMS edge hub queue size ', parameters('environmentHashId'))]",
     "queueSizeAlertDescription": "Tracks the number of times a device's edge Hub queue size (sum) was over the configured threshold during the evaluation period.",
-    "queueSizeAlertQuery": "// IoT Edge: Edge Hub queue size over threshold\n// Number of times a device's Edge Hub queue size (sum) was over the configured threshold during the evaluation period.\n// To create an alert for this query, click '+ New alert'\nlet qlenThreshold = 100;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgehub_queue_length\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend ep = tostring(dimensions.endpoint)\n| extend qlen = toint(Val)\n| project device, qlen, ep, TimeGenerated, _ResourceId\n| summarize sum(qlen) by TimeGenerated, device, _ResourceId\n| where sum_qlen >= qlenThreshold\n| project-away sum_qlen",
+    "queueSizeAlertQuery": "// IoT Edge: Edge Hub queue size over threshold\n// Number of times a device's Edge Hub queue size (sum) was over the configured threshold during the evaluation period.\n// To create an alert for this query, click '+ New alert'\nlet qlenThreshold = 1;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgehub_queue_length\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend ep = tostring(dimensions.endpoint)\n| extend qlen = toint(Val)\n| project device, qlen, ep, TimeGenerated, _ResourceId\n| summarize sum(qlen) by TimeGenerated, device, _ResourceId\n| where sum_qlen >= qlenThreshold\n| project-away sum_qlen",
 
     "deviceDiskSpaceAlertDeploymentName": "[concat('devicediskspacealert-', parameters('environmentHashId'))]",
     "deviceDiskSpaceAlertName": "[concat('ELMS device disk space ', parameters('environmentHashId'))]",
@@ -281,7 +281,7 @@
                 "name": "_ResourceId",
                 "operator": "Include",
                 "values": [
-                  "[parameters('scope')]"
+                  "*"
                 ]
               }
             ]
@@ -357,7 +357,7 @@
                 "name": "_ResourceId",
                 "operator": "Include",
                 "values": [
-                  "[parameters('scope')]"
+                  "*"
                 ]
               }
             ]
@@ -436,7 +436,7 @@
                 "name": "_ResourceId",
                 "operator": "Include",
                 "values": [
-                  "[parameters('scope')]"
+                  "*"
                 ]
               }
             ]

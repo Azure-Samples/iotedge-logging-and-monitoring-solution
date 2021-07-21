@@ -78,6 +78,10 @@
       "metadata": {
         "description": "Resource Id of the action group(s) to link the alert to"
       }
+    },
+    "autoMitigate": {
+      "type": "bool",
+      "defaultValue": true
     }
   },
   "variables": {},
@@ -89,7 +93,7 @@
       "location": "[parameters('location')]",
       "properties": {
         "enabled": true,
-        "autoMitigate": false,
+        "autoMitigate": "[parameters('autoMitigate')]",
         "severity": "[parameters('severity')]",
         "description": "[parameters('description')]",
         "evaluationFrequency": "[parameters('evaluationFrequency')]",
