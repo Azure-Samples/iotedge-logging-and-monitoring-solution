@@ -610,15 +610,15 @@ function Set-ELMSAlerts {
         "scope"                                   = @{ "value" = $script:iot_hub_id }
         "severity"                                = @{ "value" = $severity }
         
-        "queueSizeAlertEvaluationFrequency"       = @{ "value" = "PT5M" }
+        "queueSizeAlertEvaluationFrequency"       = @{ "value" = "PT30M" }
         "queueSizeAlertWindowSize"                = @{ "value" = "PT30M" }
         "queueSizeAlertThreshold"                 = @{ "value" = 3 }
         
-        "deviceDiskSpaceAlertEvaluationFrequency" = @{ "value" = "PT5M" }
+        "deviceDiskSpaceAlertEvaluationFrequency" = @{ "value" = "PT30M" }
         "deviceDiskSpaceAlertWindowSize"          = @{ "value" = "PT30M" }
         "deviceDiskSpaceAlertThreshold"           = @{ "value" = 75 }
         
-        "deviceOfflineAlertEvaluationFrequency"   = @{ "value" = "PT5M" }
+        "deviceOfflineAlertEvaluationFrequency"   = @{ "value" = "PT30M" }
         "deviceOfflineAlertWindowSize"            = @{ "value" = "PT30M" }
         "deviceOfflineAlertThreshold"             = @{ "value" = 3 }
 
