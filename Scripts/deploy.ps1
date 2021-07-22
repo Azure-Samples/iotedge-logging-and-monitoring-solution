@@ -9,6 +9,28 @@ function Set-EnvironmentHash {
     $script:env_hash = Get-EnvironmentHash -hash_length $hash_length
 }
 
+function Read-CliVersion {
+    param (
+        [version]$min_version = "2.21"
+    )
+
+    $az_version = az version | ConvertFrom-Json
+    [version]$cli_version = $az_version.'azure-cli'
+
+    Write-Host "Verifying your Azure CLI installation version..."
+    Start-Sleep -Milliseconds 500
+
+    if ($min_version -gt $cli_version) {
+        Write-Host
+        Write-Host "You are currently using the Azure CLI version $($cli_version) and this wizard requires version $($min_version) or later. You can update your CLI installation with 'az upgrade' and come back at a later time."
+
+        return $false
+    }
+    else {
+        return $true
+    }
+}
+
 function Set-AzureAccount {
     param()
 
@@ -16,7 +38,8 @@ function Set-AzureAccount {
 
     $option = Get-InputSelection `
         -options @("Yes", "No. I want to use a different subscription") `
-        -text "You are currently using the Azure subscription '$($account.name)'. Do you want to keep using it?"
+        -text "You are currently using the Azure subscription '$($account.name)'. Do you want to keep using it?" `
+        -default_index 1
     
     if ($option -eq 2) {
         $accounts = az account list | ConvertFrom-Json | Sort-Object -Property name
@@ -66,12 +89,12 @@ function Get-InputSelection {
     param(
         [array] $options,
         $text,
-        $separator = "`r`n"
+        $separator = "`r`n",
+        $default_index = $null
     )
 
     Write-Host
     Write-Host $text -Separator "`r`n`r`n"
-
     $indexed_options = @()
     for ($index = 0; $index -lt $options.Count; $index++) {
         $indexed_options += ("$($index + 1): $($options[$index])")
@@ -79,10 +102,21 @@ function Get-InputSelection {
 
     Write-Host $indexed_options -Separator $separator
 
+    if (!$default_index) {
+        $prompt = ">"
+    }
+    else {
+        $prompt = "> $default_index"
+    }
+
     while ($true) {
-        $option = Read-Host -Prompt ">"
+        $option = Read-Host -Prompt $prompt
         try {
-            if ([int] $option -ge 1 -and [int] $option -le $options.Count) {
+            if (!!$default_index -and !$option)  {
+                $option = $default_index
+                break
+            }
+            elseif ([int] $option -ge 1 -and [int] $option -le $options.Count) {
                 break
             }
         }
@@ -362,6 +396,7 @@ function Set-ELMSAlerts {
         [bool] $new_deployment = $true
     )
 
+    #region greeting
     $alerts_greeting = "Monitoring Alerts feed from built-in metrics from the IoT Edge runtime collected by the metrics-collector module. The pre-configured alert rules monitor three events in your IoT edge devices: offline devices or not sending messages upstream at an expected rate, edge hub queues growing in size over time and percentage of total disk space used per edge device. "
     if (!$new_deployment) {
         $alerts_greeting += "Additionally, you can choose between pulling logs from edge devices into Log Analytics periodically or whenever an alert is triggered, thus using less bandwidth and overall storage. "
@@ -370,10 +405,22 @@ function Set-ELMSAlerts {
     $alerts_greeting += "You can also link an existing Monitoring action group to the pre-configured alerts to get user notifications in real-time. For more information on the Azure Monitor Log alerts associated with IoT edge devices, visit https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-alerts?view=iotedge-2020-11."
     
     Write-Host
-    Write-Host $alerts_greeting
-    Write-Host
     Write-Host "Press Enter to continue."
     Read-Host
+    # Write-Host
+    # Write-Host $alerts_greeting
+    # Write-Host
+    # $option = Get-InputSelection `
+    #     -options @( "Yes", "No") `
+    #     -text "Do you want to set up monitoring alerts now?" `
+    #     -default_index 1
+
+    # if ($option -eq 2) {
+    #     Write-Host
+    #     Write-Host "No problem. You can set up alerts at any time by running this wizard and choosing option 3."
+    #     return $null
+    # }
+    #endregion
 
     #region iot hub
     if (!$new_deployment) {
@@ -446,6 +493,31 @@ function Set-ELMSAlerts {
     #endregion
 
     $script:env_hash = $function_app.name.Split('-')[1]
+    #endregion
+
+    #region verify workspace and that InsightsMetrics table contains data
+    Write-Host
+    $workspace_resource_id = $function_app.tags.logAnalyticsWorkspace
+    if (!!$workspace_resource_id) {
+        Write-Host
+        Write-Host "Verifying that there are metrics in your Log Analytics workspace..."
+
+        $workspace_id = az resource show --id $workspace_resource_id --query 'properties.customerId' -o tsv
+
+        $insights_metrics = az monitor log-analytics query -w $workspace_id --analytics-query "InsightsMetrics | summarize count()" | ConvertFrom-Json
+        if ($insights_metrics[0].count_ -eq 0) {
+            Write-Host
+            Write-Host "It looks like there is no metrics data in your Log Analytics workspace. Make sure you enable the monitoring option on your ELMS solution and you deploy the metrics collector module to your IoT edge devices to start collecting monitoring data before you attemp to set up monitoring alerts."
+            Write-Host
+            Read-Host -Prompt "Press Enter to exit"
+
+            return $null
+        }
+    }
+    else {
+        Write-Host "Unable to find a Log Analytics workspace that is linked to your ELMS Function App. Please add the tag 'logAnalyticsWorkspace': '<your-workspace-resource-id>' to your Function App in order to link it."
+        return $null
+    }
     #endregion
 
     #region monitor action groups
@@ -563,7 +635,7 @@ function Set-ELMSAlerts {
     }
     #endregion
 
-    #region disable periodic log pull if desired
+    #region enable/disable periodic log pull if desired
     $schedule_log_upload_function = az functionapp function show `
         --resource-group $function_app.resourceGroup `
         --name $function_app.name `
@@ -605,9 +677,6 @@ function Set-ELMSAlerts {
 
 function New-ELMSEnvironment() {
 
-    # set azure susbcription
-    Set-AzureAccount
-
     #region script variables
     Set-EnvironmentHash
 
@@ -642,8 +711,17 @@ function New-ELMSEnvironment() {
     Write-Host "Welcome to IoT ELMS (Edge Logging & Monitoring Solution). This deployment script will help you deploy IoT ELMS in your Azure subscription. It can be deployed as a sandbox environment, with a new IoT hub and a test IoT Edge device generating sample logs and collecting monitoring metrics, or it can connect to your existing IoT Hub and Log analytics workspace."
     Write-Host
     Write-Host "Press Enter to continue."
-    Read-Host
     #endregion
+
+    #region validate CLI version
+    $cli_valid = Read-CliVersion
+    if (!$cli_valid) {
+        return $null
+    }
+    #endregion
+
+    # set azure susbcription
+    Set-AzureAccount
 
     #region deployment option
     $deployment_options = @(
@@ -756,7 +834,8 @@ function New-ELMSEnvironment() {
     else {
         $option = Get-InputSelection `
             -options @("Yes", "No") `
-            -text @("In addition to logging, ELMS can enable IoT Edge monitoring with Azure Monitor. It will let you monitor your edge fleet at scale by using Azure Monitor to collect, store, visualize and generate alerts from metrics emitted by the IoT Edge runtime.", "Do you want to enable IoT Edge monitoring? Choose an option from the list (using its Index):")
+            -text @("In addition to logging, ELMS can enable IoT Edge monitoring with Azure Monitor. It will let you monitor your edge fleet at scale by using Azure Monitor to collect, store, visualize and generate alerts from metrics emitted by the IoT Edge runtime.", "Do you want to enable IoT Edge monitoring? Choose an option from the list (using its Index):") `
+            -default_index 1
         
         if ($option -eq 1) {
             $script:enable_monitoring = $true
@@ -1074,8 +1153,8 @@ function New-ELMSEnvironment() {
     } while ($response.StatusCode -ne 200 -and $attemps -gt 0)
     #endregion
 
-    # set alerts
-    Set-ELMSAlerts -new_deployment $true
+    # alerts
+    # Set-ELMSAlerts -new_deployment $true
 
     #region completion message
     Write-Host
