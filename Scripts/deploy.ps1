@@ -413,6 +413,8 @@ function Set-ELMSAlerts {
     $alerts_greeting += "You can also link an existing Monitoring action group to the pre-configured alerts to get user notifications in real-time. For more information on the Azure Monitor Log alerts associated with IoT edge devices, visit https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-alerts?view=iotedge-2020-11."
     
     Write-Host
+    Write-Host $alerts_greeting
+    Write-Host
     Write-Host "Press Enter to continue."
     Read-Host
     # Write-Host
