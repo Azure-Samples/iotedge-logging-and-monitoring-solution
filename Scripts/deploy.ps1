@@ -520,7 +520,7 @@ function Set-ELMSAlerts {
         --analytics-query $query | ConvertFrom-Json
         if ($insights_metrics.IsPresent -eq 'no' ) {
             Write-Host
-            Write-Host "It looks like there is no metrics data in your Log Analytics workspace. Make sure you enable the monitoring option on your ELMS solution and you deploy the metrics collector module to your IoT edge devices to start collecting monitoring data before you attemp to set up monitoring alerts."
+            Write-Host "It looks like there is no metrics data in your Log Analytics workspace. Make sure you enable the monitoring option on your ELMS solution and the metrics collector module has been running on your IoT edge devices for at least 10 minutes before you attemp to set up monitoring alerts."
             Write-Host
             Read-Host -Prompt "Press Enter to exit"
 
