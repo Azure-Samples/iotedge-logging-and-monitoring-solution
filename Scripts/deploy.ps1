@@ -17,6 +17,7 @@ function Read-CliVersion {
     $az_version = az version | ConvertFrom-Json
     [version]$cli_version = $az_version.'azure-cli'
 
+    Write-Host
     Write-Host "Verifying your Azure CLI installation version..."
     Start-Sleep -Milliseconds 500
 
@@ -27,12 +28,19 @@ function Read-CliVersion {
         return $false
     }
     else {
+        Write-Host
+        Write-Host "Great! You are using a supported Azure CLI version."
+
         return $true
     }
 }
 
 function Set-AzureAccount {
     param()
+
+    Write-Host
+    Write-Host "Retrieving your current Azure subscription..."
+    Start-Sleep -Milliseconds 500
 
     $account = az account show | ConvertFrom-Json
 
@@ -711,6 +719,7 @@ function New-ELMSEnvironment() {
     Write-Host "Welcome to IoT ELMS (Edge Logging & Monitoring Solution). This deployment script will help you deploy IoT ELMS in your Azure subscription. It can be deployed as a sandbox environment, with a new IoT hub and a test IoT Edge device generating sample logs and collecting monitoring metrics, or it can connect to your existing IoT Hub and Log analytics workspace."
     Write-Host
     Write-Host "Press Enter to continue."
+    Read-Host
     #endregion
 
     #region validate CLI version
