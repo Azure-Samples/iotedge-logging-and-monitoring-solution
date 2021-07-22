@@ -512,8 +512,11 @@ function Set-ELMSAlerts {
 
         $workspace_id = az resource show --id $workspace_resource_id --query 'properties.customerId' -o tsv
 
-        $insights_metrics = az monitor log-analytics query -w $workspace_id --analytics-query "InsightsMetrics | summarize count()" | ConvertFrom-Json
-        if ($insights_metrics[0].count_ -eq 0) {
+        $query = "let hasNonEmptyTable = (T:string) { toscalar( union isfuzzy=true ( table(T) | count as Count ), (print Count=0) | summarize sum(Count) ) > 0 }; let TableName = 'InsightsMetrics'; print IsPresent=iif(hasNonEmptyTable(TableName), 'yes', 'no')"
+        $insights_metrics = az monitor log-analytics query `
+        -w $workspace_id `
+        --analytics-query $query | ConvertFrom-Json
+        if ($insights_metrics.IsPresent -eq 'no' ) {
             Write-Host
             Write-Host "It looks like there is no metrics data in your Log Analytics workspace. Make sure you enable the monitoring option on your ELMS solution and you deploy the metrics collector module to your IoT edge devices to start collecting monitoring data before you attemp to set up monitoring alerts."
             Write-Host
