@@ -613,14 +613,20 @@ function Set-ELMSAlerts {
         "queueSizeAlertEvaluationFrequency"       = @{ "value" = "PT30M" }
         "queueSizeAlertWindowSize"                = @{ "value" = "PT30M" }
         "queueSizeAlertThreshold"                 = @{ "value" = 3 }
+        "queueSizeAlertOperator"                  = @{ "value" = "GreaterThan" }
+        "queueSizeAlertTimeAggregation"           = @{ "value" = "Count" }
         
         "deviceDiskSpaceAlertEvaluationFrequency" = @{ "value" = "PT30M" }
         "deviceDiskSpaceAlertWindowSize"          = @{ "value" = "PT30M" }
         "deviceDiskSpaceAlertThreshold"           = @{ "value" = 75 }
+        "deviceDiskSpaceAlertOperator"            = @{ "value" = "GreaterThan" }
+        "deviceDiskSpaceAlertTimeAggregation"     = @{ "value" = "Total" }
         
         "deviceOfflineAlertEvaluationFrequency"   = @{ "value" = "PT30M" }
         "deviceOfflineAlertWindowSize"            = @{ "value" = "PT30M" }
         "deviceOfflineAlertThreshold"             = @{ "value" = 3 }
+        "deviceOfflineAlertOperator"              = @{ "value" = "LessThan" }
+        "deviceOfflineAlertTimeAggregation"       = @{ "value" = "Total" }
 
         "createFunctionActionGroup"               = @{ "value" = $create_action_group }
         "additionalActionGroup"                   = @{ "value" = $additional_action_group_id }

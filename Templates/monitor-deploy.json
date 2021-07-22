@@ -45,6 +45,22 @@
         "description": "Limit value to trigger the IoT edge hub queue size alert."
       }
     },
+    "queueSizeAlertOperator": {
+      "type": "string",
+      "metadata": {
+        "description": "Evaluation operator."
+      }
+    },
+    "queueSizeAlertTimeAggregation": {
+      "type": "string",
+      "allowedValues": [
+        "Total",
+        "Count"
+      ],
+      "metadata": {
+        "description": "Time aggregation for IoT edge hub queue size alert."
+      }
+    },
     "deviceDiskSpaceAlertEvaluationFrequency": {
       "type": "string",
       "metadata": {
@@ -63,6 +79,22 @@
         "description": "Limit value to trigger the IoT edge device disk space alert."
       }
     },
+    "deviceDiskSpaceAlertOperator": {
+      "type": "string",
+      "metadata": {
+        "description": "Evaluation operator."
+      }
+    },
+    "deviceDiskSpaceAlertTimeAggregation": {
+      "type": "string",
+      "allowedValues": [
+        "Total",
+        "Count"
+      ],
+      "metadata": {
+        "description": "Time aggregation for IoT edge disk space alert."
+      }
+    },
     "deviceOfflineAlertEvaluationFrequency": {
       "type": "string",
       "metadata": {
@@ -79,6 +111,22 @@
       "type": "int",
       "metadata": {
         "description": "Limit value to trigger the IoT edge device offline alert."
+      }
+    },
+    "deviceOfflineAlertOperator": {
+      "type": "string",
+      "metadata": {
+        "description": "Evalutation operator."
+      }
+    },
+    "deviceOfflineAlertTimeAggregation": {
+      "type": "string",
+      "allowedValues": [
+        "Total",
+        "Count"
+      ],
+      "metadata": {
+        "description": "Time aggregation for IoT edge device offline alert."
       }
     },
     "createFunctionActionGroup": {
@@ -290,10 +338,10 @@
             "value": "[variables('queueSizeAlertQuery')]"
           },
           "timeAggregation": {
-            "value": "Count"
+            "value": "[parameters('queueSizeAlertTimeAggregation')]"
           },
           "operator": {
-            "value": "GreaterThan"
+            "value": "[parameters('queueSizeAlertOperator')]"
           },
           "threshold": {
             "value": "[parameters('queueSizeAlertThreshold')]"
@@ -369,10 +417,10 @@
             "value": "[variables('deviceDiskSpaceAlertMetricMeasureColumn')]"
           },
           "timeAggregation": {
-            "value": "Total"
+            "value": "[parameters('deviceDiskSpaceAlertTimeAggregation')]"
           },
           "operator": {
-            "value": "GreaterThan"
+            "value": "[parameters('deviceDiskSpaceAlertOperator')]"
           },
           "threshold": {
             "value": "[parameters('deviceDiskSpaceAlertThreshold')]"
@@ -448,10 +496,10 @@
             "value": "[variables('deviceOfflineAlertQuery')]"
           },
           "timeAggregation": {
-            "value": "Total"
+            "value": "[parameters('deviceOfflineAlertTimeAggregation')]"
           },
           "operator": {
-            "value": "LessThan"
+            "value": "[parameters('deviceOfflineAlertOperator')]"
           },
           "threshold": {
             "value": "[parameters('deviceOfflineAlertThreshold')]"
