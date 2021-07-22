@@ -451,7 +451,7 @@
             "value": "Total"
           },
           "operator": {
-            "value": "GreaterThan"
+            "value": "LessThan"
           },
           "threshold": {
             "value": "[parameters('deviceOfflineAlertThreshold')]"

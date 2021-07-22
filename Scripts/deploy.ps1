@@ -620,7 +620,7 @@ function Set-ELMSAlerts {
         
         "deviceOfflineAlertEvaluationFrequency"   = @{ "value" = "PT5M" }
         "deviceOfflineAlertWindowSize"            = @{ "value" = "PT30M" }
-        "deviceOfflineAlertThreshold"             = @{ "value" = 5 }
+        "deviceOfflineAlertThreshold"             = @{ "value" = 3 }
 
         "createFunctionActionGroup"               = @{ "value" = $create_action_group }
         "additionalActionGroup"                   = @{ "value" = $additional_action_group_id }
