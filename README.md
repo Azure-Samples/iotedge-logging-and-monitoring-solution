@@ -46,6 +46,32 @@ If the monitoring option is enabled, the following components will be created in
 
 
 
+## Monitor alerts architecture reference
+
+After the solution has been deployed with the monitoring option enabled, you can run the wizard again and create/update Azure Monitor alerts in your IoT hub. The architecture below illustrates the involved resources:
+
+![Alerts architecture](docs/monitor-alerts-architecture.png)
+
+### High-level process flow:
+
+1. Alert rules are created on Azure Monitor and scoped to your IoT hub.
+2. The wizard flow will give you the following choices to choose from:
+   1. Pull logs from IoT edge devices periodically. This is the default behavior when you deploy the solution.
+   2. Proactively pull logs from edge devices only when alerts are triggered, in which case the alerts will be linked to an Azure Function that kicks off the logs retrieval process to store them in Log Analytics for troubleshooting.
+3. Optionally, you can link an existing action group to the alerts. At the moment this document was written, action groups support email, SMS, push notifications, ITSM, webhooks, Azure Functions, Logic Apps and Automation Runbooks.
+
+
+
+> NOTE: As of August 2021, the wizard creates three query alert rules in your IoT hub that check for:
+>
+> - Edge devices with high disk space usage
+> - Edge devices with high edge hub queue length
+> - Edge devices that are offline or not sending messages upstream at an expected rate
+>
+> Additional alert rules can be created at any time through Azure CLI, Azure PowerShell or the Azure Portal.
+
+
+
 ## Pre-requisites
 
 In order to successfully deploy this solution, you will need the following:
@@ -111,6 +137,7 @@ The function solution receives its configuration through the application setting
 - **QueueName**: Storage queue to publish events to.
 - **WorkspaceId**: Log analytics workspace Id. More info on how to retrieve the workspace Id can be found [here](https://www.cloudsma.com/2020/08/log-analytics-keys/).
 - **WorkspaceKey**: Log analytics workspace shared key. More info on how to retrieve the shared key can be found [here](https://www.cloudsma.com/2020/08/log-analytics-keys/).
+- **WorkspaceDomainSuffix**: Log analytics domain suffix. It will match the cloud you are using: `azure.com` for Azure Commercial Cloud, `azure.us` for Azure Government Cloud and `azure.cn` for Azure China Cloud.
 - **LogType**: A name to group logs by in Log analytics. It can be something like `iotedgemodulelogs`.
 - **EventHubName**: Event Hubs namespace authorization key with `listen` rights. It is **OPTIONAL** and required only when uploading metrics as IoT messages.
 - **EventHubConsumerGroup**: Event Hubs instance consumer group to read events from. Default is `$default`. It is **OPTIONAL** and required only when uploading metrics as IoT messages.
@@ -120,7 +147,7 @@ The function solution receives its configuration through the application setting
 - **LogsLogLevel**: Despite what the [official documentation](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2018-06#upload-module-logs) says for the edge agent's direct methods, this setting filters log lines that match exactly the log level, following the [Syslog severity level](https://en.wikipedia.org/wiki/Syslog#Severity_level) standard. It is **OPTIONAL**, if not provided, it will retrieve logs for all log levels.
 - **LogsRegex**: Used to filter log lines with content that matches the specified regular expression. [.NET Regular Expressions](https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expressions) format is expected. **OPTIONAL**.
 - **LogsTail**: Number of log lines in the past to retrieve starting from the latest. **OPTIONAL**.
-- **LogsEncoding**: Logs encoding format. Options are `gzip` or `none`. Default is `json`.
+- **LogsEncoding**: Logs encoding format. Options are `gzip` or `none`. Default is `gzip`.
 - **LogsContentType**: Logs content type. Options are `json` or `text`. Default is `json`.
 - **CompressForUpload**: Whether to compress logs and metrics when uploading them to Azure Log Analytics or IoT messages in the case of metrics. Default is `true`.
 
