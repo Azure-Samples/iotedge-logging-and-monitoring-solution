@@ -1,0 +1,32 @@
+{
+  "edgeVmName": {
+    "value": "edge-10-ae2880df"
+  },
+  "dpsConnectionString": {
+    "value": "HostName=dps-feb2ed94.azure-devices-provisioning.net;SharedAccessKeyName=provisioningserviceowner;SharedAccessKey=2D41pGiv4/dstm23LdF4/+QQ008vO7bjWs9SjHgDgO4="
+  },
+  "templateUrl": {
+    "value": "https://raw.githubusercontent.com/Azure-Samples/iotedge-logging-and-monitoring-solution"
+  },
+  "adminUsername": {
+    "value": "azureuser"
+  },
+  "edgeVmSize": {
+    "value": "Standard_B2ms"
+  },
+  "adminPassword": {
+    "value": "Ca6.nkRE.tzG"
+  },
+  "location": {
+    "value": "eastus"
+  },
+  "branchName": {
+    "value": "alerts"
+  },
+  "edgeSubnetId": {
+    "value": "/subscriptions/f0cf2edb-86a7-44b6-9c02-9c5fee5c618d/resourceGroups/elms-w-alerts-2/providers/Microsoft.Network/virtualNetworks/iot-vnet-feb2ed94/subnets/iotedge"
+  },
+  "dpsIdScope": {
+    "value": "0ne00342759"
+  }
+}
