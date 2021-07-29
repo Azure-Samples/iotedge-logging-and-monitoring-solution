@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "name": {
+      "type": "string"
+    },
+    "shortName": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 12
+    },
+    "functionAppName": {
+      "type": "string"
+    },
+    "functionAppId": {
+      "type": "string"
+    },
+    "functionName": {
+      "type": "string"
+    },
+    "functionHttpTriggerUrl": {
+      "type": "string"
+    },
+    "useCommonAlertSchema": {
+      "type": "bool",
+      "defaultValue": true
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "microsoft.insights/actionGroups",
+      "apiVersion": "2019-06-01",
+      "name": "[parameters('name')]",
+      "location": "Global",
+      "properties": {
+        "groupShortName": "[parameters('shortName')]",
+        "enabled": true,
+        "azureFunctionReceivers": [
+          {
+            "name": "[parameters('functionAppName')]",
+            "functionAppResourceId": "[parameters('functionAppId')]",
+            "functionName": "[parameters('functionName')]",
+            "httpTriggerUrl": "[parameters('functionHttpTriggerUrl')]",
+            "useCommonAlertSchema": "[parameters('useCommonAlertSchema')]"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "resourceId": {
+      "type": "string",
+      "value": "[resourceId('microsoft.insights/actionGroups', parameters('name'))]"
+    }
+  }
+}

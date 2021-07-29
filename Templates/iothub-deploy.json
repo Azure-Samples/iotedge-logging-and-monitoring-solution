@@ -45,31 +45,40 @@
       "type": "string"
     },
     "edgeVmName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "edgeVmDnsName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "edgeVmSize": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "adminUsername": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "adminPassword": {
-      "type": "securestring"
+      "type": "securestring",
+      "defaultValue": ""
     },
     "vnetName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "vnetAddressPrefix": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "edgeSubnetName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "edgeSubnetAddressRange": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     },
     "templateUrl": {
       "type": "string"
@@ -360,7 +369,7 @@
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('sudo bash edge-setup.sh --idScope \"', if(parameters('createIoTHub'), reference(variables('dpsResourceId'), variables('dpsApiVersion')).idScope, 'idScope'), '\" --dpsConnString \"', 'HostName=', parameters('dpsName'), '.azure-devices-provisioning.net;SharedAccessKeyName=provisioningserviceowner;SharedAccessKey=', if(parameters('createIoTHub'), listKeys(variables('dpsResourceId'), providers('Microsoft.Devices', 'ProvisioningServices').apiVersions[0]).value[0].primaryKey, 'SharedAccessKey'), '\"', ' --dpsGlobalEndpoint ', '\"', 'https://', variables('dpsGlobalEndpoint'), '\"')]"
+          "commandToExecute": "[concat('sudo bash edge-setup.sh --idScope \"', if(parameters('createIoTHub'), reference(variables('dpsResourceId'), variables('dpsApiVersion')).idScope, 'idScope'), '\" --dpsConnString \"', 'HostName=', parameters('dpsName'), '.', variables('dpsGlobalDomain'), ';SharedAccessKeyName=provisioningserviceowner;SharedAccessKey=', if(parameters('createIoTHub'), listKeys(variables('dpsResourceId'), providers('Microsoft.Devices', 'ProvisioningServices').apiVersions[0]).value[0].primaryKey, 'SharedAccessKey'), '\"', ' --dpsGlobalEndpoint ', '\"', 'https://', variables('dpsGlobalEndpoint'), '\"')]"
         }
       },
       "dependsOn": [

@@ -10,6 +10,9 @@
 
  .PARAMETER idScope
     The Dps id scope
+
+ .PARAMETER dpsGlobalEndpoint
+    The Dps global endpoint
 #>
 param(
     [Parameter(Mandatory)]

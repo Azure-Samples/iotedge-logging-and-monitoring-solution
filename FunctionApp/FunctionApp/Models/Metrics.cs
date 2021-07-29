@@ -56,4 +56,20 @@ namespace FunctionApp.Models
         [JsonProperty("Labels")]
         public IReadOnlyDictionary<string, string> Labels { get; set; }
     }
+
+    public class UploadMetric
+    {
+        public DateTime TimeGeneratedUtc { get; }
+        public string Name { get; }
+        public double Value { get; }
+        public string Tags { get; }
+
+        public UploadMetric(IoTHubMetric metric)
+        {
+            this.TimeGeneratedUtc = metric.TimeGeneratedUtc;
+            this.Name = metric.Name;
+            this.Value = metric.Value;
+            this.Tags = JsonConvert.SerializeObject(metric.Labels);
+        }
+    }
 }

@@ -1,34 +1,46 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using FunctionApp.MetricsCollector;
+using FunctionApp.CertificateGenerator;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using ICSharpCode.SharpZipLib.Zip.Compression;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using System.Security.Cryptography.X509Certificates;
+using Newtonsoft.Json;
 
 namespace FunctionApp
 {
     public class AzureLogAnalytics
     {
-        public string WorkspaceId { get; set; }
+        private HttpClient _client { get; set; }
+        private string _workspaceId { get; set; }
         private string _workspaceKey { get; set; }
-        public string ApiVersion { get; set; }
-        public ILogger Logger { get; set; }
+        private string _workspaceDomainSuffix { get; set; }
+        private string _apiVersion { get; set; }
+        private CertGenerator _certGenerator { get; set; }
+        private ILogger _logger { get; set; }
+        private X509Certificate2 cert;
         private int failurecount = 0;
         private DateTime lastFailureReportedTime = DateTime.UnixEpoch;
 
-        public AzureLogAnalytics(string workspaceId, string workspaceKey, ILogger logger, string apiVersion = "2016-04-01")
+        public AzureLogAnalytics(IConfiguration configuration, HttpClient client, CertGenerator certGenerator, ILogger<AzureLogAnalytics> logger)
         {
-            this.WorkspaceId = workspaceId;
-            this._workspaceKey = workspaceKey;
-            this.ApiVersion = apiVersion;
-            this.Logger = logger;
+            this._client = client;
+            this._workspaceId = configuration["WorkspaceId"];
+            this._workspaceKey = configuration["WorkspaceKey"];
+            this._workspaceDomainSuffix = configuration["WorkspaceDomainSuffix"];
+            this._apiVersion = configuration["WorkspaceApiVersion"];
+            this._certGenerator = certGenerator;
+            this._logger = logger;
         }
 
         /// <summary>
@@ -44,9 +56,8 @@ namespace FunctionApp
         {
             try
             {
-                string requestUriString = $"https://{WorkspaceId}.ods.{Constants.DefaultLogAnalyticsWorkspaceDomain}/api/logs?api-version={ApiVersion}";
-                DateTime dateTime = DateTime.UtcNow;
-                string dateString = dateTime.ToString("r");
+                string requestUriString = $"https://{this._workspaceId}{Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOds}{this._workspaceDomainSuffix}/api/logs?api-version={this._apiVersion}";
+                string dateString = DateTime.UtcNow.ToString("r");
                 string signature = GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
                 
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(requestUriString);
@@ -82,10 +93,10 @@ namespace FunctionApp
             }
             catch (Exception e)
             {
-                this.Logger.LogError(e.Message);
+                this._logger.LogError(e.Message);
                 if (e.InnerException != null)
                 {
-                    this.Logger.LogError("InnerException - " + e.InnerException.Message);
+                    this._logger.LogError("InnerException - " + e.InnerException.Message);
                 }
             }
 
@@ -103,7 +114,11 @@ namespace FunctionApp
             try
             {
                 // Lazily generate and register certificate.
-                (X509Certificate2 cert, (string certString, byte[] certBuf), string keyString) = CertGenerator.RegisterAgentWithOMS(this.WorkspaceId, this._workspaceKey, Constants.DefaultLogAnalyticsWorkspaceDomain);
+                if (cert == null)
+                {
+                    (X509Certificate2 tempCert, (string certString, byte[] certBuf), string keyString) = this._certGenerator.RegisterAgentWithOMS(Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOms);
+                    cert = tempCert;
+                }
                 
                 using (var handler = new HttpClientHandler())
                 {
@@ -112,7 +127,7 @@ namespace FunctionApp
                     handler.PreAuthenticate = true;
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
 
-                    Uri requestUri = new Uri("https://" + this.WorkspaceId + ".ods." + Constants.DefaultLogAnalyticsWorkspaceDomain + "/OperationalData.svc/PostJsonDataItems");
+                    Uri requestUri = new Uri("https://" + this._workspaceId + Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOds + this._workspaceDomainSuffix + "/OperationalData.svc/PostJsonDataItems");
 
                     using (HttpClient client = new HttpClient(handler))
                     {
@@ -143,7 +158,7 @@ namespace FunctionApp
 
                         if (contentLength > 1024 * 1024)
                         {
-                            this.Logger.LogDebug(
+                            this._logger.LogDebug(
                                 "HTTP post content greater than 1mb" + " " +
                                 "Length - " + contentLength.ToString());
                         }
@@ -152,10 +167,10 @@ namespace FunctionApp
 
                         var response = await client.PostAsync(requestUri, contentMsg).ConfigureAwait(false);
                         var responseMsg = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        this.Logger.LogDebug(
+                        this._logger.LogDebug(
                             ((int)response.StatusCode).ToString() + " " +
                             response.ReasonPhrase + " " +
-                        responseMsg);
+                            responseMsg);
 
                         if ((int)response.StatusCode != 200)
                         {
@@ -163,13 +178,11 @@ namespace FunctionApp
 
                             if (DateTime.Now - lastFailureReportedTime > TimeSpan.FromMinutes(1))
                             {
-                                this.Logger.LogDebug(
+                                this._logger.LogError(
                                     "abnormal HTTP response code - " +
                                     "responsecode: " + ((int)response.StatusCode).ToString() + " " +
                                     "reasonphrase: " + response.ReasonPhrase + " " +
                                     "responsemsg: " + responseMsg + " " +
-                                    "requestheaders: " + client.DefaultRequestHeaders.ToString() + contentMsg.Headers + " " +
-                                    "requestcontent: " + contentMsg.ReadAsStringAsync().Result + " " +
                                     "count: " + failurecount);
                                 failurecount = 0;
                                 lastFailureReportedTime = DateTime.Now;
@@ -185,14 +198,51 @@ namespace FunctionApp
             }
             catch (Exception e)
             {
-                this.Logger.LogError(e.Message);
+                this._logger.LogError(e.Message);
                 if (e.InnerException != null)
                 {
-                    this.Logger.LogError("InnerException - " + e.InnerException.Message);
+                    this._logger.LogError("InnerException - " + e.InnerException.Message);
                 }
             }
 
             return false;
+        }
+
+        public async Task<bool> PostAsync(string content, string armResourceId)
+        {
+            try
+            {
+                string dateString = DateTime.UtcNow.ToString("r");
+                Uri requestUri = new Uri($"https://{this._workspaceId}.{Constants.DefaultLogAnalyticsWorkspaceDomainPrefixOds}.{this._workspaceDomainSuffix}/api/logs?api-version={this._apiVersion}");
+                string signature = this.GetSignature("POST", content.Length, "application/json", dateString, "/api/logs");
+
+                this._client.DefaultRequestHeaders.Add("Authorization", signature);
+                this._client.DefaultRequestHeaders.Add("Accept", "application/json");
+                this._client.DefaultRequestHeaders.Add("Log-Type", Constants.LogAnalyticsLogType);
+                this._client.DefaultRequestHeaders.Add("x-ms-date", dateString);
+                this._client.DefaultRequestHeaders.Add("x-ms-AzureResourceId", armResourceId);
+
+                var contentMsg = new StringContent(content, Encoding.UTF8);
+                contentMsg.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                this._logger.LogDebug(
+                    this._client.DefaultRequestHeaders.ToString() +
+                    contentMsg.Headers +
+                    contentMsg.ReadAsStringAsync().Result);
+
+                var response = await this._client.PostAsync(requestUri, contentMsg).ConfigureAwait(false);
+                var responseMsg = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                this._logger.LogDebug(
+                    ((int)response.StatusCode).ToString() + " " +
+                    response.ReasonPhrase + " " +
+                    responseMsg);
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                this._logger.LogError(e.Message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -210,7 +260,7 @@ namespace FunctionApp
             byte[] bytes = Encoding.UTF8.GetBytes(message);
             using (HMACSHA256 encryptor = new HMACSHA256(Convert.FromBase64String(_workspaceKey)))
             {
-                return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
+                return $"SharedKey {this._workspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
             }
         }
 
@@ -233,6 +283,36 @@ namespace FunctionApp
                 outStream.Finish();
                 return memoryStream.ToArray();
             }
+        }
+
+        /// <summary>
+        /// Breaks a collection of items into smaller chunks based on size requirements
+        /// </summary>
+        /// <typeparam name="T">Collection type</typeparam>
+        /// <param name="content">The collection</param>
+        /// <param name="chunkSizeMB">Max size in megabytes</param>
+        /// <returns>A nested collection of items</returns>
+        public List<List<T>> CreateContentChunks<T>(IEnumerable<T> content, double chunkSizeMB)
+        {
+            int totalItems = content.Count();
+            int contentLength = ASCIIEncoding.Unicode.GetByteCount(JsonConvert.SerializeObject(content));
+            double chunksCount = Math.Ceiling(contentLength / (chunkSizeMB));
+
+            // get right number of items per chunk
+            int itemsPerChunk = Convert.ToInt32(Math.Ceiling(content.Count() / chunksCount));
+
+            // add chunks to final collection
+            var chunkCollection = new List<List<T>>() { };
+            int count = 0;
+            do
+            {
+                List<T> chunk = content.Skip(count).Take(itemsPerChunk).ToList();
+                chunkCollection.Add(chunk);
+                count += itemsPerChunk;
+            }
+            while (count < content.Count());
+
+            return chunkCollection;
         }
     }
 }

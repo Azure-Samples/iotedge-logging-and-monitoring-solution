@@ -12,58 +12,120 @@ using FunctionApp.MetricsCollector;
 
 namespace FunctionApp
 {
-    public static class CollectMetrics
+    public class CollectMetrics
     {
-        private static string _hubResourceId = Environment.GetEnvironmentVariable("HubResourceId");
-        private static string _containerName = Environment.GetEnvironmentVariable("ContainerName");
-        private static string _workspaceId = Environment.GetEnvironmentVariable("WorkspaceId");
-        private static string _workspaceKey = Environment.GetEnvironmentVariable("WorkspaceKey");
-        private static string _workspaceApiVersion = Environment.GetEnvironmentVariable("WorkspaceApiVersion");
-        private static bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
-        private static string _metricsEncoding = Environment.GetEnvironmentVariable("MetricsEncoding");
+        private string _hubResourceId = Environment.GetEnvironmentVariable("HubResourceId");
+        private bool _compressForUpload = Convert.ToBoolean(Environment.GetEnvironmentVariable("CompressForUpload"));
+        private string _metricsEncoding = Environment.GetEnvironmentVariable("MetricsEncoding");
+        private int _postSizeInMB = 1;
+        private ILogger _logger { get; set; }
+        private AzureLogAnalytics _azureLogAnalytics { get; set; }
+
+        public CollectMetrics(AzureLogAnalytics azureLogAnalytics, ILogger<CollectMetrics> logger)
+        {
+            this._logger = logger;
+            this._azureLogAnalytics = azureLogAnalytics;
+        }
 
         [FunctionName("CollectMetrics")]
-        public static async Task Run(
-            [EventHubTrigger("%EventHubName%", Connection = "EventHubConnectionString", ConsumerGroup = "%EventHubConsumerGroup%")] EventData eventHubMessages,
-            ILogger log)
+        public async Task Run(
+            [EventHubTrigger("%EventHubName%", Connection = "EventHubConnectionString", ConsumerGroup = "%EventHubConsumerGroup%")] EventData[] eventHubMessages)
         {
             try
             {
-                log.LogInformation("CollectMetrics function started.");
+                if (eventHubMessages.Length == 0)
+                {
+                    this._logger.LogInformation("CollectMetrics method ended because there are no messages");
+                    return;
+                }
 
-                // Decompress if encoding is gzip
-                string metricsString = string.Empty;
-                if (string.Equals(_metricsEncoding, "gzip", StringComparison.OrdinalIgnoreCase))
-                    metricsString = GZipCompression.Decompress(eventHubMessages.Body.ToArray());
-                else
-                    metricsString = Encoding.UTF8.GetString(eventHubMessages.Body);
+                List<IoTHubMetric> iotHubMetricsList = new List<IoTHubMetric>() { };
+                foreach (EventData eventHubMessage in eventHubMessages)
+                {
+                    // Decompress if encoding is gzip
+                    string metricsString = string.Empty;
+                    if (string.Equals(_metricsEncoding, "gzip", StringComparison.OrdinalIgnoreCase))
+                        metricsString = GZipCompression.Decompress(eventHubMessage.Body.ToArray());
+                    else
+                        metricsString = Encoding.UTF8.GetString(eventHubMessage.Body);
 
-                IoTHubMetric[] iotHubMetrics = JsonConvert.DeserializeObject<IoTHubMetric[]>(metricsString);
-                IEnumerable<LaMetric> metricsToUpload = iotHubMetrics.Select(m => new LaMetric(m, string.Empty));
-                LaMetricList metricList = new LaMetricList(metricsToUpload);
+                    // Cast metric events
+                    iotHubMetricsList.AddRange(JsonConvert.DeserializeObject<IoTHubMetric[]>(metricsString));
+                }
 
-                // initialize log analytics class
-                AzureLogAnalytics logAnalytics = new AzureLogAnalytics(
-                    workspaceId: _workspaceId,
-                    workspaceKey: _workspaceKey,
-                    logger: log,
-                    apiVersion: _workspaceApiVersion);
+                // Post metrics to Log Analytics
+                await PublishToFixedTableAsync(iotHubMetricsList);
+                //bool success = await PublishToCustomTableAsync(logAnalytics, iotHubMetrics, log);
+            }
+            catch (Exception e)
+            {
+                this._logger.LogError($"CollectMetrics failed with the following exception: {e}");
+            }
+        }
+
+        // This method is disabled until a way to send data to InsightMetrics
+        // table without SSL certificate is found
+        /*
+        private async Task<bool> PublishToCustomTableAsync(IEnumerable<IoTHubMetric> metrics)
+        {
+            try
+            {
+                IEnumerable<UploadMetric> metricsToUpload = metrics.Select(m => new UploadMetric(m));
 
                 bool success = false;
                 for (int i = 0; i < Constants.UploadMaxRetries && (!success); i++)
                 {
                     // TODO: split up metricList so that no individual post is greater than 1mb
-                    success = await logAnalytics.PostToInsightsMetricsAsync(JsonConvert.SerializeObject(metricList), _hubResourceId, _compressForUpload);
+                    success = await this._azureLogAnalytics.PostAsync(JsonConvert.SerializeObject(metricsToUpload), _hubResourceId);
                 }
 
                 if (success)
-                    log.LogInformation($"Successfully sent {metricList.DataItems.Count()} metrics to fixed set table");
+                {
+                    this._logger.LogInformation($"Successfully sent {metricsToUpload.Count()} metrics to fixed set table");
+                    return true;
+                }
                 else
-                    log.LogError($"Failed to send {metricList.DataItems.Count()} metrics to fixed set table after {Constants.UploadMaxRetries} retries");
+                {
+                    this._logger.LogError($"Failed to send {metricsToUpload.Count()} metrics to fixed set table after {Constants.UploadMaxRetries} retries");
+                    return false;
+                }
             }
             catch (Exception e)
             {
-                log.LogError($"CollectMetrics failed with the following exception: {e}");
+                this._logger.LogError($"PublishAsCustomTableAsync failed with the following exception: {e}");
+                return false;
+            }
+        }
+        */
+
+        private async Task PublishToFixedTableAsync(IEnumerable<IoTHubMetric> metrics)
+        {
+            try
+            {
+                IEnumerable<LaMetric> metricsToUpload = metrics.Select(m => new LaMetric(m, string.Empty));
+                List<List<LaMetric>> metricsChunks = this._azureLogAnalytics.CreateContentChunks<LaMetric>(metricsToUpload, this._postSizeInMB * 1024f * 1024f);
+
+                this._logger.LogInformation($"Separated {metricsToUpload.Count()} metrics in {metricsChunks.Count()} chunks of {_postSizeInMB} mb");
+
+                bool success = false;
+                for (int i = 0; i < metricsChunks.Count; i++)
+                {
+                    this._logger.LogInformation($"Submitting chunk {i + 1} out of {metricsChunks.Count} with {metricsChunks[i].Count} metrics");
+
+                    // retry loop
+                    LaMetricList metricList = new LaMetricList(metricsChunks[i]);
+                    for (int r = 0; r < Constants.UploadMaxRetries && (!success); r++)
+                        success = await this._azureLogAnalytics.PostToInsightsMetricsAsync(JsonConvert.SerializeObject(metricList), _hubResourceId, _compressForUpload);
+                    
+                    if (success)
+                        this._logger.LogInformation($"Successfully sent {metricList.DataItems.Count()} metrics to fixed set table");
+                    else
+                        this._logger.LogError($"Failed to sent {metricList.DataItems.Count()} metrics to fixed set table after {Constants.UploadMaxRetries} retries");
+                }
+            }
+            catch (Exception e)
+            {
+                this._logger.LogError($"PublishToFixedTableAsync failed with the following exception: {e}");
             }
         }
     }

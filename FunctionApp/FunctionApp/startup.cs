@@ -1,5 +1,5 @@
 ﻿using System;
-using Microsoft.AspNetCore.Http;
+using FunctionApp.CertificateGenerator;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
@@ -17,7 +17,9 @@ namespace FunctionApp
             {
                 builder.Services
                     .AddLogging()
-                    .AddHttpClient();
+                    .AddHttpClient()
+                    .AddSingleton<CertGenerator, CertGenerator>()
+                    .AddSingleton<AzureLogAnalytics, AzureLogAnalytics>();
             }
             catch (Exception e)
             {
