@@ -13,6 +13,8 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using FunctionApp.Models;
+using Azure.Identity;
+using Azure.Core;
 
 namespace FunctionApp
 {
@@ -29,6 +31,7 @@ namespace FunctionApp
         private static string _logsContentType = Environment.GetEnvironmentVariable("LogsContentType");
         private static string _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
         private static string _containerName = Environment.GetEnvironmentVariable("ContainerName");
+        private static string _iotHubAddress = Environment.GetEnvironmentVariable("HubHostName");        
 
         [FunctionName("InvokeUploadModuleLogs")]
         public static async Task<IActionResult> Run(
@@ -60,6 +63,10 @@ namespace FunctionApp
                     _logsContentType = "json";
                 #endregion
 
+                TokenCredential tokenCredential = string.IsNullOrEmpty(_iotHubConnectionString) ? 
+                    tokenCredential = new DefaultAzureCredential() : null;
+
+
                 // Check payload to see if a specific resource is requested
                 string[] deviceIds = null;
 
@@ -88,13 +95,19 @@ namespace FunctionApp
                 else
                 {
                     // query IoT edge devices                    
-                    var registryManager = RegistryManager.CreateFromConnectionString(_iotHubConnectionString);
-                    var query = registryManager.CreateQuery(_iotDeviceQuery);
-                    var devices = (await query.GetNextAsJsonAsync()).ToArray();
-                    deviceIds = devices.Select(x => JsonConvert.DeserializeObject<JObject>(x).GetValue("deviceId").ToString()).ToArray();
+                    using  (var registryManager = string.IsNullOrEmpty(_iotHubConnectionString) ? 
+                                              RegistryManager.Create(_iotHubAddress, tokenCredential):
+                                              RegistryManager.CreateFromConnectionString(_iotHubConnectionString)) 
+
+                    {
+                        var query = registryManager.CreateQuery(_iotDeviceQuery);
+                        var devices = (await query.GetNextAsJsonAsync()).ToArray();
+                        deviceIds = devices.Select(x => JsonConvert.DeserializeObject<JObject>(x).GetValue("deviceId").ToString()).ToArray();
+                    }
                 }
 
-                // get container SAS token URL
+
+
                 BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
                 Azure.Storage.Sas.BlobContainerSasPermissions permissions = Azure.Storage.Sas.BlobContainerSasPermissions.All;
                 DateTimeOffset expiresOn = new DateTimeOffset(DateTime.UtcNow.AddHours(12));
@@ -103,19 +116,10 @@ namespace FunctionApp
                 // invoke direct method on every device
                 string moduleId = "$edgeAgent";
                 string methodName = "UploadModuleLogs";
-                
-                // So it should be like
-                // if string.IsNullOrEmpty(_iotHubConnectionString) {
-                //     // Use managed identity defined for functions      
-                //     TokenCredential tokenCredential = new DefaultAzureCredential(); 
-            
-                //     using var serviceClient = ServiceClient.Create(IOTHUB_ADDRESS, tokenCredential, TransportType.Amqp);
 
-                // } else {
-                //     ServiceClient _serviceClient = ServiceClient.CreateFromConnectionString(_iotHubConnectionString);    
-                // }
-                
-                ServiceClient _serviceClient = ServiceClient.CreateFromConnectionString(_iotHubConnectionString);
+                using ServiceClient _serviceClient = string.IsNullOrEmpty(_iotHubConnectionString) ? 
+                    ServiceClient.Create(_iotHubAddress, tokenCredential):
+                    ServiceClient.CreateFromConnectionString(_iotHubConnectionString);
 
                 foreach (string deviceId in deviceIds)
                 {
