@@ -87,7 +87,7 @@ namespace FunctionApp
                 }
                 else
                 {
-                    // query IoT edge devices
+                    // query IoT edge devices                    
                     var registryManager = RegistryManager.CreateFromConnectionString(_iotHubConnectionString);
                     var query = registryManager.CreateQuery(_iotDeviceQuery);
                     var devices = (await query.GetNextAsJsonAsync()).ToArray();
@@ -103,6 +103,18 @@ namespace FunctionApp
                 // invoke direct method on every device
                 string moduleId = "$edgeAgent";
                 string methodName = "UploadModuleLogs";
+                
+                // So it should be like
+                // if string.IsNullOrEmpty(_iotHubConnectionString) {
+                //     // Use managed identity defined for functions      
+                //     TokenCredential tokenCredential = new DefaultAzureCredential(); 
+            
+                //     using var serviceClient = ServiceClient.Create(IOTHUB_ADDRESS, tokenCredential, TransportType.Amqp);
+
+                // } else {
+                //     ServiceClient _serviceClient = ServiceClient.CreateFromConnectionString(_iotHubConnectionString);    
+                // }
+                
                 ServiceClient _serviceClient = ServiceClient.CreateFromConnectionString(_iotHubConnectionString);
 
                 foreach (string deviceId in deviceIds)
