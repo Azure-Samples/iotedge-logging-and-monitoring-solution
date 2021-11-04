@@ -107,7 +107,7 @@ namespace FunctionApp
                 }
 
 
-
+                // get container SAS token URL
                 BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
                 Azure.Storage.Sas.BlobContainerSasPermissions permissions = Azure.Storage.Sas.BlobContainerSasPermissions.All;
                 DateTimeOffset expiresOn = new DateTimeOffset(DateTime.UtcNow.AddHours(12));
