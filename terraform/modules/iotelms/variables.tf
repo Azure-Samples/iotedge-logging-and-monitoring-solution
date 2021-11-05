@@ -1,0 +1,55 @@
+variable "rg_name" {
+  type = string
+}
+
+variable "location" {
+  type = string
+}
+
+variable "random_id" {
+  type = string
+}
+
+variable "functionapp" {
+  type    = string
+  default = "../../modules/iotelms/deploy.zip"
+}
+
+variable "iothub_connection_string" {
+  type = string
+}
+
+variable "iothub_id" {
+  type = string
+}
+
+variable "iothub_name" {
+  type = string
+}
+
+variable "edge_device_name" {
+  type    = string
+  default = ""
+}
+
+variable "name_identifier" {
+  type = string
+}
+
+variable "keyvault_id" {
+  type = string
+}
+
+variable "keyvault_access_policy_id" {
+  type = string
+}
+
+variable "script_path" {
+  type    = string
+  default = "../../../scripts"
+}
+
+variable "create_edge_device_id" {
+  type    = string
+  default = ""
+}
