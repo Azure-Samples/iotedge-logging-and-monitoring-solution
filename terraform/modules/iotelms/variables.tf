@@ -36,14 +36,6 @@ variable "name_identifier" {
   type = string
 }
 
-variable "keyvault_id" {
-  type = string
-}
-
-variable "keyvault_access_policy_id" {
-  type = string
-}
-
 variable "script_path" {
   type    = string
   default = "../../../scripts"
