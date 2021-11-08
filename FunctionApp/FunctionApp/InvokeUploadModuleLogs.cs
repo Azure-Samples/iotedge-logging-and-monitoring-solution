@@ -20,7 +20,6 @@ namespace FunctionApp
 {
     public static class InvokeUploadModuleLogs
     {
-        private static string _iotHubConnectionString = Environment.GetEnvironmentVariable("HubConnectionString");
         private static string _iotDeviceQuery = Environment.GetEnvironmentVariable("DeviceQuery");
         private static string _logsIdRegex = Environment.GetEnvironmentVariable("LogsIdRegex");
         private static string _logsSince = Environment.GetEnvironmentVariable("LogsSince");
@@ -63,9 +62,7 @@ namespace FunctionApp
                     _logsContentType = "json";
                 #endregion
 
-                TokenCredential tokenCredential = string.IsNullOrEmpty(_iotHubConnectionString) ? 
-                    tokenCredential = new DefaultAzureCredential() : null;
-
+                TokenCredential tokenCredential = new DefaultAzureCredential();
 
                 // Check payload to see if a specific resource is requested
                 string[] deviceIds = null;
@@ -95,10 +92,7 @@ namespace FunctionApp
                 else
                 {
                     // query IoT edge devices                    
-                    using  (var registryManager = string.IsNullOrEmpty(_iotHubConnectionString) ? 
-                                              RegistryManager.Create(_iotHubAddress, tokenCredential):
-                                              RegistryManager.CreateFromConnectionString(_iotHubConnectionString)) 
-
+                    using  (var registryManager = RegistryManager.Create(_iotHubAddress, tokenCredential))
                     {
                         var query = registryManager.CreateQuery(_iotDeviceQuery);
                         var devices = (await query.GetNextAsJsonAsync()).ToArray();
@@ -116,9 +110,7 @@ namespace FunctionApp
                 string moduleId = "$edgeAgent";
                 string methodName = "UploadModuleLogs";
 
-                using ServiceClient _serviceClient = string.IsNullOrEmpty(_iotHubConnectionString) ? 
-                    ServiceClient.Create(_iotHubAddress, tokenCredential):
-                    ServiceClient.CreateFromConnectionString(_iotHubConnectionString);
+                using ServiceClient _serviceClient = ServiceClient.Create(_iotHubAddress, tokenCredential);
 
                 foreach (string deviceId in deviceIds)
                 {
