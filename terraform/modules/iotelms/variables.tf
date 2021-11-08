@@ -12,7 +12,7 @@ variable "random_id" {
 
 variable "functionapp" {
   type    = string
-  default = "../../modules/iotelms/deploy.zip"
+  default = "../../FunctionApp/FunctionApp/deploy.zip"
 }
 
 variable "iothub_connection_string" {

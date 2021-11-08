@@ -132,7 +132,7 @@ resource "null_resource" "check_key" {
 
   provisioner "local-exec" {
     command     = "az functionapp config appsettings set --name ${azurerm_function_app.elms.name} --resource-group ${var.rg_name} --settings \"HostKey=${data.azurerm_function_app_host_keys.elms.default_function_key}\""
-    interpreter = ["/bin/bash", "-c"]
+    interpreter = ["/bin/bash", "-c"]  # ["Powershell", "-command"]
   }
 }
 
@@ -208,8 +208,6 @@ resource "azurerm_eventhub_authorization_rule" "elms" {
   send                = true
 }
 
-# Making changes in default iothub to add metrics routes
-
 resource "azurerm_iothub_endpoint_eventhub" "elms" {
   resource_group_name = var.rg_name
   iothub_name         = var.iothub_name
@@ -227,32 +225,4 @@ resource "azurerm_iothub_route" "elms" {
   condition      = "id = 'origin-iotedge-metrics-collector'"
   endpoint_names = [azurerm_iothub_endpoint_eventhub.elms.name]
   enabled        = true
-}
-
-resource "azurerm_key_vault_secret" "log_analytics_ws_id" {
-  key_vault_id = var.keyvault_id
-  name         = "log-analytics-ws-id"
-  value        = azurerm_log_analytics_workspace.elms.workspace_id
-
-  depends_on = [var.keyvault_access_policy_id]
-}
-
-resource "azurerm_key_vault_secret" "log_analytics_ws_primary_key" {
-  key_vault_id = var.keyvault_id
-  name         = "log-analytics-ws-primarykey"
-  value        = azurerm_log_analytics_workspace.elms.primary_shared_key
-
-  depends_on = [var.keyvault_access_policy_id]
-}
-
-resource "null_resource" "create_edge_device_twin_tag" {
-  count = var.edge_device_name != "" ? 1 : 0
-  provisioner "local-exec" {
-    when        = create
-    command     = "${var.script_path}/create-edge-device-twin-tag.sh ${var.edge_device_name} ${var.iothub_name} ${var.script_path}"
-    interpreter = ["/bin/bash", "-c"]
-  }
-  # Edge device needs to exist before creating edge device twin tag.
-  # So create-edge-device script needs to be completed before this resource can be created.
-  depends_on = [var.create_edge_device_id]
 }
