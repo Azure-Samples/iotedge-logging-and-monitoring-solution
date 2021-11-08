@@ -1,0 +1,39 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.140.1/containers/dotnetcore
+{
+	"name": "terraform-iot-edge",
+	"build": {
+		"dockerfile": "Dockerfile",
+	},
+	"runArgs": [
+		"--network",
+		"host",
+	],
+	"mounts": [
+		// Keep command history 
+		"source=ostf-bashhistory,target=/commandhistory,type=volume",
+		// Use hosts docker socket
+		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+	],
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/bash"
+	},
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-python.python",
+		"ms-azuretools.vscode-docker",
+		"ms-vsliveshare.vsliveshare",
+		"yzhang.markdown-all-in-one",
+		"davidanson.vscode-markdownlint",
+		"redhat.vscode-yaml",
+		"bierner.markdown-mermaid",
+		"hashicorp.terraform",
+		"treetsidesoftware.code-spell-checker",
+		"vsciot-vscode.azure-iot-edge",
+		"ms-azuretools.live-video-analytics-edge",
+		"vsciot-vscode.azure-iot-tools",
+		"streetsidesoftware.code-spell-checker",
+		"foxundermoon.shell-format"
+	]
+}
