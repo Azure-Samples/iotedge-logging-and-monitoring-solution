@@ -989,8 +989,8 @@
               "value": "[variables('eventHubsConsumerGroup')]"
             },
             {
-              "name": "EventHubConnectionString",
-              "value": "[if(parameters('createEventHubs'), concat('Endpoint=sb://', reference(variables('eventHubsDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.endpoint.value, ';SharedAccessKeyName=', parameters('eventHubsListenPolicyName'), ';SharedAccessKey=', reference(variables('eventHubsDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.namespaceListenKey.value), '')]"
+              "name": "EventHubConnection",
+              "value": "[if(parameters('createEventHubs'), concat(reference(variables('eventHubsDeploymentName')), '.servicebus.windows.net'), '')]"
             },
             {
               "name": "CompressForUpload",

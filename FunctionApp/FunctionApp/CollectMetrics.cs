@@ -29,7 +29,7 @@ namespace FunctionApp
 
         [FunctionName("CollectMetrics")]
         public async Task Run(
-            [EventHubTrigger("%EventHubName%", Connection = "EventHubConnectionString", ConsumerGroup = "%EventHubConsumerGroup%")] EventData[] eventHubMessages)
+            [EventHubTrigger("%EventHubName%", Connection = "EventHubConnection", ConsumerGroup = "%EventHubConsumerGroup%")] EventData[] eventHubMessages)
         {
             try
             {
