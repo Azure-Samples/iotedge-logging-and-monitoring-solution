@@ -84,9 +84,9 @@ resource "azurerm_function_app" "elms" {
     "ContainerName"                         = azurerm_storage_container.elmslogs.name
     "CompressForUpload"                     = true
     "DeviceQuery"                           = "SELECT * FROM devices WHERE tags.logPullEnabled='true'"
-    "EventHubConnectionString"              = azurerm_eventhub_namespace_authorization_rule.elms.primary_connection_string
-    "EventHubConsumerGroup"                 = azurerm_eventhub_consumer_group.elms.name
-    "EventHubName"                          = azurerm_eventhub.elms.name
+    "EventHubConnectionString"              = var.send_metrics_device_to_cloud == true ? azurerm_eventhub_namespace_authorization_rule.elms[0].primary_connection_string : ""
+    "EventHubConsumerGroup"                 = var.send_metrics_device_to_cloud == true ? azurerm_eventhub_consumer_group.elms[0].name : ""
+    "EventHubName"                          = var.send_metrics_device_to_cloud == true ? azurerm_eventhub.elms[0].name : ""
     "FUNCTIONS_WORKER_RUNTIME"              = "dotnet"
     "HASH"                                  = base64encode(filesha256(var.functionapp))
     "HttpTriggerFunction"                   = "InvokeUploadModuleLogs"
@@ -132,7 +132,7 @@ resource "null_resource" "check_key" {
 
   provisioner "local-exec" {
     command     = "az functionapp config appsettings set --name ${azurerm_function_app.elms.name} --resource-group ${var.rg_name} --settings \"HostKey=${data.azurerm_function_app_host_keys.elms.default_function_key}\""
-    interpreter = ["/bin/bash", "-c"]  # ["Powershell", "-command"]
+    interpreter = ["/bin/bash", "-c"] # ["Powershell", "-command"]
   }
 }
 
@@ -178,6 +178,7 @@ resource "azurerm_log_analytics_workspace" "elms" {
 }
 
 resource "azurerm_eventhub_namespace" "elms" {
+  count               = var.send_metrics_device_to_cloud == true ? 1 : 0
   name                = "evhns-${var.name_identifier}-${var.random_id}"
   resource_group_name = var.rg_name
   location            = var.location
@@ -186,51 +187,57 @@ resource "azurerm_eventhub_namespace" "elms" {
 }
 
 resource "azurerm_eventhub" "elms" {
+  count               = var.send_metrics_device_to_cloud == true ? 1 : 0
   name                = "evh-${var.name_identifier}"
   resource_group_name = var.rg_name
-  namespace_name      = azurerm_eventhub_namespace.elms.name
+  namespace_name      = azurerm_eventhub_namespace.elms[0].name
   partition_count     = 4
   message_retention   = 1
 }
 
 resource "azurerm_eventhub_consumer_group" "elms" {
+  count               = var.send_metrics_device_to_cloud == true ? 1 : 0
   name                = "metricsCollectorConsumerGroup"
   resource_group_name = var.rg_name
-  namespace_name      = azurerm_eventhub_namespace.elms.name
-  eventhub_name       = azurerm_eventhub.elms.name
+  namespace_name      = azurerm_eventhub_namespace.elms[0].name
+  eventhub_name       = azurerm_eventhub.elms[0].name
 }
 
 resource "azurerm_eventhub_namespace_authorization_rule" "elms" {
+  count               = var.send_metrics_device_to_cloud == true ? 1 : 0
   name                = "listen-rule"
   resource_group_name = var.rg_name
-  namespace_name      = azurerm_eventhub_namespace.elms.name
+  namespace_name      = azurerm_eventhub_namespace.elms[0].name
   listen              = true
 }
 
 resource "azurerm_eventhub_authorization_rule" "elms" {
+  count               = var.send_metrics_device_to_cloud == true ? 1 : 0
   name                = "send-rule"
   resource_group_name = var.rg_name
-  namespace_name      = azurerm_eventhub_namespace.elms.name
-  eventhub_name       = azurerm_eventhub.elms.name
+  namespace_name      = azurerm_eventhub_namespace.elms[0].name
+  eventhub_name       = azurerm_eventhub.elms[0].name
   send                = true
 }
 
 resource "azurerm_iothub_endpoint_eventhub" "elms" {
+  count               = var.send_metrics_device_to_cloud == true ? 1 : 0
   resource_group_name = var.rg_name
   iothub_name         = var.iothub_name
   name                = "metricscollector-${var.name_identifier}"
 
-  connection_string = azurerm_eventhub_authorization_rule.elms.primary_connection_string
+  connection_string = azurerm_eventhub_authorization_rule.elms[0].primary_connection_string
 }
 
 resource "azurerm_iothub_route" "elms" {
+  count               = var.send_metrics_device_to_cloud == true ? 1 : 0
   resource_group_name = var.rg_name
   iothub_name         = var.iothub_name
   name                = "metricscollector-${var.name_identifier}"
 
   source         = "DeviceMessages"
   condition      = "id = 'origin-iotedge-metrics-collector'"
-  endpoint_names = [azurerm_iothub_endpoint_eventhub.elms.name]
+  endpoint_names = [azurerm_iothub_endpoint_eventhub.elms[0].name]
   enabled        = true
 }
 

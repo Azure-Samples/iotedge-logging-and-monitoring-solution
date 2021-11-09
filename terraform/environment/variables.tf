@@ -18,3 +18,8 @@ variable "iothub_id" {
 variable "iothub_name" {
   type = string
 }
+
+variable "send_metrics_device_to_cloud" {
+  type    = bool
+  default = false
+}

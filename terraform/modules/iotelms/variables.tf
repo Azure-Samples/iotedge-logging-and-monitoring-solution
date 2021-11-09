@@ -41,3 +41,7 @@ variable "create_edge_device_id" {
   type    = string
   default = ""
 }
+
+variable "send_metrics_device_to_cloud" {
+  type    = bool
+}
