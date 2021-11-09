@@ -973,8 +973,8 @@
               "value": "[parameters('deviceQuery')]"
             },
             {
-              "name": "HubConnectionString",
-              "value": "[concat('HostName=', reference(variables('iotHubDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.hostname.value, ';SharedAccessKeyName=', parameters('iotHubServicePolicyName'), ';SharedAccessKey=', reference(variables('iotHubDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.serviceKey.value)]"
+              "name": "HubHostName",
+              "value": "[reference(variables('iotHubDeploymentName'))]"
             },
             {
               "name": "HubResourceId",
@@ -989,7 +989,7 @@
               "value": "[variables('eventHubsConsumerGroup')]"
             },
             {
-              "name": "EventHubConnection",
+              "name": "EventHub__fullyQualifiedNamespace",
               "value": "[if(parameters('createEventHubs'), concat(reference(variables('eventHubsDeploymentName')), '.servicebus.windows.net'), '')]"
             },
             {
