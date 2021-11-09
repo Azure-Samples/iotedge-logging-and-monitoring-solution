@@ -75,7 +75,6 @@ resource "azurerm_function_app" "elms" {
   app_service_plan_id        = azurerm_app_service_plan.elms.id
   storage_account_name       = azurerm_storage_account.elmsfunc.name
   storage_account_access_key = azurerm_storage_account.elmsfunc.primary_access_key
-  client_affinity_enabled    = false
   version                    = "~3"
 
   app_settings = {

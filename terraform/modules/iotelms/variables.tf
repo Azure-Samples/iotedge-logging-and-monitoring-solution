@@ -23,25 +23,10 @@ variable "iothub_name" {
   type = string
 }
 
-variable "edge_device_name" {
-  type    = string
-  default = ""
-}
-
 variable "name_identifier" {
   type = string
 }
 
-variable "script_path" {
-  type    = string
-  default = "../../../scripts"
-}
-
-variable "create_edge_device_id" {
-  type    = string
-  default = ""
-}
-
 variable "send_metrics_device_to_cloud" {
-  type    = bool
+  type = bool
 }
