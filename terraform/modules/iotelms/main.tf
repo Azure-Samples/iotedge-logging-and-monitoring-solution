@@ -85,13 +85,13 @@ resource "azurerm_function_app" "elms" {
     "CompressForUpload"                     = true
     "DeviceQuery"                           = "SELECT * FROM devices WHERE tags.logPullEnabled='true'"
     "EventHubConnectionString"              = azurerm_eventhub_namespace_authorization_rule.elms.primary_connection_string
-    "EventHubConsumerGroup"                 = "$Default"
+    "EventHubConsumerGroup"                 = azurerm_eventhub_consumer_group.elms.name
     "EventHubName"                          = azurerm_eventhub.elms.name
     "FUNCTIONS_WORKER_RUNTIME"              = "dotnet"
     "HASH"                                  = base64encode(filesha256(var.functionapp))
     "HttpTriggerFunction"                   = "InvokeUploadModuleLogs"
     "HostUrl"                               = "https://func-${var.name_identifier}-${var.random_id}.azurewebsites.net"
-    "HubConnectionString"                   = var.iothub_connection_string
+    "HubConnectionString"                   = azurerm_iothub_shared_access_policy.elms.primary_connection_string
     "HubResourceId"                         = var.iothub_id
     "LogsContentType"                       = "json"
     "LogsEncoding"                          = "gzip"
@@ -193,6 +193,13 @@ resource "azurerm_eventhub" "elms" {
   message_retention   = 1
 }
 
+resource "azurerm_eventhub_consumer_group" "elms" {
+  name                = "metricsCollectorConsumerGroup"
+  resource_group_name = var.rg_name
+  namespace_name      = azurerm_eventhub_namespace.elms.name
+  eventhub_name       = azurerm_eventhub.elms.name
+}
+
 resource "azurerm_eventhub_namespace_authorization_rule" "elms" {
   name                = "listen-rule"
   resource_group_name = var.rg_name
@@ -225,4 +232,15 @@ resource "azurerm_iothub_route" "elms" {
   condition      = "id = 'origin-iotedge-metrics-collector'"
   endpoint_names = [azurerm_iothub_endpoint_eventhub.elms.name]
   enabled        = true
+}
+
+resource "azurerm_iothub_shared_access_policy" "elms" {
+  name                = "iotedgelogs"
+  resource_group_name = var.rg_name
+  iothub_name         = var.iothub_name
+
+  registry_read   = true
+  registry_write  = false
+  service_connect = true
+  device_connect  = false
 }

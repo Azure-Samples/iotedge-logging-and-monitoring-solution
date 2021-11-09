@@ -11,10 +11,6 @@ variable "rg_name" {
   type = string
 }
 
-variable "iothub_connection_string" {
-  type = string
-}
-
 variable "iothub_id" {
   type = string
 }

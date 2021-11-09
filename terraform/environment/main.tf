@@ -27,5 +27,4 @@ module "iotelms" {
   random_id                 = lower(random_id.elms.hex)
   iothub_id                 = var.iothub_id
   iothub_name               = var.iothub_name
-  iothub_connection_string  = var.iothub_connection_string
 }

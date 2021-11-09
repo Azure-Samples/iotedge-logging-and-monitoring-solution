@@ -15,10 +15,6 @@ variable "functionapp" {
   default = "../../FunctionApp/FunctionApp/deploy.zip"
 }
 
-variable "iothub_connection_string" {
-  type = string
-}
-
 variable "iothub_id" {
   type = string
 }
