@@ -2,7 +2,7 @@
 
 [Terraform](https://www.terraform.io/) can be used for managing the ELMS infrastructure on Azure. You can find the definitions in the [terraform](../terraform) folder.
 Terraform can be set up locally and resources can be deployed to a chosen Azure subscription.
-The following steps are needed for achieving this:
+The following steps are needed to achieve this:
 
 ## 1. Prepare environment
 
@@ -12,7 +12,7 @@ The following steps are needed for achieving this:
 2. Install Visual Studio extension [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 3. Open project in a devcontainer. Run the `Remote-Containers: Open Folder in Container...` command and select the local folder
 
-After that you will have all needed tools, so continue with [the step 3](#3-create-the-terraform-state-storage).
+After that you will have all the needed tools, so continue with [step 3](#3-create-the-terraform-state-storage).
 
 ### Option 2: Install Terraform and Azure CLI manually
 
@@ -36,7 +36,7 @@ The Terraform backend can be set up by running the `init-tfstate-storage.sh` scr
 
 ```shell
 cd terraform/scripts
-./init-tfstate-storage.sh  "<resource_group_name>" "<location>" "<storage_account_name>"
+./init-tfstate-storage.sh "<resource_group_name>" "<location>" "<storage_account_name>"
 ```
 
 ## 4. Terraform init
@@ -59,7 +59,7 @@ cd terraform/environment
 terraform apply -var location="<location>" -var rg_name="<rg-name>" -var iothub_id="<iothub-resource-id>" -var iothub_name="<iothub-name>"
 ```
 
-If you want to use [the Monitoring architecture](../README.md#monitoring-architecture-reference), then you need to provide additional variable `send_metrics_device_to_cloud=true`.
+If you want to use the [Monitoring architecture](../README.md#monitoring-architecture-reference), then you need to change the default value of the following variable: `send_metrics_device_to_cloud=true`.
 
 ```shell
 cd terraform/environment
@@ -81,7 +81,7 @@ az iot hub device-twin update --device-id <edge_device_name> --hub-name <iothub_
 The entire infrastructure can be deleted by running:
 
 ```shell
-cd infra/terraform/environments/<target_environment>
+cd infra/terraform/environment/
 terraform destroy
 ```
 
