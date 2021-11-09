@@ -103,14 +103,16 @@ git clone https://github.com/Azure-Samples/iotedge-logging-and-monitoring-soluti
 
 ## Deploy the solution
 
+There are two options to deploy the solution.
+
+### Use PowerShell script
+
 Now you will deploy the entire solution, open a PowerShell console and run the code below:
 
 ```powershell
 cd iotedge-logging-and-monitoring-solution\
 .\Scripts\deploy.ps1
 ```
-
-
 
 The script will ask some questions regarding deployment options. Depending on the answers you provide, ELMS will have deployed the following main resources:
 
@@ -123,7 +125,11 @@ The script will ask some questions regarding deployment options. Depending on th
 - Event grid topic
 - Event hubs namespace
 
+### Use Terraform
 
+Refer to [this documentation](docs/provision-elms-with-terraform.md) for information on how to provision the ELMS infrastructure using terraform.
+
+> Note: [Monitor alert architecture](#monitor-alerts-architecture-reference) is not supported with the Terraform deployment.
 
 ## Understanding required application settings
 
