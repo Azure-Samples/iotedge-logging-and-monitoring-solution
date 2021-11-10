@@ -80,6 +80,8 @@ resource "azurerm_function_app" "elms" {
   app_settings = {
     "APPINSIGHTS_INSTRUMENTATIONKEY"        = azurerm_application_insights.elms.instrumentation_key
     "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.elms.connection_string
+    "AzureWebJobs.CollectMetrics.Disabled"  = var.send_metrics_device_to_cloud == true ? false : true
+    "AzureWebJobs.MonitorAlerts.Disabled"   = true
     "ContainerName"                         = azurerm_storage_container.elmslogs.name
     "CompressForUpload"                     = true
     "DeviceQuery"                           = "SELECT * FROM devices WHERE tags.logPullEnabled='true'"
