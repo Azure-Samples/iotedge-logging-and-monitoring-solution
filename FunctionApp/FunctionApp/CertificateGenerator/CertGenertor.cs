@@ -41,7 +41,7 @@
             this._logger = logger;
 
             // storage-based certificate management
-            string storageConnectionString = configuration["StorageConnectionString"];
+            // string storageConnectionString = configuration["StorageConnectionString"];
         }
 
         internal class Constants
