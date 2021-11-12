@@ -960,8 +960,8 @@
               "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').connectionString]"
             },
             {
-              "name": "StorageConnectionString",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', reference(variables('eventGridDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.storageAccountKey.value, ';EndpointSuffix=', variables('storageAccountEndpointSuffix'))]"
+              "name": "StorageAccountName",
+              "value": "[parameters('storageAccountName')]"
             },
             {
               "name": "QueueName",

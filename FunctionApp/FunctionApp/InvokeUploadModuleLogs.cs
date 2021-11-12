@@ -28,7 +28,7 @@ namespace FunctionApp
         private static string _logsTail = Environment.GetEnvironmentVariable("LogsTail");
         private static string _logsEncoding = Environment.GetEnvironmentVariable("LogsEncoding");
         private static string _logsContentType = Environment.GetEnvironmentVariable("LogsContentType");
-        private static string _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
+        private static string _storageAccountName = Environment.GetEnvironmentVariable("StorageAccountName");
         private static string _containerName = Environment.GetEnvironmentVariable("ContainerName");
         private static string _iotHubAddress = Environment.GetEnvironmentVariable("HubHostName");        
 
@@ -101,7 +101,7 @@ namespace FunctionApp
                 }
 
                 // get container SAS token URL
-                BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
+                BlobContainerClient container = new BlobContainerClient(new Uri($"https://{_storageAccountName}.blob.core.windows.net/{_containerName}"), tokenCredential);
                 Azure.Storage.Sas.BlobContainerSasPermissions permissions = Azure.Storage.Sas.BlobContainerSasPermissions.All;
                 DateTimeOffset expiresOn = new DateTimeOffset(DateTime.UtcNow.AddHours(12));
                 Uri sasUri = container.GenerateSasUri(permissions, expiresOn);
