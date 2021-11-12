@@ -14,8 +14,6 @@ RUN \
     # Install iotedgehubdev
     apt-get install -y python3-pip && pip3 install iotedgehubdev && \
     # Install Azure Function Core Tools
-	# wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb && \
-	# sudo dpkg -i packages-microsoft-prod.deb && \
     apt-get install azure-functions-core-tools-3 && \
     # Install the Azure CLI and IoT extension
     curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
