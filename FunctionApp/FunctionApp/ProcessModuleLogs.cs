@@ -60,7 +60,9 @@ namespace FunctionApp
                 #endregion
 
                 this._logger.LogInformation($"ProcessModuleLogs function received a new queue message from blob {blobName}");
+
                 TokenCredential tokenCredential = new DefaultAzureCredential();
+
                 // Create a BlobServiceClient object which will be used to create a container client
                 BlobServiceClient blobServiceClient = new BlobServiceClient( new Uri($"https://{_storageAccountName}.blob.core.windows.net"), tokenCredential);
 
