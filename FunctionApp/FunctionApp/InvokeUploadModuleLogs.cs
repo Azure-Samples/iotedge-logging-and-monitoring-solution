@@ -175,19 +175,18 @@ namespace FunctionApp
         {
             BlobServiceClient blobServiceClient = blobContainerClient.GetParentBlobServiceClient();
 
-            // Get a user delegation key for the Blob service that's valid for seven days.
-            // You can use the key to generate any number of shared access signatures 
-            // over the lifetime of the key.
+            // Get a user delegation key for the Blob service that's valid for 12 hours.
+            // You can use the key to generate any number of shared access signatures over the lifetime of the key.
             Azure.Storage.Blobs.Models.UserDelegationKey userDelegationKey =
-                await blobServiceClient.GetUserDelegationKeyAsync(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(7));
+                await blobServiceClient.GetUserDelegationKeyAsync(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(12));
 
-            // Create a SAS token that's also valid for seven days.
+            // Create a SAS token that's also valid for 12 hours.
             BlobSasBuilder sasBuilder = new BlobSasBuilder()
             {
                 BlobContainerName = blobContainerClient.Name,
                 Resource = "c",
                 StartsOn = DateTimeOffset.UtcNow,
-                ExpiresOn = DateTimeOffset.UtcNow.AddDays(7)
+                ExpiresOn = DateTimeOffset.UtcNow.AddHours(12)
             };
 
             // Specify permissions for the SAS.
