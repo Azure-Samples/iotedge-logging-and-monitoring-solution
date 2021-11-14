@@ -1,8 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Net.Http;
 using Newtonsoft.Json;
 using FunctionApp.Models;
 using Microsoft.Azure.WebJobs;

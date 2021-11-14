@@ -964,6 +964,10 @@
               "value": "[parameters('storageAccountName')]"
             },
             {
+              "name": "StorageName__serviceUri",
+              "value": "[concat('https://', parameters('storageAccountName'), '.queue.core.windows.net/')]"
+            },
+            {
               "name": "QueueName",
               "value": "[parameters('storageQueueName')]"
             },
