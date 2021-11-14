@@ -1,6 +1,7 @@
 $root_path = Split-Path $PSScriptRoot -Parent
 Import-Module "$root_path/Scripts/PS-Library"
-$github_repo_url = "https://raw.githubusercontent.com/Azure-Samples/iotedge-logging-and-monitoring-solution"
+# eedorenko should be reverted back to Azure-Samples before PRing to upstream 
+$github_repo_url = "https://raw.githubusercontent.com/eedorenko/iotedge-logging-and-monitoring-solution"
 
 function Set-EnvironmentHash {
     param(
