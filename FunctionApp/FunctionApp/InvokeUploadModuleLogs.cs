@@ -105,7 +105,6 @@ namespace FunctionApp
                 // get container SAS token URL
                 BlobContainerClient container = new BlobContainerClient(new Uri($"https://{_storageAccountName}.blob.core.windows.net/{_containerName}"), tokenCredential);
                 Uri sasUri = await GetUserDelegationSasContainer(container);
-                log.LogInformation("uri is " + sasUri.ToString());
 
                 // invoke direct method on every device
                 string moduleId = "$edgeAgent";
