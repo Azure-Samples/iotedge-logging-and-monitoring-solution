@@ -1,8 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Net.Http;
 using Newtonsoft.Json;
 using FunctionApp.Models;
 using Microsoft.Azure.WebJobs;
@@ -12,13 +10,15 @@ using System.Text.RegularExpressions;
 using Azure.Storage.Blobs;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Azure.Identity;
+using Azure.Core;
 
 namespace FunctionApp
 {
     public class ProcessModuleLogs
     {
         private string _hubResourceId = Environment.GetEnvironmentVariable("HubResourceId");
-        private string _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
+        private string _storageAccountName = Environment.GetEnvironmentVariable("StorageAccountName");
         private string _containerName = Environment.GetEnvironmentVariable("ContainerName");
         private string _logsEncoding = Environment.GetEnvironmentVariable("LogsEncoding");
         private string _logType = Environment.GetEnvironmentVariable("LogType");
@@ -35,7 +35,7 @@ namespace FunctionApp
 
         [FunctionName("ProcessModuleLogs")]
         public async Task Run(
-            [QueueTrigger("%QueueName%", Connection = "StorageConnectionString")] string queueItem)
+            [QueueTrigger("%QueueName%", Connection = "StorageName")] string queueItem)
         {
             try
             {
@@ -58,9 +58,11 @@ namespace FunctionApp
                 #endregion
 
                 this._logger.LogInformation($"ProcessModuleLogs function received a new queue message from blob {blobName}");
-                
+
+                TokenCredential tokenCredential = new DefaultAzureCredential();
+
                 // Create a BlobServiceClient object which will be used to create a container client
-                BlobServiceClient blobServiceClient = new BlobServiceClient(_connectionString);
+                BlobServiceClient blobServiceClient = new BlobServiceClient( new Uri($"https://{_storageAccountName}.blob.core.windows.net"), tokenCredential);
 
                 // Create container client object
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(_containerName);
