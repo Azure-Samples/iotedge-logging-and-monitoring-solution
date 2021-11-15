@@ -15,6 +15,8 @@ using Microsoft.AspNetCore.Mvc;
 using FunctionApp.Models;
 using Azure.Identity;
 using Azure.Core;
+using Azure.Storage.Sas;
+using Azure.Storage.Blobs.Specialized;
 
 namespace FunctionApp
 {
@@ -28,9 +30,9 @@ namespace FunctionApp
         private static string _logsTail = Environment.GetEnvironmentVariable("LogsTail");
         private static string _logsEncoding = Environment.GetEnvironmentVariable("LogsEncoding");
         private static string _logsContentType = Environment.GetEnvironmentVariable("LogsContentType");
-        private static string _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
+        private static string _storageAccountName = Environment.GetEnvironmentVariable("StorageAccountName");
         private static string _containerName = Environment.GetEnvironmentVariable("ContainerName");
-        private static string _iotHubAddress = Environment.GetEnvironmentVariable("HubHostName");        
+        private static string _iotHubAddress = Environment.GetEnvironmentVariable("HubHostName");
 
         [FunctionName("InvokeUploadModuleLogs")]
         public static async Task<IActionResult> Run(
@@ -92,7 +94,7 @@ namespace FunctionApp
                 else
                 {
                     // query IoT edge devices                    
-                    using  (var registryManager = RegistryManager.Create(_iotHubAddress, tokenCredential))
+                    using (var registryManager = RegistryManager.Create(_iotHubAddress, tokenCredential))
                     {
                         var query = registryManager.CreateQuery(_iotDeviceQuery);
                         var devices = (await query.GetNextAsJsonAsync()).ToArray();
@@ -101,10 +103,8 @@ namespace FunctionApp
                 }
 
                 // get container SAS token URL
-                BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
-                Azure.Storage.Sas.BlobContainerSasPermissions permissions = Azure.Storage.Sas.BlobContainerSasPermissions.All;
-                DateTimeOffset expiresOn = new DateTimeOffset(DateTime.UtcNow.AddHours(12));
-                Uri sasUri = container.GenerateSasUri(permissions, expiresOn);
+                BlobContainerClient container = new BlobContainerClient(new Uri($"https://{_storageAccountName}.blob.core.windows.net/{_containerName}"), tokenCredential);
+                Uri sasUri = await GetUserDelegationSasContainer(container);
 
                 // invoke direct method on every device
                 string moduleId = "$edgeAgent";
@@ -168,6 +168,37 @@ namespace FunctionApp
                 log.LogError($"InvokeUploadModuleLogs failed with the following exception: {e}");
                 return new BadRequestObjectResult(e.ToString());
             }
+        }
+
+        public async static Task<Uri> GetUserDelegationSasContainer(BlobContainerClient blobContainerClient)
+        {
+            BlobServiceClient blobServiceClient = blobContainerClient.GetParentBlobServiceClient();
+
+            // Get a user delegation key for the Blob service that's valid for 12 hours.
+            // You can use the key to generate any number of shared access signatures over the lifetime of the key.
+            Azure.Storage.Blobs.Models.UserDelegationKey userDelegationKey =
+                await blobServiceClient.GetUserDelegationKeyAsync(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(12));
+
+            // Create a SAS token that's also valid for 12 hours.
+            BlobSasBuilder sasBuilder = new BlobSasBuilder()
+            {
+                BlobContainerName = blobContainerClient.Name,
+                Resource = "c",
+                StartsOn = DateTimeOffset.UtcNow,
+                ExpiresOn = DateTimeOffset.UtcNow.AddHours(12)
+            };
+
+            // Specify permissions for the SAS.
+            sasBuilder.SetPermissions(BlobAccountSasPermissions.All);
+          
+            // Add the SAS token to the container URI.
+            BlobUriBuilder blobUriBuilder = new BlobUriBuilder(blobContainerClient.Uri)
+            {
+                // Specify the user delegation key.
+                Sas = sasBuilder.ToSasQueryParameters(userDelegationKey, blobServiceClient.AccountName)
+            };
+
+            return blobUriBuilder.ToUri();
         }
     }
 }
