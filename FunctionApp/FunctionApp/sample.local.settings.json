@@ -1,0 +1,47 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "FUNCTIONS_EXTENSION_VERSION": "~3",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AzureWebJobsDashboard": "UseDevelopmentStorage=true",
+    "AzureWebJobs.HttpExample.Disabled": "true",
+    "APPINSIGHTS_INSTRUMENTATIONKEY": "<...>",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "<...>",
+
+    // these values are required only when uploading metrics as IoT messages
+    // ,"EventHubConsumerGroup": "metricsCollectorConsumerGroup",
+    // "EventHubName": "<...>",
+    // "EventHub__fullyQualifiedNamespace": "<>.servicebus.windows.net",
+
+    "StorageAccountName": "<storage account name>",
+    "StorageName__serviceUri": "https:// <storage account name>.queue.core.windows.net/",
+    "ContainerName": "<...>",
+    "DeviceQuery": "SELECT * FROM devices WHERE tags.logPullEnabled='true'",
+    "WorkspaceId": "<...>",
+    "WorkspaceKey": "<...>",
+    "WorkspaceApiVersion": "2016-04-01",
+    "WorkspaceDomainSuffix": "azure.com",
+    "HttpTriggerFunction": "InvokeUploadModuleLogs",
+    "HubHostName": "<iot hub name>.azure-devices.net",
+    "HubResourceId": "<...>",
+    "CompressForUpload": true,
+    "MetricsEncoding": "gzip",
+    "QueueName": "<...>",
+    "HostUrl": "https://<function app name>.azurewebsites.net",
+    "HostKey": ""
+
+    // Uncomment these values if your account is associated w/ more than one subscription and/or tenant
+    //,"AZURE_TENANT_ID": "<...>",
+    //"AZURE_SUBSCRIPTION_ID": "<...>"
+
+    // If you require local development from within the dev container, you'll need to set up a service principal in Azure, then fill in these values in addition to the tenant and subscription
+    //,"AZURE_CLIENT_ID": "<...>",
+    //"AZURE_CLIENT_SECRET": "<...>"
+  },
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "*",
+    "CORSCredentials": false
+  }
+}
