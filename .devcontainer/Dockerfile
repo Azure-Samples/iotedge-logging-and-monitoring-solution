@@ -14,7 +14,12 @@ RUN \
     # Install iotedgehubdev
     apt-get install -y python3-pip && pip3 install iotedgehubdev && \
     # Install Azure Function Core Tools
-    apt-get install azure-functions-core-tools-3 && \
+    mkdir -p /opt/azfunctools && \
+    cd /opt/azfunctools && \
+    curl -sSL -o azfunctools.zip https://github.com/Azure/azure-functions-core-tools/releases/download/4.0.3971/Azure.Functions.Cli.linux-x64.4.0.3971.zip && \
+    unzip azfunctools.zip && \
+    chmod +x func && \
+    chmod +x gozip && \
     # Install the Azure CLI and IoT extension
     curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
     az extension add --name azure-iot && \
@@ -34,6 +39,8 @@ RUN \
     apt-get autoremove -y && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/opt/azfunctools:${PATH}"
 
 # launch docker-ce
 ENTRYPOINT [ "/usr/local/share/docker-init.sh" ]

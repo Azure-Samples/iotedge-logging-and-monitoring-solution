@@ -27,7 +27,8 @@
         "ms-azuretools.vscode-docker",
         "vsciot-vscode.azure-iot-tools",
         "ms-azuretools.vscode-azurefunctions",
-        "hashicorp.terraform"
+        "hashicorp.terraform",
+        "azurite.azurite"
     ],
 
     // Use 'forwardPorts' to make a list of ports inside the container available locally.

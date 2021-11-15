@@ -386,3 +386,6 @@ override.tf.json
 
 # Ignore Terraform lock file
 .terraform.lock.hcl
+
+# Ignore Azurite files
+__*
