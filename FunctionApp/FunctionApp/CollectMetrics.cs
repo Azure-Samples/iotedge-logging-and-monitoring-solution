@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Azure.Messaging.EventHubs;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.EventHubs;
 using Microsoft.Extensions.Logging;
 using FunctionApp.Models;
 using FunctionApp.MetricsCollector;
@@ -29,7 +29,7 @@ namespace FunctionApp
 
         [FunctionName("CollectMetrics")]
         public async Task Run(
-            [EventHubTrigger("%EventHubName%", Connection = "EventHubConnectionString", ConsumerGroup = "%EventHubConsumerGroup%")] EventData[] eventHubMessages)
+            [EventHubTrigger("%EventHubName%", Connection = "EventHub", ConsumerGroup = "%EventHubConsumerGroup%")] EventData[] eventHubMessages)
         {
             try
             {
@@ -47,7 +47,7 @@ namespace FunctionApp
                     if (string.Equals(_metricsEncoding, "gzip", StringComparison.OrdinalIgnoreCase))
                         metricsString = GZipCompression.Decompress(eventHubMessage.Body.ToArray());
                     else
-                        metricsString = Encoding.UTF8.GetString(eventHubMessage.Body);
+                        metricsString = Encoding.UTF8.GetString(eventHubMessage.Body.ToArray());
 
                     // Cast metric events
                     iotHubMetricsList.AddRange(JsonConvert.DeserializeObject<IoTHubMetric[]>(metricsString));
