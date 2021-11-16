@@ -1002,7 +1002,7 @@
               },
               {
                 "name": "EventHub__fullyQualifiedNamespace",
-                "value": "[if(parameters('createEventHubs'), concat(variables('eventHubsDeploymentName'), '.servicebus.windows.net'), '')]"
+                "value": "[if(parameters('createEventHubs'), concat(parameters('eventHubsNamespace'), '.servicebus.windows.net'), '')]"
               },
               {
                 "name": "CompressForUpload",
