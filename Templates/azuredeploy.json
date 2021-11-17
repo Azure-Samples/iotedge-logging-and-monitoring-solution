@@ -1053,6 +1053,10 @@
               {
                 "name": "HttpTriggerFunction",
                 "value": "[parameters('httpTriggerFunction')]"
+              },
+              {
+                "name": "WEBSITE_LOAD_USER_PROFILE",
+                "value": "[if(parameters('createEventHubs'), 1, 0)]" // this is required for proper certificate loading in the CollectMetrics function
               }
             ]
           }
