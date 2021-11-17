@@ -2,6 +2,12 @@
 
 [Terraform](https://www.terraform.io/) can be used for managing the ELMS infrastructure on Azure. You can find the definitions in the [terraform](../terraform) folder.
 Terraform can be set up locally and resources can be deployed to a chosen Azure subscription.
+
+There are two deployment options:
+
+* Option 1: Select `terraform/environments/basic-elms` if you want to use your existing IoT Hub and IoT Edge devices and deploy only the ELMS resources.
+* Option 2: Select `terraform/environments/extended-elms` if you want to create a sandbox environment with a new IoT Hub, IoT Edge device linked with a VM and the ELMS resources.
+
 The following steps are needed to achieve this:
 
 ## 1. Prepare environment
@@ -39,59 +45,81 @@ cd terraform/scripts
 ./init-tfstate-storage.sh "<resource_group_name>" "<location>" "<storage_account_name>"
 ```
 
-Should a user prefer to not use an Azure storage account and store the Terraform backend locally, then the following code snippet must be removed from the `terraform/environment/main.tf` and the above script won't be required anymore.
+Should a user prefer to not use an Azure storage account and store the Terraform backend locally, then the following code snippet must be removed from the `terraform/environments/<target_environment>/main.tf` and the above script won't be required anymore.
 
 ```shell
-provider "azurerm" {
-  features {}
+backend "azurerm" {
 }
 ```
 
 ## 4. Terraform init
 
-After successfully creating the backend, the Terraform code is ready to be initialized. The `storage_account_name` is the name of the storage account created in the previous step. The other necessary variables are taken from the `backend.tfvars` file which contains the values used in the `init-tfstate-storage.sh` script.
+Select a `<target_environment>`. It is either `basic-elms` or `extended-elms`.
 
 ```shell
-cd infra/terraform/environment
-terraform init -backend-config=backend.tfvars -backend-config=storage_account_name="<storage_account_name>"
+cd terraform/environments/<target_environment>
 ```
+
+If using
+
+* local backend, run:
+
+  ```shell
+  terraform init
+  ```
+
+* Azure backend, run:
+
+  ```shell
+  terraform init -backend-config=backend.tfvars -backend-config=storage_account_name="<storage_account_name>"
+  ```
+
+  The `storage_account_name` is the name of the storage account created in the previous step. The other necessary variables are taken from the `backend.tfvars` file which contains the values used in the `init-tfstate-storage.sh` script.
 
 ## 5. Terraform apply
 
 The actual provisioning of the resources happens in this step. The command will display what are the differences between the terraform state file and the new local changes and will prompt manual input of the response `yes` to begin provisioning.
 
-It is possible that this command has an impact on the pre-existent IoT Hub so make sure to carefully review the Terraform plan before agreeing to the changes.
+Depending on the chosen `target_environment`, you will need to provide several parameters, specifically those that do not have a default value assigned in the `environments/<target_environment>/variable.tf` file.
 
-This command requires several parameters, specifically those that do not have a default value assigned in the `environment/variable.tf` file.
-
-```shell
-cd terraform/environment
-terraform apply -var location="<location>" -var rg_name="<rg-name>" -var iothub_id="<iothub-resource-id>" -var iothub_name="<iothub-name>"
-```
-
-If you want to use the [Monitoring architecture](../README.md#monitoring-architecture-reference), then you need to change the default value of the following variable: `send_metrics_device_to_cloud=true`.
-
-```shell
-cd terraform/environment
-terraform apply -var location="<location>" -var rg_name="<rg-name>" -var iothub_id="<iothub-resource-id>" -var iothub_name="<iothub-name>" -var send_metrics_device_to_cloud=true
-```
+If you want to use the [Monitoring architecture](../README.md#monitoring-architecture-reference), then you need to change the default value of the following variable: `send_metrics_device_to_cloud` to `true`.
 
 The default values of any other variables can be overridden by specifying additional parameters in the `apply` command.
 
+### basic-elms
+
+This command has an impact on the pre-existent IoT Hub. It adds a new IoT Hub endpoint and route. Make sure to carefully review the Terraform plan and that there is no impact to your existing IoT Hub message routing before agreeing to the changes.
+
+```shell
+cd terraform/environments/basic-elms
+terraform apply -var location="<location>" -var rg_name="<rg-name>" -var iothub_id="<iothub-resource-id>" -var iothub_name="<iothub-name>"
+```
+
+### extended-elms
+
+This command will create all new resources, including a resource group, an IoT Hub, an Edge device with a linked VM and the ELMS resources.
+
+```shell
+cd terraform/environments/extended-elms
+terraform apply -var location="<location>"
+```
+
 ## 6. Specify IoT edge devices you want to capture logs from
 
-Add the tag `logPullEnabled="true"` to your IoT edge devices' twins to allow log pulling from the modules. This can be done in the Azure Portal or with the following command:
+If your chosen `target-environment` is `basic-elms` then add the tag `logPullEnabled="true"` to your IoT edge devices' twins to allow log pulling from the modules. This can be done in the Azure Portal or with the following command:
 
 ```shell
 az iot hub device-twin update --device-id <edge_device_name> --hub-name <iothub_name> --tags '{"logPullEnabled": "true"}'
 ```
+
+If you chose `extended-elms`, then no action is needed. The tag was already applied to the Edge device.
 
 ## 7. Terraform destroy
 
 The entire infrastructure can be deleted by running:
 
 ```shell
-cd infra/terraform/environment/
+cd terraform/environments/<target_environment>
 terraform destroy
 ```
 

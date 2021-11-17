@@ -19,7 +19,7 @@ resource "random_id" "elms" {
 }
 
 module "iotelms" {
-  source                       = "../modules/iotelms"
+  source                       = "../../modules/iotelms"
   rg_name                      = var.rg_name
   location                     = var.location
   name_identifier              = var.name_identifier

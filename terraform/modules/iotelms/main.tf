@@ -132,8 +132,8 @@ resource "null_resource" "check_key" {
   }
 
   provisioner "local-exec" {
-    command     = "az functionapp config appsettings set --name ${azurerm_function_app.elms.name} --resource-group ${var.rg_name} --settings \"HostKey=${data.azurerm_function_app_host_keys.elms.default_function_key}\""
-    interpreter = ["/bin/bash", "-c"] # ["Powershell", "-command"]
+    command     = "az functionapp config appsettings set --name ${azurerm_function_app.elms.name} --resource-group ${var.rg_name} --settings \"HostKey=${data.azurerm_function_app_host_keys.elms.default_function_key}\" --output none"
+    interpreter = ["/bin/bash", "-c"]
   }
 }
 
