@@ -135,7 +135,7 @@ Refer to [this documentation](docs/provision-elms-with-terraform.md) for informa
 
 The function solution receives its configuration through the application settings, these settings determine how your function will handle logs. Let's take a look at them:
 
-- **HubConnectionString**: IoT Hub access policy connection string with at least **registry read** and **service connect** permissions. More info about IoT access security can be found [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-security).
+- **HubHostName**: IoT Hub host name (ending in `azure-devices.net`). IoT Hub access will be granted through AAD managed identity. More info about IoT access security can be found [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-security).
 - **HubResourceId**: IoT Hub resource Id. This setting is used to map logs to the Azure resource and enable features like workbooks and monitoring dashboards on Azure.
 - **DeviceQuery**: IoT Hub query based on device twin information to target one or many IoT edge devices. This solution adds the tag `logPullEnabled="true"` to the IoT edge device twin, so the query to target it is `SELECT * FROM devices WHERE tags.logPullEnabled='true'`. More info about querying IoT Hub for devices and modules can be found [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-query-language#device-and-module-twin-queries).
 - **StorageConnectionString**: Connection string for the storage account that will host the container to store logs and queue to publish events.
@@ -147,7 +147,7 @@ The function solution receives its configuration through the application setting
 - **LogType**: A name to group logs by in Log analytics. It can be something like `iotedgemodulelogs`.
 - **EventHubName**: Event Hubs namespace authorization key with `listen` rights. It is **OPTIONAL** and required only when uploading metrics as IoT messages.
 - **EventHubConsumerGroup**: Event Hubs instance consumer group to read events from. Default is `$default`. It is **OPTIONAL** and required only when uploading metrics as IoT messages.
-- **EventHubConnectionString**: Event Hubs namespace connection string. It is **OPTIONAL** and required only when uploading metrics as IoT messages.
+- **EventHub__fullyQualifiedNamespace**: Event Hubs fully qualified namespace(ending in `.servicebus.windows.net`). It is **OPTIONAL** and required only when uploading metrics as IoT messages.
 - **LogsIdRegex**: A regular expression that supplies the IoT edge module name. It can match multiple modules. You can use `.*` if you want to capture logs for all modules running on the IoT edge device. [.NET Regular Expressions](https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expressions) format is expected.
 - **LogsSince**: Only returns logs since this time, as a duration (1d, 90m, 2 days 3 hours 2 minutes), rfc3339 timestamp, or UNIX timestamp. It is **OPTIONAL**, if not provided, it will attempt to retrieve all logs.
 - **LogsLogLevel**: Despite what the [official documentation](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2018-06#upload-module-logs) says for the edge agent's direct methods, this setting filters log lines that match exactly the log level, following the [Syslog severity level](https://en.wikipedia.org/wiki/Syslog#Severity_level) standard. It is **OPTIONAL**, if not provided, it will retrieve logs for all log levels.

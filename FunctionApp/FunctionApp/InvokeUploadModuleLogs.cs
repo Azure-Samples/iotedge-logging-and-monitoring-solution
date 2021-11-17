@@ -13,12 +13,13 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using FunctionApp.Models;
+using Azure.Identity;
+using Azure.Core;
 
 namespace FunctionApp
 {
     public static class InvokeUploadModuleLogs
     {
-        private static string _iotHubConnectionString = Environment.GetEnvironmentVariable("HubConnectionString");
         private static string _iotDeviceQuery = Environment.GetEnvironmentVariable("DeviceQuery");
         private static string _logsIdRegex = Environment.GetEnvironmentVariable("LogsIdRegex");
         private static string _logsSince = Environment.GetEnvironmentVariable("LogsSince");
@@ -29,6 +30,7 @@ namespace FunctionApp
         private static string _logsContentType = Environment.GetEnvironmentVariable("LogsContentType");
         private static string _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
         private static string _containerName = Environment.GetEnvironmentVariable("ContainerName");
+        private static string _iotHubAddress = Environment.GetEnvironmentVariable("HubHostName");        
 
         [FunctionName("InvokeUploadModuleLogs")]
         public static async Task<IActionResult> Run(
@@ -60,6 +62,8 @@ namespace FunctionApp
                     _logsContentType = "json";
                 #endregion
 
+                TokenCredential tokenCredential = new DefaultAzureCredential();
+
                 // Check payload to see if a specific resource is requested
                 string[] deviceIds = null;
 
@@ -87,11 +91,13 @@ namespace FunctionApp
                 }
                 else
                 {
-                    // query IoT edge devices
-                    var registryManager = RegistryManager.CreateFromConnectionString(_iotHubConnectionString);
-                    var query = registryManager.CreateQuery(_iotDeviceQuery);
-                    var devices = (await query.GetNextAsJsonAsync()).ToArray();
-                    deviceIds = devices.Select(x => JsonConvert.DeserializeObject<JObject>(x).GetValue("deviceId").ToString()).ToArray();
+                    // query IoT edge devices                    
+                    using  (var registryManager = RegistryManager.Create(_iotHubAddress, tokenCredential))
+                    {
+                        var query = registryManager.CreateQuery(_iotDeviceQuery);
+                        var devices = (await query.GetNextAsJsonAsync()).ToArray();
+                        deviceIds = devices.Select(x => JsonConvert.DeserializeObject<JObject>(x).GetValue("deviceId").ToString()).ToArray();
+                    }
                 }
 
                 // get container SAS token URL
@@ -103,7 +109,8 @@ namespace FunctionApp
                 // invoke direct method on every device
                 string moduleId = "$edgeAgent";
                 string methodName = "UploadModuleLogs";
-                ServiceClient _serviceClient = ServiceClient.CreateFromConnectionString(_iotHubConnectionString);
+
+                using ServiceClient _serviceClient = ServiceClient.Create(_iotHubAddress, tokenCredential);
 
                 foreach (string deviceId in deviceIds)
                 {
