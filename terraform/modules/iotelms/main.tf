@@ -114,7 +114,7 @@ resource "azurerm_function_app" "elms" {
     "WorkspaceId"                           = azurerm_log_analytics_workspace.elms.workspace_id
     "WorkspaceKey"                          = azurerm_log_analytics_workspace.elms.primary_shared_key
     "WEBSITE_RUN_FROM_PACKAGE"              = "https://${azurerm_storage_account.elmsfunc.name}.blob.core.windows.net/${azurerm_storage_container.elmsfunc.name}/${azurerm_storage_blob.elms.name}${data.azurerm_storage_account_blob_container_sas.elms.sas}"
-    "WEBSITE_LOAD_USER_PROFILE"             = 1 // this is required for proper certificate loading in the CollectMetrics function
+    "WEBSITE_LOAD_USER_PROFILE"             = var.send_metrics_device_to_cloud == true ? 1 : 0 // this is required for proper certificate loading in the CollectMetrics function
   }
 
   site_config {
