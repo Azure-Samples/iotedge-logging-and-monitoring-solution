@@ -5,7 +5,6 @@
     "FUNCTIONS_EXTENSION_VERSION": "~3",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "AzureWebJobsDashboard": "UseDevelopmentStorage=true",
-    "AzureWebJobs.HttpExample.Disabled": "true",
     "APPINSIGHTS_INSTRUMENTATIONKEY": "<...>",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "<...>",
 

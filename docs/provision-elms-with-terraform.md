@@ -14,16 +14,16 @@ The following steps are needed to achieve this:
 
 ### Option 1: Use Docker devcontainer
 
-1. Install [Docker Desktop](https://docs.docker.com/desktop/)
-2. Install Visual Studio extension [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-3. Open project in a devcontainer. Run the `Remote-Containers: Open Folder in Container...` command and select the local folder
+1. Install [Docker Desktop](https://docs.docker.com/desktop/).
+2. Install Visual Studio Code extension [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+3. Open project in a devcontainer. Run the `Remote-Containers: Open Folder in Container...` command and select the local folder.
 
-After that you will have all the needed tools, so continue with [step 3](#3-create-the-terraform-state-storage).
+After that you will have all the needed tools, so continue with [step 2](#2-log-into-azure-cli).
 
 ### Option 2: Install Terraform and Azure CLI manually
 
-1. [Install Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
-2. [Install Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+1. Install [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+2. Install [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
 
 ## 2. Log into Azure CLI
 
@@ -86,18 +86,18 @@ If you want to use the [Monitoring architecture](../README.md#monitoring-archite
 
 The default values of any other variables can be overridden by specifying additional parameters in the `apply` command.
 
-### basic-elms
+### a. basic-elms
 
-This command has an impact on the pre-existent IoT Hub. It adds a new IoT Hub endpoint and route. Make sure to carefully review the Terraform plan and that there is no impact to your existing IoT Hub message routing before agreeing to the changes.
+This command has an impact on the pre-existent IoT Hub. It adds a new IoT Hub endpoint and route. Before agreeing to apply the changes, make sure to carefully review the Terraform plan so that there is no unwanted impact to the existing IoT Hub message routing.
 
 ```shell
 cd terraform/environments/basic-elms
 terraform apply -var location="<location>" -var rg_name="<rg-name>" -var iothub_id="<iothub-resource-id>" -var iothub_name="<iothub-name>"
 ```
 
-### extended-elms
+### b. extended-elms
 
-This command will create all new resources, including a resource group, an IoT Hub, an Edge device with a linked VM and the ELMS resources.
+Apart from the ELMS specific resources, this command will create a resource group, an IoT Hub and an Edge device with a linked VM.
 
 ```shell
 cd terraform/environments/extended-elms
@@ -112,7 +112,7 @@ If your chosen `target-environment` is `basic-elms` then add the tag `logPullEna
 az iot hub device-twin update --device-id <edge_device_name> --hub-name <iothub_name> --tags '{"logPullEnabled": "true"}'
 ```
 
-If you chose `extended-elms`, then no action is needed. The tag was already applied to the Edge device.
+If you choose `extended-elms`, then no action is needed as the tag is automatically applied to the Edge device.
 
 ## 7. Terraform destroy
 

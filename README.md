@@ -129,7 +129,7 @@ The script will ask some questions regarding deployment options. Depending on th
 
 Refer to [this documentation](docs/provision-elms-with-terraform.md) for information on how to provision the ELMS infrastructure using terraform.
 
-> Note: [Monitor alert architecture](#monitor-alerts-architecture-reference) is not supported with the Terraform deployment.
+> Note: [Monitor alert architecture](#monitor-alerts-architecture-reference) and Device Provisioning Service is not supported with the Terraform deployment.
 
 ## Understanding required application settings
 
@@ -157,7 +157,8 @@ The function solution receives its configuration through the application setting
 - **LogsContentType**: Logs content type. Options are `json` or `text`. Default is `json`.
 - **CompressForUpload**: Whether to compress logs and metrics when uploading them to Azure Log Analytics or IoT messages in the case of metrics. Default is `true`.
 
-
+### Local development and debugging
+You can find a sample of the application settings needed to run the solution locally in this [file](FunctionApp/FunctionApp/sample.local.settings.json). It needs to be adapted based on the chosen scenario.
 
 ## Logging considerations
 
