@@ -132,7 +132,8 @@ The function solution receives its configuration through the application setting
 - **HubHostName**: IoT Hub host name (ending in `azure-devices.net`). IoT Hub access will be granted through AAD managed identity. More info about IoT access security can be found [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-security).
 - **HubResourceId**: IoT Hub resource Id. This setting is used to map logs to the Azure resource and enable features like workbooks and monitoring dashboards on Azure.
 - **DeviceQuery**: IoT Hub query based on device twin information to target one or many IoT edge devices. This solution adds the tag `logPullEnabled="true"` to the IoT edge device twin, so the query to target it is `SELECT * FROM devices WHERE tags.logPullEnabled='true'`. More info about querying IoT Hub for devices and modules can be found [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-query-language#device-and-module-twin-queries).
-- **StorageConnectionString**: Connection string for the storage account that will host the container to store logs and queue to publish events.
+- **StorageAccountName**: Name of the storage account that will host the container to store logs and queue to publish events.
+- **StorageName__serviceUri**: Uri pointing to the logs storage account in the format of `https://<StorageAccountName>.queue.core.windows.net/`
 - **ContainerName**: Container name to upload log files to.
 - **QueueName**: Storage queue to publish events to.
 - **WorkspaceId**: Log analytics workspace Id. More info on how to retrieve the workspace Id can be found [here](https://www.cloudsma.com/2020/08/log-analytics-keys/).

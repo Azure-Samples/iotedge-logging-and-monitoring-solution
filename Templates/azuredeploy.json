@@ -497,40 +497,42 @@
         }
       }
     },
-    "variables": {
-      "dpsName": "[concat('dps-', parameters('environmentHashId'))]",
-      "iotHubOwnerPolicyName": "iothubowner",
-      "edgeVmDnsName": "[concat(parameters('edgeVmName'), '-', parameters('environmentHashId'))]",
-      "eventGridSubscriptionName": "[concat('iotedgemodulelogs', parameters('environmentHashId'))]",
-      "eventGridSubscriptionFilter": "[concat('/blobServices/default/containers/', parameters('storageContainerName'), '/')]",
-      "functionAppHostingPlanName": "[concat(parameters('functionAppName'), '-plan')]",
-      "functionStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'function')]",
-      "functionStorageAccountSku": "Standard_LRS",
-      "storageAccountEndpointSuffix": "[if(startsWith(resourceGroup().location, 'usgov'), 'core.usgovcloudapi.net', if(startsWith(resourceGroup().location, 'usdod'), 'core.usgovcloudapi.net', 'core.windows.net'))]",
-      "functionFileShareName": "[substring(replace(concat(toLower(parameters('functionAppName')), parameters('environmentHashId')), '-', ''), 0, 25)]",
-      "functionAppResourceId": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
-      "functionApiVersion": "2018-11-01",
-      "appInsightsName": "[parameters('functionAppName')]",
-      "workspaceId": "[resourceId(parameters('workspaceResourceGroup'), 'Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
-      "workspaceApiVersion": "[providers('microsoft.operationalinsights', 'workspaces').apiVersions[0]]",
-      "workspaceDomainSuffix": "[if(or(startsWith(resourceGroup().location, 'usgov'), startsWith(resourceGroup().location, 'usdod')), 'azure.us', if(contains(resourceGroup().location, 'china'), 'azure.cn', 'azure.com'))]",
-      "iotHubDeploymentNames": {
-        "true": "[concat('iothub-with-route-', parameters('environmentHashId'))]",
-        "false": "[concat('iothub-', parameters('environmentHashId'))]"
-      },
-      "iotHubDeploymentName": "[variables('iotHubDeploymentNames')[string(parameters('createEventHubs'))]]",
-      "iotHubDeploymentTemplates": {
-        "true": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/iothub-with-route-deploy.json')]",
-        "false": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/iothub-deploy.json')]"
-      },
-      "eventGridDeploymentName": "[concat('storagesystemtopic-', parameters('environmentHashId'))]",
-      "eventHubsDeploymentName": "[concat('eventhubs-', parameters('environmentHashId'))]",
-      "eventHubsConsumerGroup": "$default",
-      "linkedDeploymentApiVersion": "2020-10-01",
-      "managedIdentityName": "monitoringIdentity",
-      "ioTHubDataContributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4fc6c259-987e-4a07-842e-c321cc9d413f')]",
-      "eventHubsDataReceiver": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'a638d3c7-ab3a-418d-83e6-5f17a39d4fde')]"
+  "variables": {
+    "dpsName": "[concat('dps-', parameters('environmentHashId'))]",
+    "iotHubOwnerPolicyName": "iothubowner",
+    "edgeVmDnsName": "[concat(parameters('edgeVmName'), '-', parameters('environmentHashId'))]",
+    "eventGridSubscriptionName": "[concat('iotedgemodulelogs', parameters('environmentHashId'))]",
+    "eventGridSubscriptionFilter": "[concat('/blobServices/default/containers/', parameters('storageContainerName'), '/')]",
+    "functionAppHostingPlanName": "[concat(parameters('functionAppName'), '-plan')]",
+    "functionStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'function')]",
+    "functionStorageAccountSku": "Standard_LRS",
+    "storageAccountEndpointSuffix": "[if(startsWith(resourceGroup().location, 'usgov'), 'core.usgovcloudapi.net', if(startsWith(resourceGroup().location, 'usdod'), 'core.usgovcloudapi.net', 'core.windows.net'))]",
+    "functionFileShareName": "[substring(replace(concat(toLower(parameters('functionAppName')), parameters('environmentHashId')), '-', ''), 0, 25)]",
+    "functionAppResourceId": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
+    "functionApiVersion": "2018-11-01",
+    "appInsightsName": "[parameters('functionAppName')]",
+    "workspaceId": "[resourceId(parameters('workspaceResourceGroup'), 'Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+    "workspaceApiVersion": "[providers('microsoft.operationalinsights', 'workspaces').apiVersions[0]]",
+    "workspaceDomainSuffix": "[if(or(startsWith(resourceGroup().location, 'usgov'), startsWith(resourceGroup().location, 'usdod')), 'azure.us', if(contains(resourceGroup().location, 'china'), 'azure.cn', 'azure.com'))]",
+    "iotHubDeploymentNames": {
+      "true": "[concat('iothub-with-route-', parameters('environmentHashId'))]",
+      "false": "[concat('iothub-', parameters('environmentHashId'))]"
     },
+    "iotHubDeploymentName": "[variables('iotHubDeploymentNames')[string(parameters('createEventHubs'))]]",
+    "iotHubDeploymentTemplates": {
+      "true": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/iothub-with-route-deploy.json')]",
+      "false": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/iothub-deploy.json')]"
+    },
+    "eventGridDeploymentName": "[concat('storagesystemtopic-', parameters('environmentHashId'))]",
+    "eventHubsDeploymentName": "[concat('eventhubs-', parameters('environmentHashId'))]",
+    "eventHubsConsumerGroup": "$default",
+    "linkedDeploymentApiVersion": "2020-10-01",
+    "managedIdentityName": "monitoringIdentity",
+    "ioTHubDataContributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4fc6c259-987e-4a07-842e-c321cc9d413f')]",
+    "eventHubsDataReceiver": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'a638d3c7-ab3a-418d-83e6-5f17a39d4fde')]",
+    "storageBlobDataContributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+    "storageQueueDataContributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')]"
+  },
     "resources": [
       {
         "type": "Microsoft.Resources/deployments",
@@ -730,7 +732,7 @@
             },
             "iotHubPartitionCount": {
               "value": "[parameters('iotHubPartitionCount')]"
-            },
+            },            
             "iotHubOwnerPolicyName": {
               "value": "[variables('iotHubOwnerPolicyName')]"
             },
@@ -963,8 +965,12 @@
                 "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').connectionString]"
               },
               {
-                "name": "StorageConnectionString",
-                "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', reference(variables('eventGridDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.storageAccountKey.value, ';EndpointSuffix=', variables('storageAccountEndpointSuffix'))]"
+                "name": "StorageAccountName",
+                "value": "[parameters('storageAccountName')]"
+              },
+              {
+                "name": "StorageName__serviceUri",
+                "value": "[concat('https://', parameters('storageAccountName'), '.queue.core.windows.net/')]"
               },
               {
                 "name": "QueueName",
@@ -996,7 +1002,7 @@
               },
               {
                 "name": "EventHub__fullyQualifiedNamespace",
-                "value": "[if(parameters('createEventHubs'), concat(variables('eventHubsDeploymentName'), '.servicebus.windows.net'), '')]"
+                "value": "[if(parameters('createEventHubs'), concat(parameters('eventHubsNamespace'), '.servicebus.windows.net'), '')]"
               },
               {
                 "name": "CompressForUpload",
@@ -1088,7 +1094,37 @@
             "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]",
             "principalType": "ServicePrincipal"
         }
-      }      
+      },
+      {
+        "type": "Microsoft.Authorization/roleAssignments",
+        "apiVersion": "2020-04-01-preview",
+        "name": "[guid('storageBlobRoleAssignmentName', parameters('storageAccountName'))]",
+        "scope": "[concat('Microsoft.Storage/storageAccounts', '/', parameters('storageAccountName'))]",
+        "dependsOn": [
+          "[variables('eventGridDeploymentName')]",
+          "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+        ],
+        "properties": {
+            "roleDefinitionId": "[variables('storageBlobDataContributor')]",
+            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]",
+            "principalType": "ServicePrincipal"
+        }
+      },
+      {
+        "type": "Microsoft.Authorization/roleAssignments",
+        "apiVersion": "2020-04-01-preview",
+        "name": "[guid('storageQueueRoleAssignmentName', parameters('storageAccountName'))]",
+        "scope": "[concat('Microsoft.Storage/storageAccounts', '/', parameters('storageAccountName'))]",
+        "dependsOn": [
+          "[variables('eventGridDeploymentName')]",
+          "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+        ],
+        "properties": {
+            "roleDefinitionId": "[variables('storageQueueDataContributor')]",
+            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]",
+            "principalType": "ServicePrincipal"
+        }
+      }                  
     ],
     "outputs": {
       "iotHubResourceId": {

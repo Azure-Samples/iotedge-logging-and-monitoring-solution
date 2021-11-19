@@ -22,6 +22,8 @@
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Configuration;
     using Azure.Storage.Blobs;
+    using Azure.Core;
+    using Azure.Identity;
 
     public class CertGenerator
     {
@@ -41,7 +43,7 @@
             this._logger = logger;
 
             // storage-based certificate management
-            string storageConnectionString = configuration["StorageConnectionString"];
+            // string storageAccountName = configuration["StorageAccountName"];
         }
 
         internal class Constants
@@ -64,10 +66,12 @@
             private readonly BlobContainerClient _containerClient;
             private ILogger _logger { get; set; }
 
-            public CloudCertStore(string connectionString, ILogger logger)
+            public CloudCertStore(string storageAccountName, ILogger logger)
             {
                 this._logger = logger;
-                BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
+                TokenCredential tokenCredential = new DefaultAzureCredential();
+
+                BlobServiceClient blobServiceClient = new BlobServiceClient(new Uri($"https://{storageAccountName}.blob.core.windows.net"), tokenCredential);
                 this._containerClient = blobServiceClient.GetBlobContainerClient(this._containerName);
                 if (!this._containerClient.Exists())
                     blobServiceClient.CreateBlobContainer(this._containerName);
