@@ -909,7 +909,7 @@
         "type": "Microsoft.Web/serverfarms",
         "apiVersion": "[variables('functionApiVersion')]",
         "name": "[variables('functionAppDotNetHostingPlanName')]",
-        "condition": "[not(parameters('createDistribTracing'))]",
+        "condition": "[parameters('createDistribTracing')]",
         "location": "[parameters('location')]",
         "sku": {
           "name": "Y1",
@@ -1110,7 +1110,7 @@
         "type": "Microsoft.Web/sites",
         "apiVersion": "[variables('functionApiVersion')]",
         "name": "[parameters('functionAppDotNetName')]",           
-        "condition": "[not(parameters('createDistribTracing'))]",
+        "condition": "[parameters('createDistribTracing')]",
         "location": "[parameters('location')]",
         "kind": "functionapp",
         "identity": {
