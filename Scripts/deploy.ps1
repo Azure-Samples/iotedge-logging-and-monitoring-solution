@@ -304,6 +304,8 @@ function Set-LogAnalyticsWorkspace {
     }
 }
 
+# function Set-ApplicationInsights!!!!! {
+
 function Set-EventHubsNamespace {
     param(
         [string] $prefix = "metricscollector",
@@ -703,6 +705,8 @@ function New-ELMSEnvironment() {
     $script:deployment_condition = "tags.logPullEnabled='true'"
     $script:device_query = "SELECT * FROM devices WHERE $($script:deployment_condition)"
     $script:function_app_name = "iotedgelogsapp-$($script:env_hash)"
+    $script:function_app_dotnet_backened_name = "iot-dotnet-backend-$($script:env_hash)"
+    $script:function_app_java_backened_name = "iot-java-backend-$($script:env_hash)"
     $script:logs_regex = "\b(WRN?|ERR?|CRIT?)\b"
     $script:logs_since = "15m"
     $script:logs_encoding = "gzip"
@@ -854,13 +858,22 @@ function New-ELMSEnvironment() {
     else {
         $option = Get-InputSelection `
             -options @("Yes", "No") `
-            -text @("In addition to logging, ELMS can enable IoT Edge monitoring with Azure Monitor. It will let you monitor your edge fleet at scale by using Azure Monitor to collect, store, visualize and generate alerts from metrics emitted by the IoT Edge runtime.", "Do you want to enable IoT Edge monitoring? Choose an option from the list (using its Index):") `
+            -text @("ELMS can enable IoT Edge monitoring with Azure Monitor. It will let you monitor your edge fleet at scale by using Azure Monitor to collect, store, visualize and generate alerts from metrics emitted by the IoT Edge runtime.", "Do you want to enable IoT Edge monitoring? Choose an option from the list (using its Index):") `
             -default_index 1
         
         if ($option -eq 1) {
             $script:enable_monitoring = $true
         }
     }
+
+    $option = Get-InputSelection `
+        -options @("Logging", "Distributed Tracing") `
+        -text @("Do you want to deploy Logging or Distributed Tracing sample? Choose an option from the list (using its Index):") `
+        -default_index 1
+    
+    if ($option -eq 2) {
+        $script:enable_distributed_tracing = $true
+    }    
 
     #region select monitoring type
     if ($script:enable_monitoring -and $null -eq $script:monitoring_mode) {
@@ -962,6 +975,8 @@ function New-ELMSEnvironment() {
         "workspaceName"               = @{ "value" = $script:workspace_name }
         "workspaceResourceGroup"      = @{ "value" = $script:workspace_resource_group }
         "functionAppName"             = @{ "value" = $script:function_app_name }
+        "functionAppDotNetName "      = @{ "value" = $script:function_app_dotnet_backend_name }
+        "functionAppJavaName"         = @{ "value" = $script:function_app_java_backend_name }        
         "httpTriggerFunction"         = @{ "value" = $script:invoke_log_upload_function_name }
         "logsRegex"                   = @{ "value" = $script:logs_regex }
         "logsSince"                   = @{ "value" = $script:logs_since }
@@ -1077,19 +1092,38 @@ function New-ELMSEnvironment() {
                 --priority $priority | Out-Null
         }
 
-        # Create logging deployment
-        $deployment_name = "sample-logging"
-        $priority += 1
-        
-        Write-Host "`r`nCreating IoT edge logging layered deployment $deployment_name"
+        if ($script:enable_distributed_tracing) {
+            # Create logging deployment
+            $deployment_name = "sample-distributed-tracing"
+            $priority += 1
+            
+            Write-Host "`r`nCreating IoT edge distributed tracing layered deployment $deployment_name"
 
-        az iot edge deployment create `
-            --layered `
-            -d "$deployment_name" `
-            --hub-name $script:iot_hub_name `
-            --content "$($root_path)/EdgeSolution/logging.deployment.json" `
-            --target-condition=$script:deployment_condition `
-            --priority $priority | Out-Null
+            az iot edge deployment create `
+                --layered `
+                -d "$deployment_name" `
+                --hub-name $script:iot_hub_name `
+                --content "$($root_path)/DistributedTracing/EdgeSolution/deployment.template.json" `
+                --target-condition=$script:deployment_condition `
+                --priority $priority | Out-Null           
+
+        } else {
+            # Create logging deployment
+            $deployment_name = "sample-logging"
+            $priority += 1
+            
+            Write-Host "`r`nCreating IoT edge logging layered deployment $deployment_name"
+
+            az iot edge deployment create `
+                --layered `
+                -d "$deployment_name" `
+                --hub-name $script:iot_hub_name `
+                --content "$($root_path)/EdgeSolution/logging.deployment.json" `
+                --target-condition=$script:deployment_condition `
+                --priority $priority | Out-Null
+        }
+        
+
     }
     #endregion
 
