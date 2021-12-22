@@ -509,7 +509,14 @@
         "metadata": {
           "description": "GitHub repo branch name."
         }
-      }
+      },
+      "createDistribTracing": {
+        "type": "bool",
+        "defaultValue": true,
+        "metadata": {
+          "description": "Create disributed tracing sample"
+        }
+      }            
     },
   "variables": {
     "dpsName": "[concat('dps-', parameters('environmentHashId'))]",
@@ -518,7 +525,7 @@
     "eventGridSubscriptionName": "[concat('iotedgemodulelogs', parameters('environmentHashId'))]",
     "eventGridSubscriptionFilter": "[concat('/blobServices/default/containers/', parameters('storageContainerName'), '/')]",
     "functionAppHostingPlanName": "[concat(parameters('functionAppName'), '-plan')]",
-    "functionAppDotNetHostingPlanName": "[concat(parameters('functionAppDotNetName'), '-plan')]",
+    "functionAppDotNetHostingPlanName": "[concat(parameters('functionAppDotNetName'), '-plan')]",     
     "functionStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'function')]",
     "functionStorageAccountSku": "Standard_LRS",
     "storageAccountEndpointSuffix": "[if(startsWith(resourceGroup().location, 'usgov'), 'core.usgovcloudapi.net', if(startsWith(resourceGroup().location, 'usdod'), 'core.usgovcloudapi.net', 'core.windows.net'))]",
@@ -901,7 +908,8 @@
       {
         "type": "Microsoft.Web/serverfarms",
         "apiVersion": "[variables('functionApiVersion')]",
-        "name": "[variables('functionAppDoNetHostingPlanName')]",
+        "name": "[variables('functionAppDotNetHostingPlanName')]",
+        "condition": "[not(parameters('createDistribTracing'))]",
         "location": "[parameters('location')]",
         "sku": {
           "name": "Y1",
@@ -1101,7 +1109,8 @@
       {
         "type": "Microsoft.Web/sites",
         "apiVersion": "[variables('functionApiVersion')]",
-        "name": "[parameters('functionAppDotNetName')]",              
+        "name": "[parameters('functionAppDotNetName')]",           
+        "condition": "[not(parameters('createDistribTracing'))]",
         "location": "[parameters('location')]",
         "kind": "functionapp",
         "identity": {

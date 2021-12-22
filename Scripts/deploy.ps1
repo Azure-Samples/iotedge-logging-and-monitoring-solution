@@ -1,6 +1,6 @@
 $root_path = Split-Path $PSScriptRoot -Parent
 Import-Module "$root_path/Scripts/PS-Library"
-$github_repo_url = "https://raw.githubusercontent.com/Azure-Samples/iotedge-logging-and-monitoring-solution"
+$github_repo_url = "https://raw.githubusercontent.com/eedorenko/iotedge-logging-and-monitoring-solution"
 
 function Set-EnvironmentHash {
     param(
@@ -705,8 +705,8 @@ function New-ELMSEnvironment() {
     $script:deployment_condition = "tags.logPullEnabled='true'"
     $script:device_query = "SELECT * FROM devices WHERE $($script:deployment_condition)"
     $script:function_app_name = "iotedgelogsapp-$($script:env_hash)"
-    $script:function_app_dotnet_backened_name = "iot-dotnet-backend-$($script:env_hash)"
-    $script:function_app_java_backened_name = "iot-java-backend-$($script:env_hash)"
+    $script:function_app_dotnet_backend_name = "iot-dotnet-backend-$($script:env_hash)"
+    $script:function_app_java_backend_name = "iot-java-backend-$($script:env_hash)"
     $script:logs_regex = "\b(WRN?|ERR?|CRIT?)\b"
     $script:logs_since = "15m"
     $script:logs_encoding = "gzip"
@@ -974,8 +974,8 @@ function New-ELMSEnvironment() {
         "workspaceLocation"           = @{ "value" = $script:workspace_location }
         "workspaceName"               = @{ "value" = $script:workspace_name }
         "workspaceResourceGroup"      = @{ "value" = $script:workspace_resource_group }
-        "functionAppName"             = @{ "value" = $script:function_app_name }
-        "functionAppDotNetName "      = @{ "value" = $script:function_app_dotnet_backend_name }
+        "functionAppName"             = @{ "value" = $script:function_app_name } 
+        "functionAppDotNetName"       = @{ "value" = $script:function_app_dotnet_backend_name }
         "functionAppJavaName"         = @{ "value" = $script:function_app_java_backend_name }        
         "httpTriggerFunction"         = @{ "value" = $script:invoke_log_upload_function_name }
         "logsRegex"                   = @{ "value" = $script:logs_regex }
@@ -984,6 +984,7 @@ function New-ELMSEnvironment() {
         "metricsEncoding"             = @{ "value" = $script:metrics_encoding }
         "templateUrl"                 = @{ "value" = $github_repo_url }
         "branchName"                  = @{ "value" = $(git rev-parse --abbrev-ref HEAD) }
+        "createDistribTracing"        = @{ "value" = $script:enable_distributed_tracing }
     }
 
     if ($script:create_iot_hub) {
