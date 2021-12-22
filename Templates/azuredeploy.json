@@ -1193,7 +1193,7 @@
           "[resourceId('Microsoft.Web/serverfarms', variables('functionAppJavaHostingPlanName'))]"
         ],
         "properties": {
-          "name": "[parameters('functionAppDotNetName')]",
+          "name": "[parameters('functionAppJavaName')]",
           "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionAppJavaHostingPlanName'))]",
           "clientAffinityEnabled": false,
           "siteConfig": {
