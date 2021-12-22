@@ -532,7 +532,7 @@
     "functionFileShareName": "[substring(replace(concat(toLower(parameters('functionAppName')), parameters('environmentHashId')), '-', ''), 0, 25)]",
     "functionAppResourceId": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
     "functionApiVersion": "2018-11-01",
-    "appInsightsName": "[parameters('functionAppName')]",
+    "appInsightsName": "[concat('appinsights-', parameters('environmentHashId'))]",
     "workspaceId": "[resourceId(parameters('workspaceResourceGroup'), 'Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
     "workspaceApiVersion": "[providers('microsoft.operationalinsights', 'workspaces').apiVersions[0]]",
     "workspaceDomainSuffix": "[if(or(startsWith(resourceGroup().location, 'usgov'), startsWith(resourceGroup().location, 'usdod')), 'azure.us', if(contains(resourceGroup().location, 'china'), 'azure.cn', 'azure.com'))]",
