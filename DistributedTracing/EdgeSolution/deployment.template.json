@@ -49,7 +49,7 @@
         },              
       "properties.desired.modules.Opentelemetrycollector": {
         "settings": {
-          "image": "kaizentm/iotsample-opentelemetrycollector:0.0.1",
+          "image": "kaizentm/iotsample-opentelemetrycollector:0.0.1"
           // "createOptions": {
           //   "Hostname": "opentelemetrycollector",
           //   "HostConfig": {
