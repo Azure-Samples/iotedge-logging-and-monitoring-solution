@@ -1143,7 +1143,7 @@
               },
               {
                 "name": "IoTHubConnection",
-                "value": "IoTHubConnection]"
+                "value": "[if(parameters('createEventHubs'), concat('Endpoint=sb://', reference(variables('eventHubsDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.endpoint.value, ';SharedAccessKeyName=', parameters('eventHubsListenPolicyName'), ';SharedAccessKey=', reference(variables('eventHubsDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.namespaceListenKey.value), '')]"
               },
               {
                 "name": "JAVA_FUNCTION_URI",
