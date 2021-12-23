@@ -535,8 +535,8 @@
     "functionApiVersion": "2018-11-01",
     "appInsightsName": "[concat('appinsights-', parameters('environmentHashId'))]",
     "workspaceId": "[resourceId(parameters('workspaceResourceGroup'), 'Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
-    //"workspaceApiVersion": "[providers('Microsoft.OperationalInsights', 'workspaces').apiVersions[0]]",
-    "workspaceApiVersion": "2016-04-01",
+    "workspaceApiVersion": "[providers('Microsoft.OperationalInsights', 'workspaces').apiVersions[0]]",
+    // "workspaceApiVersion": "2016-04-01",
     "workspaceDomainSuffix": "[if(or(startsWith(resourceGroup().location, 'usgov'), startsWith(resourceGroup().location, 'usdod')), 'azure.us', if(contains(resourceGroup().location, 'china'), 'azure.cn', 'azure.com'))]",
     "iotHubDeploymentNames": {
       "true": "[concat('iothub-with-route-', parameters('environmentHashId'))]",
