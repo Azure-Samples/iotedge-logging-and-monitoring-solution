@@ -129,7 +129,7 @@ The script will ask some questions regarding deployment options. Depending on th
 
 Refer to [this documentation](docs/provision-elms-with-terraform.md) for information on how to provision the ELMS infrastructure using terraform.
 
-> Note: [Monitor alert architecture](#monitor-alerts-architecture-reference) and Device Provisioning Service is not supported with the Terraform deployment.
+> Note: [Monitor alert architecture](#monitor-alerts-architecture-reference), Device Provisioning Service and Distributed Tracing sample are not supported with the Terraform deployment.
 
 ## Understanding required application settings
 

@@ -1,0 +1,27 @@
+          // "createOptions": {
+          //   "Hostname": "opentelemetrycollector",
+          //   "HostConfig": {
+          //     "PortBindings": {
+          //       "4317/tcp": [
+          //         {
+          //           "HostPort": "4317"
+          //         }
+          //       ],
+          //       "4318/tcp": [
+          //         {
+          //           "HostPort": "4318"
+          //         }
+          //       ],
+          //       "55679/tcp": [
+          //         {
+          //           "HostPort": "55679"
+          //         }
+          //       ],
+          //       "1888/tcp": [
+          //         {
+          //           "HostPort": "1888"
+          //         }
+          //       ]
+          //     }
+          //   }
+          // }
