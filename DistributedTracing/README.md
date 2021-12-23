@@ -2,7 +2,7 @@
 
 The sample demonstrates implementation of end-to-end distributed tracing with [OpenTelemery]().  
 
-Please see the [Overview of Distributed Tracing with IoT Edge]() to understand the concept and different architecture paterns. 
+Please see the [Overview of Distributed Tracing with IoT Edge](https://csefy19.visualstudio.com/CSE_Engineer_for_Reuse/_boards/board/t/DevOps%20and%20Infrastructure/Stories/?workitem=493299) to understand the concept and different architecture paterns. 
 
 At this point, the sample implements the "online" scenario when an IoT Edge device is normally online and has a constant access to an Application Insights instance.  
 
@@ -40,12 +40,16 @@ Besides Application Insights, `Tempperature Sensor` and `Filter` IoT Edge module
 
 [picture]
 
+
+<!-- 
+TODO:
+
 ## Configurations
 Specific dist tracing configurations pwer each layer
   
 
 ## Deployment
-To deploy the sample run the PowerShell script `./Scripts/deploy.ps1` and select the `Distributed Tracing` option when asked.  
+To deploy the sample run the PowerShell script `./Scripts/deploy.ps1` and select the `Distributed Tracing` option when asked.   -->
 
  
 
