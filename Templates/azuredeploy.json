@@ -1135,7 +1135,7 @@
         },            
         "dependsOn": [
           "[resourceId('Microsoft.Web/serverfarms', variables('functionAppDotNetHostingPlanName'))]",
-          "[variables('iotHubDeploymentName')]"
+          "[parameters('functionAppName')]"
         ],
         "properties": {
           "name": "[parameters('functionAppDotNetName')]",

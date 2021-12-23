@@ -871,9 +871,9 @@ function New-ELMSEnvironment() {
         -text @("Do you want to deploy Logging or Distributed Tracing sample? Choose an option from the list (using its Index):") `
         -default_index 1
     
-    if ($option -eq 2) {
-        $script:enable_distributed_tracing = $true
-    }    
+    
+    $script:enable_distributed_tracing = ($option -eq 2)
+        
 
     #region select monitoring type
     if ($script:enable_monitoring -and $null -eq $script:monitoring_mode) {
