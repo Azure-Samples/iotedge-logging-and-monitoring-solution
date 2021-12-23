@@ -1135,7 +1135,7 @@
         },            
         "dependsOn": [
           "[resourceId('Microsoft.Web/serverfarms', variables('functionAppDotNetHostingPlanName'))]",
-          "[parameters('functionAppName')]"
+          "[variables('iotHubDeploymentName')]"
         ],
         "properties": {
           "name": "[parameters('functionAppDotNetName')]",
@@ -1170,7 +1170,7 @@
               },
               {
                 "name": "IoTHubConnection",
-                "value": "[concat('Endpoint=', reference(resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/IotHubs', parameters('iotHubName'))), providers('Microsoft.Devices', 'IoTHubs').apiVersions[0]).eventHubEndpoints.events.endpoint, ';SharedAccessKeyName=iothubowner;SharedAccessKey=', listKeys(resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/IotHubs', parameters('iotHubName'))resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/IotHubs', parameters('iotHubName')), providers('Microsoft.Devices', 'IoTHubs').apiVersions[0]).value[0].primaryKey, ';EntityPath=', reference(resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/IotHubs', parameters('iotHubName'))resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/IotHubs', parameters('iotHubName'))), providers('Microsoft.Devices', 'IoTHubs').apiVersions[0]).eventHubEndpoints.events.path)]"                
+                "value": "[reference(variables('iotHubDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.endpoint.value]"                
               },
               {
                 "name": "JAVA_FUNCTION_URI",

@@ -430,6 +430,10 @@
     "serviceKey": {
       "type": "string",
       "value": "[listKeys(variables('iotHubServiceKeysId'), variables('iotHubApiVersion')).primaryKey]"
-    }
+    },    
+    "endpoint": {
+      "type": "string",
+      "value": "[concat('Endpoint=', reference(variables('iotHubId'), variables('iotHubApiVersion')).eventHubEndpoints.events.endpoint, ';SharedAccessKeyName=iothubowner;SharedAccessKey=', listKeys(variables('iotHubOwnerKeysId'), variables('iotHubApiVersion')).primaryKey, ';EntityPath=', reference(variables('iotHubId'), variables('iotHubApiVersion')).eventHubEndpoints.events.path)]"
+    }    
   }
 }
