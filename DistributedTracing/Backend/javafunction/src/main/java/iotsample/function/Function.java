@@ -88,8 +88,8 @@ public class Function {
     * In the cloud the funcions app is configured as described here https://docs.microsoft.com/en-us/azure/azure-monitor/app/monitor-functions#how-to-enable-distributed-tracing-for-java-function-apps
     *
     * The Java agent performs the following:
-    *   - automatically creates OpenTelemetry spans while intereacting with the outer world
-    *     - e.g. in this sample it cathces "traceparent" header in the incoming request and creates a span for the function execution, 
+    *   - automatically creates OpenTelemetry spans while interacting with the outer world
+    *     - e.g. in this sample it catches "traceparent" header in the incoming request and creates a span for the function execution, 
     *      it also creates spans while interacting with the blobcontainer and managed identity service.  
     *   - injects trace_id and span_id in the logging (MDC) context so it can be used in the output
     *   - exports spans and logs (including MDC) to Application insights tables (dependencies, requests, traces, exceptions).    

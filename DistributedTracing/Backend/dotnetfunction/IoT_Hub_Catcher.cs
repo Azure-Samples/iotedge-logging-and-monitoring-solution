@@ -70,7 +70,7 @@ namespace IoTSample
         }
 
         private void Init() {
-            // By default .Net5/6 embed into outgoing htttp calls a "buggy" traceparent header.
+            // By default .Net5/6 embeds into outgoing http calls a "buggy" traceparent header.
             // We don't want it as we want to provide correct traceparent header instead. 
             // See https://github.com/dotnet/aspnetcore/issues/27846
             // https://github.com/dotnet/runtime/issues/35337#issuecomment-864293752                    
@@ -79,14 +79,14 @@ namespace IoTSample
 
         /*
         * The backend C# function is invoked when a new IoT meessage arrives from a device to Event Hub.
-        * The function uses the message "traceparent" property to start a new OpenTelemtry span (Activity) in the same trace. 
+        * The function uses the message "traceparent" property to start a new OpenTelemetry span (Activity) in the same trace. 
         * It invokes via http call the next backend function (Java function) in the chain passing the new span as a traceparent 
         * in the header.   
         */
         [Function("IoTHubCatcher")]
         public async Task RunAsync([EventHubTrigger("messages/events", Connection = "IoTHubConnection", IsBatched = false)] string iotMessage,
-    FunctionContext context,
-    DateTime[] enqueuedTimeUtcArray,
+             FunctionContext context,
+             DateTime[] enqueuedTimeUtcArray,
              long[] sequenceNumberArray,
              string[] offsetArray,
              Dictionary<string, JsonElement> properties)
@@ -110,7 +110,8 @@ namespace IoTSample
                     {
                         string traceparent = java_activity.Id;
                         stringContent.Headers.Add("traceparent", traceparent);
-                        await client.PostAsync(GetEnvironmentVariable("JAVA_FUNCTION_URI"), stringContent);
+                        HttpResponseMessage response = await client.PostAsync(GetEnvironmentVariable("JAVA_FUNCTION_URI"), stringContent);
+                        response.EnsureSuccessStatusCode();
                     }
                 }
             }

@@ -66,7 +66,6 @@ namespace FilterModule
             /*
             * Configuring ILogger to 
             *   - automatically create a logging scope for the current TraceId and SpanId 
-                (the default Functions logger (e.g. context.GetLogger or dependency injected) can't do that)
                 This feature is available for .Net5 and .Net6 only.
             *   - export logs to console
             *   - export logs to Application Insights. It exports TraceId and SpanId to customDimensions field 
