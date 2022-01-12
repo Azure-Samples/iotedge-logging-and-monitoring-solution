@@ -1343,6 +1343,14 @@
       "eventHubsSendKey": {
         "type": "string",
         "value": "[if(parameters('createEventHubs'), reference(variables('eventHubsDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.instanceSendKey.value, '')]"
-      }
+      },
+      "appInsightsInstrumentationKey": {
+        "type": "string",
+        "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').InstrumentationKey]"
+      },
+      "appInsightsConnectionString": {
+        "type": "string",
+        "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').connectionString]"
+      }      
     }
   }

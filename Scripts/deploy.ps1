@@ -1041,25 +1041,37 @@ function New-ELMSEnvironment() {
 
     #region generate monitoring deployment manifest
     if ($script:enable_monitoring) {
-        $script:scrape_frequency = 300
-        if ($script:metrics_encoding -eq "gzip") {
-            $script:compress_for_upload = "true"
+        if ($script:enable_distributed_tracing) {
+            $monitoring_template = "$($root_path)/DistributedTracing/EdgeSolution/deployment.template.json"
+            $monitoring_manifest = "$($root_path)/DistributedTracing/EdgeSolution/deployment.manifest.json"
+            Remove-Item -Path $monitoring_manifest -ErrorAction Ignore
+    
+            (Get-Content -Path $monitoring_template -Raw) | ForEach-Object {
+                $_  -replace '${INSTRUMENTATION_KEY}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
+                    -replace '${AI_CONNECTION_STRING}', $script:deployment_output.properties.outputs.appInsightsConnectionString.value `
+            } | Set-Content -Path $monitoring_manifest    
+        } else {
+            $script:scrape_frequency = 300
+            if ($script:metrics_encoding -eq "gzip") {
+                $script:compress_for_upload = "true"
+            }
+            else {
+                $script:compress_for_upload = "false"
+            }
+            $monitoring_template = "$($root_path)/EdgeSolution/monitoring.$($script:monitoring_mode.ToLower()).template.json"
+            $monitoring_manifest = "$($root_path)/EdgeSolution/monitoring.deployment.json"
+            Remove-Item -Path $monitoring_manifest -ErrorAction Ignore
+    
+            (Get-Content -Path $monitoring_template -Raw) | ForEach-Object {
+                $_ -replace '__WORKSPACE_ID__', $script:deployment_output.properties.outputs.workspaceId.value `
+                    -replace '__SHARED_KEY__', $script:deployment_output.properties.outputs.workspaceSharedKey.value `
+                    -replace '__HUB_RESOURCE_ID__', $script:deployment_output.properties.outputs.iotHubResourceId.value `
+                    -replace '__UPLOAD_TARGET__', $script:monitoring_mode `
+                    -replace '__SCRAPE_FREQUENCY__', $script:scrape_frequency `
+                    -replace '__COMPRESS_FOR_UPLOAD__', $script:compress_for_upload `
+                    -replace '__COMPRESS_FOR_UPLOAD__', $script:compress_for_upload
+            } | Set-Content -Path $monitoring_manifest    
         }
-        else {
-            $script:compress_for_upload = "false"
-        }
-        $monitoring_template = "$($root_path)/EdgeSolution/monitoring.$($script:monitoring_mode.ToLower()).template.json"
-        $monitoring_manifest = "$($root_path)/EdgeSolution/monitoring.deployment.json"
-        Remove-Item -Path $monitoring_manifest -ErrorAction Ignore
-
-        (Get-Content -Path $monitoring_template -Raw) | ForEach-Object {
-            $_ -replace '__WORKSPACE_ID__', $script:deployment_output.properties.outputs.workspaceId.value `
-                -replace '__SHARED_KEY__', $script:deployment_output.properties.outputs.workspaceSharedKey.value `
-                -replace '__HUB_RESOURCE_ID__', $script:deployment_output.properties.outputs.iotHubResourceId.value `
-                -replace '__UPLOAD_TARGET__', $script:monitoring_mode `
-                -replace '__SCRAPE_FREQUENCY__', $script:scrape_frequency `
-                -replace '__COMPRESS_FOR_UPLOAD__', $script:compress_for_upload
-        } | Set-Content -Path $monitoring_manifest
     }
     #endregion
 
@@ -1104,7 +1116,7 @@ function New-ELMSEnvironment() {
                 --layered `
                 -d "$deployment_name" `
                 --hub-name $script:iot_hub_name `
-                --content "$($root_path)/DistributedTracing/EdgeSolution/deployment.template.json" `
+                --content "$($root_path)/DistributedTracing/EdgeSolution/deployment.manifest.json" `
                 --target-condition=$script:deployment_condition `
                 --priority $priority | Out-Null           
 
