@@ -1048,7 +1048,7 @@ function New-ELMSEnvironment() {
     
             (Get-Content -Path $monitoring_template -Raw) | ForEach-Object {
                 $_  -replace '${INSTRUMENTATION_KEY}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
-                    -replace '${AI_CONNECTION_STRING}', $script:deployment_output.properties.outputs.appInsightsConnectionString.value
+                    -replace '${AI_CONNECTION_STRING}', 'some_test_value'
             } | Set-Content -Path $monitoring_manifest    
         } else {
             $script:scrape_frequency = 300
