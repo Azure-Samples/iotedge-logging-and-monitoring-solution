@@ -716,8 +716,8 @@ function New-ELMSEnvironment() {
     $script:alert_function_name = "MonitorAlerts"
     $script:zip_package_name = "deploy.zip"
     $script:zip_package_path = "$($root_path)/FunctionApp/FunctionApp/$($zip_package_name)"
-    $script:zip_package_app_dotnet_backend_path = "$($root_path)DistributedTracing/Backend/dotnetfunction/iot-dotnet-backend.zip"
-    $script:zip_package_app_java_backend_path = "$($root_path)DistributedTracing/Backend/javafunction/iot-java-backend.zip"
+    $script:zip_package_app_dotnet_backend_path = "$($root_path)/DistributedTracing/Backend/dotnetfunction/iot-dotnet-backend.zip"
+    $script:zip_package_app_java_backend_path = "$($root_path)/DistributedTracing/Backend/javafunction/iot-java-backend.zip"
     #endregion
 
     #region greetings
