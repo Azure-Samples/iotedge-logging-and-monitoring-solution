@@ -19,7 +19,7 @@
               "value": "${AI_CONNECTION_STRING}"
             },
             "OTLP_ENDPOINT": {
-              "value": "${OTLP_ENDPOINT}"
+              "value": "http://opentelemetrycollector:4317"
             }              
           },
           "status": "running",
@@ -40,7 +40,7 @@
               "value": "${AI_CONNECTION_STRING}"
             },
             "OTLP_ENDPOINT": {
-              "value": "${OTLP_ENDPOINT}"
+              "value": "http://opentelemetrycollector:4317"
             }                    
           },
           "status": "running",

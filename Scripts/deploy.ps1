@@ -716,6 +716,8 @@ function New-ELMSEnvironment() {
     $script:alert_function_name = "MonitorAlerts"
     $script:zip_package_name = "deploy.zip"
     $script:zip_package_path = "$($root_path)/FunctionApp/FunctionApp/$($zip_package_name)"
+    $script:zip_package_app_dotnet_backend_path = "$($root_path)DistributedTracing/Backend/dotnetfunction/iot-dotnet-backend.zip"
+    $script:zip_package_app_java_backend_path = "$($root_path)DistributedTracing/Backend/javafunction/iot-java-backend.zip"
     #endregion
 
     #region greetings
@@ -1047,8 +1049,8 @@ function New-ELMSEnvironment() {
             Remove-Item -Path $monitoring_manifest -ErrorAction Ignore
     
             (Get-Content -Path $monitoring_template -Raw) | ForEach-Object {
-                $_  -replace '${INSTRUMENTATION_KEY}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
-                    -replace '${AI_CONNECTION_STRING}', 'some_test_value'
+                $_  -replace '\$\{INSTRUMENTATION_KEY\}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
+                    -replace '\$\{AI_CONNECTION_STRING\}', $script:deployment_output.properties.outputs.appInsightsConnectionString.value
             } | Set-Content -Path $monitoring_manifest    
         } else {
             $script:scrape_frequency = 300
@@ -1149,6 +1151,18 @@ function New-ELMSEnvironment() {
     if (!$script:create_event_hubs) {
 
         az functionapp config appsettings set --resource-group $script:resource_group_name --name $script:function_app_name --settings "AzureWebJobs.CollectMetrics.Disabled=true" | Out-Null
+    }
+    #endregion
+
+    #region backend apps
+    if ($script:enable_distributed_tracing) {
+        Write-Host
+        Write-Host "Deploying code to dotnet backend app $script:function_app_dotnet_backend_name"            
+        az functionapp deployment source config-zip -g $script:resource_group_name -n $script:function_app_dotnet_backend_name --src $script:zip_package_app_dotnet_backend_path | Out-Null
+
+        Write-Host
+        Write-Host "Deploying code to java backend app $script:function_app_java_backend_name"            
+        az functionapp deployment source config-zip -g $script:resource_group_name -n $script:function_app_java_backend_name --src $script:zip_package_app_java_backend_path | Out-Null
     }
     #endregion
 
