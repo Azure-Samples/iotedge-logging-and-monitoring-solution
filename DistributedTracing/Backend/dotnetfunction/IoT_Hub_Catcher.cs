@@ -79,7 +79,8 @@ namespace IoTSample
 
         /*
         * The backend C# function is invoked when a new IoT meessage arrives from a device to Event Hub.
-        * The function uses the message "traceparent" property to start a new OpenTelemetry span (Activity) in the same trace. 
+        * The function uses the message "Diagnostic-Id" property to start a new OpenTelemetry span (Activity) in the same trace. 
+        * Event Hub renames the original "traceparent" property coming from the device to "Diagnostic-Id".
         * It invokes via http call the next backend function (Java function) in the chain passing the new span as a traceparent 
         * in the header.   
         */
@@ -94,7 +95,7 @@ namespace IoTSample
             Init();            
 
             using (GetTracerProvider())
-            using (var activity = IoTHubCatcherSource.StartActivity("ProcessedInFunction", ActivityKind.Server, properties["traceparent"].GetString()))
+            using (var activity = IoTHubCatcherSource.StartActivity("ProcessedInFunction", ActivityKind.Server, properties["Diagnostic-Id"].GetString()))
             {
                 
                 activity.SetTag("MessageString", iotMessage);
