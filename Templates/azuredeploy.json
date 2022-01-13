@@ -1407,6 +1407,7 @@
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
         "name": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]",
         "resourceGroup": "[parameters('storageAccountResourceGroup')]",
+        "condition": "[parameters('createDistribTracing')]",
         "dependsOn": [
             "[variables('eventGridDeploymentName')]",
             "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"            
@@ -1456,6 +1457,7 @@
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
         "name": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]",
         "resourceGroup": "[parameters('storageAccountResourceGroup')]",
+        "condition": "[parameters('createDistribTracing')]",
         "dependsOn": [
             "[variables('eventGridDeploymentName')]",
             "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"            
