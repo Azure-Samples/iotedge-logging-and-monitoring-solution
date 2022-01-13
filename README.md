@@ -1,9 +1,12 @@
 # IoT ELMS
 
-IoT **E**dge **L**ogging and **M**onitoring **S**olution (pronounced *Lm's*) is an architecture and a sample cloud workflow that enables secure and automated retrieval of workload logs and metrics from IoT Edge devices without any additional host-level components. It leverages IoT Edge Agent's [built-in functionality to retrieve logs](https://docs.microsoft.com/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2020-11) and IoT [Edge metrics collector](https://aka.ms/edgemon-logs) for metrics.
+IoT **E**dge **L**ogging and **M**onitoring **S**olution (pronounced *Lm's*) provides architecture and sample implementations of collecting all three pillars of the observability data from IoT Edge devices and delivering logs, metrics and distributed tracing to Azure Monitor.
 
-ELMS also provides a sample cloud workflow to process logs uploaded by the device to a blob storage container, as well as metrics arriving as device-to-cloud messages in IoT Hub. The sample can be deployed either in a sandbox environment or integrated with existing resources using an intuitive CLI wizard.
+ELMS provides a sample cloud workflow to process logs uploaded by the device to a blob storage container, as well as metrics arriving as device-to-cloud messages in IoT Hub. The workflow enables secure and automated retrieval of workload logs and metrics from IoT Edge devices without any additional host-level components. It leverages IoT Edge Agent's [built-in functionality to retrieve logs](https://docs.microsoft.com/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2020-11) and IoT [Edge metrics collector](https://aka.ms/edgemon-logs) for metrics.
 
+ELMS also provides [architecture patterns](docs/iot-edge-distributed-tracing.md) and a [sample implementation](DistributedTracing/README.md) of end-to-end distributed tracing for a common `IoT Edge to Cloud` scenario. 
+
+The samples can be deployed either in a sandbox environment or integrated with existing resources using an intuitive CLI wizard.
 
 
 ## Logging architecture reference
@@ -71,6 +74,10 @@ After the solution has been deployed with the monitoring option enabled, you can
 > Additional alert rules can be created at any time through Azure CLI, Azure PowerShell or the Azure Portal.
 
 
+## Distributed Tracing
+
+Refer to the [Distributed Tracing Sample](DistributedTracing) for the saample description in deployment instructions.
+
 
 ## Pre-requisites
 
@@ -120,7 +127,7 @@ The script will ask some questions regarding deployment options. Depending on th
 - Device Provisioning Service
 - IoT Edge virtual machine
 - Storage accounts
-- App service plan and Function app
+- App service plan and Function app 
 - Application Insights
 - Event grid topic
 - Event hubs namespace
@@ -129,7 +136,7 @@ The script will ask some questions regarding deployment options. Depending on th
 
 Refer to [this documentation](docs/provision-elms-with-terraform.md) for information on how to provision the ELMS infrastructure using terraform.
 
-> Note: [Monitor alert architecture](#monitor-alerts-architecture-reference), Device Provisioning Service and Distributed Tracing sample are not supported with the Terraform deployment.
+> Note: [Monitor alert architecture](#monitor-alerts-architecture-reference), Device Provisioning Service and [Distributed Tracing Sample](DistributedTracing)s are not supported with the Terraform deployment.
 
 ## Understanding required application settings
 
