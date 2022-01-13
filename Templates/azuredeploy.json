@@ -1197,14 +1197,14 @@
         "properties": {
           "name": "[parameters('functionAppJavaName')]",
           "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionAppJavaHostingPlanName'))]",
-          "clientAffinityEnabled": false,
-          "javaVersion": "11",  
+          "clientAffinityEnabled": false,          
           "siteConfig": {
             "cors": {
               "allowedOrigins": [
                 "*"
               ]
             },
+            "javaVersion": "11",
             "appSettings": [
               {
                 "name": "AzureWebJobsStorage",
