@@ -1198,6 +1198,7 @@
           "name": "[parameters('functionAppJavaName')]",
           "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionAppJavaHostingPlanName'))]",
           "clientAffinityEnabled": false,
+          "javaVersion": "11",  
           "siteConfig": {
             "cors": {
               "allowedOrigins": [
@@ -1305,7 +1306,37 @@
             "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]",
             "principalType": "ServicePrincipal"
         }
-      }                  
+      },
+      {
+        "type": "Microsoft.Authorization/roleAssignments",
+        "apiVersion": "2020-04-01-preview",
+        "name": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]",
+        "scope": "[concat('Microsoft.Storage/storageAccounts', '/', variables('functionStorageAccountName'))]",
+        "dependsOn": [
+          "[variables('eventGridDeploymentName')]",
+          "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"
+        ],
+        "properties": {
+            "roleDefinitionId": "[variables('storageBlobDataContributor')]",
+            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId]",
+            "principalType": "ServicePrincipal"
+        }
+      },
+      {
+        "type": "Microsoft.Authorization/roleAssignments",
+        "apiVersion": "2020-04-01-preview",
+        "name": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]",
+        "scope": "[concat('Microsoft.Storage/storageAccounts', '/', variables('functionStorageAccountName'))]",
+        "dependsOn": [
+          "[variables('eventGridDeploymentName')]",
+          "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"
+        ],
+        "properties": {
+            "roleDefinitionId": "[variables('storageQueueDataContributor')]",
+            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId]",
+            "principalType": "ServicePrincipal"
+        }
+      }                              
     ],
     "outputs": {
       "iotHubResourceId": {
