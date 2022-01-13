@@ -7,7 +7,7 @@ RUN dotnet restore SimulatedTemperatureSensor.csproj
 
 
 COPY . ./
-RUN dotnet publish -c Release -o out --no-dependencies --no-restore SimulatedTemperatureSensor.csproj
+RUN dotnet publish -c Release -o out --no-dependencies
 
 FROM mcr.microsoft.com/dotnet/runtime:5.0-buster-slim
 WORKDIR /app
