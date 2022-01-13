@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "name": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "roleDefinitionId": {
+      "type": "string"
+    },
+    "principalId": {
+      "type": "string"
+    },
+    "principalType": {
+      "type": "string",
+      "defaultValue": "ServicePrincipal",
+      "allowedValues": [
+        "User",
+        "ServicePrincipal"
+      ]
+    }
+  },
+  "resources": [
+    {
+        "type": "Microsoft.Authorization/roleAssignments",
+        "apiVersion": "2020-04-01-preview",
+        "name": "[parameters('name')]",
+        "scope": "[parameters('scope')]",
+        "properties": {
+            "roleDefinitionId": "[parameters('roleDefinitionId')]",
+            "principalId": "[parameters('principalId')]",
+            "principalType": "[parameters('principalType')]"
+        }
+      }
+  ]
+}

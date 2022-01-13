@@ -548,6 +548,10 @@
     },
     "eventGridDeploymentName": "[concat('storagesystemtopic-', parameters('environmentHashId'))]",
     "eventHubsDeploymentName": "[concat('eventhubs-', parameters('environmentHashId'))]",
+    "iotHubRoleAssignmentDeploymentName": "[concat('iothub-roleassignments-', parameters('environmentHashId'))]",
+    "eventHubRoleAssignmentDeploymentName": "[concat('eventhub-roleassignments-', parameters('environmentHashId'))]",
+    "storageQueueRoleAssignmentDeploymentName": "[concat('queue-roleassignments-', parameters('environmentHashId'))]",
+    "storageBlobRoleAssignmentDeploymentName": "[concat('blob-roleassignments-', parameters('environmentHashId'))]",
     "eventHubsConsumerGroup": "$default",
     "linkedDeploymentApiVersion": "2020-10-01",
     "managedIdentityName": "monitoringIdentity",
@@ -1247,95 +1251,240 @@
         "resources": []
       },        
       {
-        "type": "Microsoft.Authorization/roleAssignments",
-        "apiVersion": "2020-04-01-preview",
-        "name": "[guid('iotHubRoleAssignmentName', parameters('iotHubName'))]",
-        "scope": "[concat('Microsoft.Devices/Iothubs', '/', parameters('iotHubName'))]",
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+        "name": "[variables('iotHubRoleAssignmentDeploymentName')]",
+        "resourceGroup": "[parameters('iotHubResourceGroup')]",
         "dependsOn": [
             "[variables('iotHubDeploymentName')]",
             "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"            
         ],
         "properties": {
-            "roleDefinitionId": "[variables('ioTHubDataContributor')]",
-            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]",
-            "principalType": "ServicePrincipal"
+          "mode": "Incremental",
+          "templateLink": {
+            "contentVersion": "1.0.0.0",
+            "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/roleassignments-deploy.json')]"
+          },
+          "parameters": {
+            "name": {
+              "value": "[guid('iotHubRoleAssignmentName', parameters('iotHubName'))]"
+            },
+            "scope": {
+              "value": "[resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/Iothubs', parameters('iotHubName'))]"
+            },
+            "roleDefinitionId": {
+              "value": "[variables('ioTHubDataContributor')]"
+            },
+            "principalId": {
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]"
+            },
+            "principalType": {
+              "value": "ServicePrincipal"
+            }
+          }
         }
       },
       {
-        "type": "Microsoft.Authorization/roleAssignments",
-        "apiVersion": "2020-04-01-preview",
-        "name": "[guid('eventHubRoleAssignmentName', parameters('eventHubsNamespace'))]",
-        "scope": "[concat('Microsoft.EventHub/namespaces', '/', parameters('eventHubsNamespace'))]",
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+        "condition": "[not(empty(parameters('eventHubsNamespace')))]",
+        "name": "[variables('eventHubRoleAssignmentDeploymentName')]",
+        "resourceGroup": "[parameters('eventHubResourceGroup')]",
         "dependsOn": [
             "[variables('eventHubsDeploymentName')]",
-            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"            
         ],
         "properties": {
-            "roleDefinitionId": "[variables('eventHubsDataReceiver')]",
-            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]",
-            "principalType": "ServicePrincipal"
+          "mode": "Incremental",
+          "templateLink": {
+            "contentVersion": "1.0.0.0",
+            "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/roleassignments-deploy.json')]"
+          },
+          "parameters": {
+            "name": {
+              "value": "[guid('eventHubRoleAssignmentName', parameters('iotHubName'))]"
+            },
+            "scope": {
+              "value": "[resourceId(parameters('eventHubResourceGroup'), 'Microsoft.EventHub/namespaces', parameters('eventHubsNamespace'))]"
+            },
+            "roleDefinitionId": {
+              "value": "[variables('eventHubsDataReceiver')]"
+            },
+            "principalId": {
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]"
+            },
+            "principalType": {
+              "value": "ServicePrincipal"
+            }
+          }
         }
       },
       {
-        "type": "Microsoft.Authorization/roleAssignments",
-        "apiVersion": "2020-04-01-preview",
-        "name": "[guid('storageBlobRoleAssignmentName', parameters('storageAccountName'))]",
-        "scope": "[concat('Microsoft.Storage/storageAccounts', '/', parameters('storageAccountName'))]",
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+        "name": "[variables('storageBlobRoleAssignmentDeploymentName')]",
+        "resourceGroup": "[parameters('storageAccountResourceGroup')]",
         "dependsOn": [
-          "[variables('eventGridDeploymentName')]",
-          "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+            "[variables('eventGridDeploymentName')]",
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"            
         ],
         "properties": {
-            "roleDefinitionId": "[variables('storageBlobDataContributor')]",
-            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]",
-            "principalType": "ServicePrincipal"
+          "mode": "Incremental",
+          "templateLink": {
+            "contentVersion": "1.0.0.0",
+            "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/roleassignments-deploy.json')]"
+          },
+          "parameters": {
+            "name": {
+              "value": "[guid('storageBlobRoleAssignmentName', parameters('iotHubName'))]"
+            },
+            "scope": {
+              "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            },
+            "roleDefinitionId": {
+              "value": "[variables('storageBlobDataContributor')]"
+            },
+            "principalId": {
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]"
+            },
+            "principalType": {
+              "value": "ServicePrincipal"
+            }
+          }
         }
       },
       {
-        "type": "Microsoft.Authorization/roleAssignments",
-        "apiVersion": "2020-04-01-preview",
-        "name": "[guid('storageQueueRoleAssignmentName', parameters('storageAccountName'))]",
-        "scope": "[concat('Microsoft.Storage/storageAccounts', '/', parameters('storageAccountName'))]",
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+        "name": "[variables('storageQueueRoleAssignmentDeploymentName')]",
+        "resourceGroup": "[parameters('storageAccountResourceGroup')]",
         "dependsOn": [
-          "[variables('eventGridDeploymentName')]",
-          "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+            "[variables('eventGridDeploymentName')]",
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"            
         ],
         "properties": {
-            "roleDefinitionId": "[variables('storageQueueDataContributor')]",
-            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]",
-            "principalType": "ServicePrincipal"
+          "mode": "Incremental",
+          "templateLink": {
+            "contentVersion": "1.0.0.0",
+            "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/roleassignments-deploy.json')]"
+          },
+          "parameters": {
+            "name": {
+              "value": "[guid('storageQueueRoleAssignmentName', parameters('iotHubName'))]"
+            },
+            "scope": {
+              "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            },
+            "roleDefinitionId": {
+              "value": "[variables('storageQueueDataContributor')]"
+            },
+            "principalId": {
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')),'2019-08-01', 'full').identity.principalId]"
+            },
+            "principalType": {
+              "value": "ServicePrincipal"
+            }
+          }
         }
       },
+      // {
+      //   "type": "Microsoft.Authorization/roleAssignments",
+      //   "apiVersion": "2020-04-01-preview",
+      //   "name": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]",
+      //   "scope": "[concat('Microsoft.Storage/storageAccounts', '/', variables('functionStorageAccountName'))]",
+      //   "dependsOn": [
+      //     "[variables('eventGridDeploymentName')]",
+      //     "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"
+      //   ],
+      //   "properties": {
+      //       "roleDefinitionId": "[variables('storageBlobDataContributor')]",
+      //       "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId]",
+      //       "principalType": "ServicePrincipal"
+      //   }
+      // },
       {
-        "type": "Microsoft.Authorization/roleAssignments",
-        "apiVersion": "2020-04-01-preview",
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "[variables('linkedDeploymentApiVersion')]",
         "name": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]",
-        "scope": "[concat('Microsoft.Storage/storageAccounts', '/', variables('functionStorageAccountName'))]",
+        "resourceGroup": "[parameters('storageAccountResourceGroup')]",
         "dependsOn": [
-          "[variables('eventGridDeploymentName')]",
-          "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"
+            "[variables('eventGridDeploymentName')]",
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"            
         ],
         "properties": {
-            "roleDefinitionId": "[variables('storageBlobDataContributor')]",
-            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId]",
-            "principalType": "ServicePrincipal"
+          "mode": "Incremental",
+          "templateLink": {
+            "contentVersion": "1.0.0.0",
+            "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/roleassignments-deploy.json')]"
+          },
+          "parameters": {
+            "name": {
+              "value": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]"
+            },
+            "scope": {
+              "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', variables('functionStorageAccountName'))]"
+            },
+            "roleDefinitionId": {
+              "value": "[variables('storageBlobDataContributor')]"
+            },
+            "principalId": {
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId]"
+            },
+            "principalType": {
+              "value": "ServicePrincipal"
+            }
+          }
         }
-      },
+      },    
+      // {
+      //   "type": "Microsoft.Authorization/roleAssignments",
+      //   "apiVersion": "2020-04-01-preview",
+      //   "name": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]",
+      //   "scope": "[concat('Microsoft.Storage/storageAccounts', '/', variables('functionStorageAccountName'))]",
+      //   "dependsOn": [
+      //     "[variables('eventGridDeploymentName')]",
+      //     "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"
+      //   ],
+      //   "properties": {
+      //       "roleDefinitionId": "[variables('storageQueueDataContributor')]",
+      //       "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId]",
+      //       "principalType": "ServicePrincipal"
+      //   }
+      // },
       {
-        "type": "Microsoft.Authorization/roleAssignments",
-        "apiVersion": "2020-04-01-preview",
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "[variables('linkedDeploymentApiVersion')]",
         "name": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]",
-        "scope": "[concat('Microsoft.Storage/storageAccounts', '/', variables('functionStorageAccountName'))]",
+        "resourceGroup": "[parameters('storageAccountResourceGroup')]",
         "dependsOn": [
-          "[variables('eventGridDeploymentName')]",
-          "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"
+            "[variables('eventGridDeploymentName')]",
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"            
         ],
         "properties": {
-            "roleDefinitionId": "[variables('storageQueueDataContributor')]",
-            "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId]",
-            "principalType": "ServicePrincipal"
+          "mode": "Incremental",
+          "templateLink": {
+            "contentVersion": "1.0.0.0",
+            "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/roleassignments-deploy.json')]"
+          },
+          "parameters": {
+            "name": {
+              "value": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]"
+            },
+            "scope": {
+              "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', variables('functionStorageAccountName'))]"
+            },
+            "roleDefinitionId": {
+              "value": "[variables('storageQueueDataContributor')]"
+            },
+            "principalId": {
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId]"
+            },
+            "principalType": {
+              "value": "ServicePrincipal"
+            }
+          }
         }
-      }                              
+      }                                    
     ],
     "outputs": {
       "iotHubResourceId": {
