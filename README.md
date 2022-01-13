@@ -76,7 +76,7 @@ After the solution has been deployed with the monitoring option enabled, you can
 
 ## Distributed Tracing
 
-Refer to the [Distributed Tracing Sample](DistributedTracing) for the saample description in deployment instructions.
+Refer to the [Distributed Tracing Sample](DistributedTracing) for the sample description in deployment instructions.
 
 
 ## Pre-requisites
