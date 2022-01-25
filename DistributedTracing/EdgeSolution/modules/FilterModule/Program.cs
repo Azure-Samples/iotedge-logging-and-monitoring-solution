@@ -104,10 +104,10 @@ namespace FilterModule
                 {
                     opt.Endpoint = new Uri(configuration.GetSection("OTLP_ENDPOINT").Value);
                 })
-                .AddAzureMonitorTraceExporter(o =>
-                {
-                    o.ConnectionString = configuration.GetSection("AI_CONNECTION_STRING").Value;
-                })
+                // .AddAzureMonitorTraceExporter(o =>
+                // {
+                //     o.ConnectionString = configuration.GetSection("AI_CONNECTION_STRING").Value;
+                // })
                 .Build();
 
             Init().Wait();

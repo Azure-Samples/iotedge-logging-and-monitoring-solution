@@ -114,10 +114,10 @@ namespace SimulatedTemperatureSensor
                 {
                     opt.Endpoint = new Uri(configuration.GetSection("OTLP_ENDPOINT").Value);                    
                 })
-                .AddAzureMonitorTraceExporter(o =>
-                {
-                    o.ConnectionString = configuration.GetSection("AI_CONNECTION_STRING").Value;
-                })
+                // .AddAzureMonitorTraceExporter(o =>
+                // {
+                //     o.ConnectionString = configuration.GetSection("AI_CONNECTION_STRING").Value;
+                // })
                 .Build();
                 
 
@@ -268,7 +268,7 @@ namespace SimulatedTemperatureSensor
                 if (sendData)
                 {
                     //Start a new OpenTelemetry tracing span (Activity)                   
-                    using (var activity = SimulatedTemperatureSensorActivitySource.StartActivity("SendTemerature", ActivityKind.Client))
+                    using (var activity = SimulatedTemperatureSensorActivitySource.StartActivity("SendTemeratureViaOtel", ActivityKind.Client))
                      {
                         var tempData = new MessageBody
                         {
