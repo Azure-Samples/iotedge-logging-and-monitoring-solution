@@ -20,9 +20,10 @@ namespace SimulatedTemperatureSensor
     using OpenTelemetry;
     using OpenTelemetry.Trace;
     using OpenTelemetry.Resources;
+    using OpenTelemetry.Logs;
     using Microsoft.Extensions.Logging;
-    using Azure.Monitor.OpenTelemetry.Exporter;
-    using Microsoft.Extensions.Logging.ApplicationInsights;
+    // using Azure.Monitor.OpenTelemetry.Exporter;
+    // using Microsoft.Extensions.Logging.ApplicationInsights;
     using Microsoft.ApplicationInsights;
     using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.ApplicationInsights.DataContracts;
@@ -82,27 +83,41 @@ namespace SimulatedTemperatureSensor
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
-                    .AddFilter("Microsoft", LogLevel.Warning)
-                    .AddFilter("System", LogLevel.Warning)
-                    .AddSimpleConsole(options => options.IncludeScopes = true)
-                    .AddApplicationInsights(configuration.GetSection("INSTRUMENTATION_KEY").Value)
-                    .Configure(c => c.ActivityTrackingOptions =
-                        ActivityTrackingOptions.SpanId
-                        | ActivityTrackingOptions.TraceId);                
+                    // .AddFilter("Microsoft", LogLevel.Warning)
+                    // .AddFilter("System", LogLevel.Warning)
+                    // .AddSimpleConsole(options => options.IncludeScopes = true)
+                    // .AddApplicationInsights(configuration.GetSection("INSTRUMENTATION_KEY").Value)
+                    // .Configure(c => c.ActivityTrackingOptions =
+                    //     ActivityTrackingOptions.SpanId
+                    //     | ActivityTrackingOptions.TraceId)
+
+                    .AddOpenTelemetry(options =>
+                    {
+                        options.IncludeFormattedMessage = true;
+                        options.IncludeScopes = true;
+                        options.ParseStateValues = true;
+                        options.AddConsoleExporter();
+                        options.AddOtlpExporter(
+                             opt =>
+                                 {
+                                     opt.Endpoint = new Uri(configuration.GetSection("OTLP_ENDPOINT").Value);
+                                 });
+                    }
+                                );
             });
 
-            logger = loggerFactory.CreateLogger<Program>();        
-            
-            logger.LogInformation("SimulatedTemperatureSensor Main() started");            
-            
+            logger = loggerFactory.CreateLogger<Program>();
+
+            logger.LogInformation("SimulatedTemperatureSensor Main() started");
+
             //This switch is neededd to succesfuly export OpenTelemetry data to OTLP 
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-            
+
             /*
             * Configuring an OpenTelemetry TraceProvider to export spans (System.Diagnostics.Activity) to 
             * OTLP (to be caught by OpenTelemetry collector) and to Application Insights tables ("Dependencies" and "Requests") 
             * so that "Operation Id == TraceId, Id == SpanId, Parent Id == Parent SpanId"
-            */            
+            */
             using var tracerProvider = Sdk.CreateTracerProviderBuilder()
                 .SetSampler(new AlwaysOnSampler())
                 .AddSource("IoTSample.SimulatedTemperatureSensor")
@@ -112,14 +127,14 @@ namespace SimulatedTemperatureSensor
                 .AddOtlpExporter(
                     opt =>
                 {
-                    opt.Endpoint = new Uri(configuration.GetSection("OTLP_ENDPOINT").Value);                    
+                    opt.Endpoint = new Uri(configuration.GetSection("OTLP_ENDPOINT").Value);
                 })
                 // .AddAzureMonitorTraceExporter(o =>
                 // {
                 //     o.ConnectionString = configuration.GetSection("AI_CONNECTION_STRING").Value;
                 // })
                 .Build();
-                
+
 
             messageDelay = configuration.GetValue("MessageDelay", TimeSpan.FromSeconds(5));
             int messageCount = configuration.GetValue(MessageCountConfigKey, 500);
@@ -187,7 +202,7 @@ namespace SimulatedTemperatureSensor
             byte[] messageBytes = message.GetBytes();
             string messageString = Encoding.UTF8.GetString(messageBytes);
 
-            logger.LogInformation("Received message Body: [{messageString}]",messageString);
+            logger.LogInformation("Received message Body: [{messageString}]", messageString);
 
             try
             {
@@ -268,8 +283,8 @@ namespace SimulatedTemperatureSensor
                 if (sendData)
                 {
                     //Start a new OpenTelemetry tracing span (Activity)                   
-                    using (var activity = SimulatedTemperatureSensorActivitySource.StartActivity("SendTemeratureViaOtel", ActivityKind.Client))
-                     {
+                    using (var activity = SimulatedTemperatureSensorActivitySource.StartActivity("SendTemerature", ActivityKind.Client))
+                    {
                         var tempData = new MessageBody
                         {
                             Machine = new Machine
@@ -288,25 +303,26 @@ namespace SimulatedTemperatureSensor
                         var dataBuffer = JsonConvert.SerializeObject(tempData);
                         var encodedMessage = Encoding.UTF8.GetBytes(dataBuffer);
                         var eventMessage = new Message(encodedMessage);
-                        
+
                         //Add custom tags to the span (Activity) 
-                        activity?.SetTag("MessageString",Encoding.UTF8.GetString(encodedMessage));         
-                        activity?.SetTag("MachineTemperature",currentTemp);         
+                        activity?.SetTag("MessageString", Encoding.UTF8.GetString(encodedMessage));
+                        activity?.SetTag("MachineTemperature", currentTemp);
 
                         eventMessage.ContentEncoding = "utf-8";
                         eventMessage.ContentType = "application/json";
                         eventMessage.Properties.Add("sequenceNumber", count.ToString());
                         eventMessage.Properties.Add("batchId", BatchId.ToString());
 
-                        
-                        
-                        if (activity != null) {
+
+
+                        if (activity != null)
+                        {
                             // To support W3C convention
                             // See https://www.w3.org/TR/trace-context/#trace-context-http-headers-format
                             // This message property will be exracted by the following components (modules and backends) to 
                             // continiue the trace
-                            eventMessage.Properties.Add("traceparent", activity.Id);                            
-                            
+                            eventMessage.Properties.Add("traceparent", activity.Id);
+
                             //To support EvenHub + App Insights integration
                             //See https://medium.com/swlh/correlated-logs-deep-dive-for-eventhub-triggered-azure-function-in-app-insights-ac69c7c70285
                             //
@@ -315,22 +331,24 @@ namespace SimulatedTemperatureSensor
                         }
 
                         logger.LogInformation($"\t{DateTime.Now.ToLocalTime()}> Sending message: {count}, Body: [{dataBuffer}]");
-                        
+
                         //Event is same as a log record. It's totally ignored by Azure Monitor exporter,
                         //but is picked up by OTLP exporter, so it can be received by Otel collector and sent to Jaeger, for example.
                         activity?.AddEvent(new ActivityEvent($"\t{DateTime.Now.ToLocalTime()}> Sending message: {count}, Body: [{dataBuffer}]"));
-                        
 
-                        try {
+
+                        try
+                        {
                             await moduleClient.SendEventAsync("temperatureOutput", eventMessage);
                             //throw new InvalidOperationException("This is a test exception");
                         }
-                        catch (Exception ex) {                            
+                        catch (Exception ex)
+                        {
                             //An exception is exported to Application Insighs "exceptions" table.
                             //It also contains TraceId and SpanId in customDimenssions field 
-                            logger.LogError(ex,"That's bad");
+                            logger.LogError(ex, "That's bad");
                         }
-                        
+
                         logger.LogInformation($"\t{DateTime.Now.ToLocalTime()}> Sent message: {count}, Body: [{dataBuffer}]");
                         count++;
                     }
@@ -342,7 +360,7 @@ namespace SimulatedTemperatureSensor
 
             if (messageCount < count)
             {
-                logger.LogInformation("Done sending {messageCount} messages",messageCount);
+                logger.LogInformation("Done sending {messageCount} messages", messageCount);
             }
         }
 
@@ -402,7 +420,7 @@ namespace SimulatedTemperatureSensor
                     ModuleClient moduleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
                     await moduleClient.OpenAsync();
 
-                    logger.LogInformation("[Information]: Successfully initialized module client of transport type [{transportType}].",transportType);
+                    logger.LogInformation("[Information]: Successfully initialized module client of transport type [{transportType}].", transportType);
                     return moduleClient;
                 });
 

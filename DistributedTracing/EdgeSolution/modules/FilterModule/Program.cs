@@ -14,11 +14,12 @@ namespace FilterModule
     using OpenTelemetry;
     using OpenTelemetry.Trace;
     using OpenTelemetry.Resources;
-    using Azure.Monitor.OpenTelemetry.Exporter;
+    using OpenTelemetry.Logs;
+    // using Azure.Monitor.OpenTelemetry.Exporter;
     using Microsoft.Extensions.Configuration;
     using System.IO;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Logging.ApplicationInsights;
+    // using Microsoft.Extensions.Logging.ApplicationInsights;
     using Microsoft.ApplicationInsights;
     using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.ApplicationInsights.DataContracts;
@@ -74,25 +75,39 @@ namespace FilterModule
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
-                    .AddFilter("Microsoft", LogLevel.Warning)
-                    .AddFilter("System", LogLevel.Warning)
-                    .AddSimpleConsole(options => options.IncludeScopes = true)
-                    .AddApplicationInsights(configuration.GetSection("INSTRUMENTATION_KEY").Value)
-                    .Configure(c => c.ActivityTrackingOptions =
-                        ActivityTrackingOptions.SpanId
-                        | ActivityTrackingOptions.TraceId);
+                    // .AddFilter("Microsoft", LogLevel.Warning)
+                    // .AddFilter("System", LogLevel.Warning)
+                    // .AddSimpleConsole(options => options.IncludeScopes = true)
+                    // .AddApplicationInsights(configuration.GetSection("INSTRUMENTATION_KEY").Value)
+                    // .Configure(c => c.ActivityTrackingOptions =
+                    //     ActivityTrackingOptions.SpanId
+                    //     | ActivityTrackingOptions.TraceId)
+
+                    .AddOpenTelemetry(options =>
+                    {
+                        options.IncludeFormattedMessage = true;
+                        options.IncludeScopes = true;
+                        options.ParseStateValues = true;
+                        options.AddConsoleExporter();
+                        options.AddOtlpExporter(
+                             opt =>
+                                 {
+                                     opt.Endpoint = new Uri(configuration.GetSection("OTLP_ENDPOINT").Value);
+                                 });
+                    }
+                                );
             });
 
             logger = loggerFactory.CreateLogger<Program>();
 
             //This switch is neededd to succesfuly export OpenTelemetry data to OTLP 
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-            
+
             /*
             * Configuring an OpenTelemetry TraceProvider to export spans (System.Diagnostics.Activity) to 
             * OTLP (to be caught by OpenTelemetry collector) and to Application Insights tables ("Dependencies" and "Requests") 
             * so that "Operation Id == TraceId, Id == SpanId, Parent Id == Parent SpanId"
-            */            
+            */
             using var tracerProvider = Sdk.CreateTracerProviderBuilder()
                 .SetSampler(new AlwaysOnSampler())
                 .AddSource("IoTSample.FilterModule")
@@ -191,7 +206,7 @@ namespace FilterModule
             using (var activity = FilterModuleActivitySource.StartActivity("FilterTemperature", ActivityKind.Server, message.Properties["traceparent"]))
             {
                 try
-                {                    
+                {
                     ModuleClient moduleClient = (ModuleClient)userContext;
 
                     var filteredMessage = Filter(message);
@@ -203,8 +218,8 @@ namespace FilterModule
                             // start a new child span and send it in the message "traceparent" property
                             // to be caught by the following components
                             filteredMessage.Properties["traceparent"] = iot_hub_activity.Id;
-                            await moduleClient.SendEventAsync("output1", filteredMessage).ConfigureAwait(false);                                                        
-                       }
+                            await moduleClient.SendEventAsync("output1", filteredMessage).ConfigureAwait(false);
+                        }
                     }
 
                     // Indicate that the message treatment is completed.
