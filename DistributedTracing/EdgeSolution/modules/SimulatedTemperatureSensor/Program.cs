@@ -22,8 +22,6 @@ namespace SimulatedTemperatureSensor
     using OpenTelemetry.Resources;
     using OpenTelemetry.Logs;
     using Microsoft.Extensions.Logging;
-    // using Azure.Monitor.OpenTelemetry.Exporter;
-    // using Microsoft.Extensions.Logging.ApplicationInsights;
     using Microsoft.ApplicationInsights;
     using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.ApplicationInsights.DataContracts;
@@ -77,20 +75,15 @@ namespace SimulatedTemperatureSensor
             *   - automatically create a logging scope for the current TraceId and SpanId 
                 This feature is available for .Net5 and .Net6 only.
             *   - export logs to console
-            *   - export logs to Application Insights. It exports TraceId and SpanId to customDimensions field 
-            *     of "traces" (or exceptions) table in App Insights.
+            *   - export logs to OTLP
             */
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
-                    // .AddFilter("Microsoft", LogLevel.Warning)
-                    // .AddFilter("System", LogLevel.Warning)
-                    // .AddSimpleConsole(options => options.IncludeScopes = true)
-                    // .AddApplicationInsights(configuration.GetSection("INSTRUMENTATION_KEY").Value)
-                    // .Configure(c => c.ActivityTrackingOptions =
-                    //     ActivityTrackingOptions.SpanId
-                    //     | ActivityTrackingOptions.TraceId)
-
+                    .SetMinimumLevel(
+                        (LogLevel)Enum.Parse(typeof(LogLevel),
+                                                 configuration.GetSection("LOGGING_LEVEL").Value,
+                                                 true))
                     .AddOpenTelemetry(options =>
                     {
                         options.IncludeFormattedMessage = true;
@@ -115,11 +108,10 @@ namespace SimulatedTemperatureSensor
 
             /*
             * Configuring an OpenTelemetry TraceProvider to export spans (System.Diagnostics.Activity) to 
-            * OTLP (to be caught by OpenTelemetry collector) and to Application Insights tables ("Dependencies" and "Requests") 
-            * so that "Operation Id == TraceId, Id == SpanId, Parent Id == Parent SpanId"
+            * OTLP (to be caught by OpenTelemetry collector)
             */
             using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-                .SetSampler(new AlwaysOnSampler())
+                .SetSampler(new TraceIdRatioBasedSampler(Convert.ToDouble(configuration.GetSection("TRACE_SAMPLE_RAIO").Value)))
                 .AddSource("IoTSample.SimulatedTemperatureSensor")
                 .SetResourceBuilder(ResourceBuilder.CreateDefault()
                     .AddTelemetrySdk()
@@ -129,10 +121,6 @@ namespace SimulatedTemperatureSensor
                 {
                     opt.Endpoint = new Uri(configuration.GetSection("OTLP_ENDPOINT").Value);
                 })
-                // .AddAzureMonitorTraceExporter(o =>
-                // {
-                //     o.ConnectionString = configuration.GetSection("AI_CONNECTION_STRING").Value;
-                // })
                 .Build();
 
 
@@ -349,7 +337,7 @@ namespace SimulatedTemperatureSensor
                             logger.LogError(ex, "That's bad");
                         }
 
-                        logger.LogInformation($"\t{DateTime.Now.ToLocalTime()}> Sent message: {count}, Body: [{dataBuffer}]");
+                        logger.LogDebug($"\t{DateTime.Now.ToLocalTime()}> Sent message: {count}, Body: [{dataBuffer}]");
                         count++;
                     }
 

@@ -15,11 +15,9 @@ namespace FilterModule
     using OpenTelemetry.Trace;
     using OpenTelemetry.Resources;
     using OpenTelemetry.Logs;
-    // using Azure.Monitor.OpenTelemetry.Exporter;
     using Microsoft.Extensions.Configuration;
     using System.IO;
     using Microsoft.Extensions.Logging;
-    // using Microsoft.Extensions.Logging.ApplicationInsights;
     using Microsoft.ApplicationInsights;
     using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.ApplicationInsights.DataContracts;
@@ -69,20 +67,15 @@ namespace FilterModule
             *   - automatically create a logging scope for the current TraceId and SpanId 
                 This feature is available for .Net5 and .Net6 only.
             *   - export logs to console
-            *   - export logs to Application Insights. It exports TraceId and SpanId to customDimensions field 
-            *     of "traces" (or exceptions) table in App Insights.
+            *   - export logs to OTLP
             */
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
-                    // .AddFilter("Microsoft", LogLevel.Warning)
-                    // .AddFilter("System", LogLevel.Warning)
-                    // .AddSimpleConsole(options => options.IncludeScopes = true)
-                    // .AddApplicationInsights(configuration.GetSection("INSTRUMENTATION_KEY").Value)
-                    // .Configure(c => c.ActivityTrackingOptions =
-                    //     ActivityTrackingOptions.SpanId
-                    //     | ActivityTrackingOptions.TraceId)
-
+                    .SetMinimumLevel(
+                        (LogLevel)Enum.Parse(typeof(LogLevel),
+                                                 configuration.GetSection("LOGGING_LEVEL").Value,
+                                                 true))
                     .AddOpenTelemetry(options =>
                     {
                         options.IncludeFormattedMessage = true;
@@ -105,11 +98,10 @@ namespace FilterModule
 
             /*
             * Configuring an OpenTelemetry TraceProvider to export spans (System.Diagnostics.Activity) to 
-            * OTLP (to be caught by OpenTelemetry collector) and to Application Insights tables ("Dependencies" and "Requests") 
-            * so that "Operation Id == TraceId, Id == SpanId, Parent Id == Parent SpanId"
+            * OTLP (to be caught by OpenTelemetry collector)
             */
             using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-                .SetSampler(new AlwaysOnSampler())
+                .SetSampler(new TraceIdRatioBasedSampler(Convert.ToDouble(configuration.GetSection("TRACE_SAMPLE_RAIO").Value)))
                 .AddSource("IoTSample.FilterModule")
                 .SetResourceBuilder(ResourceBuilder.CreateDefault()
                     .AddTelemetrySdk()
@@ -265,7 +257,7 @@ namespace FilterModule
 
                 if (messageBody.machine.temperature > temperatureThreshold)
                 {
-                    logger.LogInformation("Machine temperature {messageBody.machine.temperature} exceeds threshold {temperatureThreshold}", messageBody.machine.temperature, temperatureThreshold);
+                    logger.LogDebug("Machine temperature {messageBody.machine.temperature} exceeds threshold {temperatureThreshold}", messageBody.machine.temperature, temperatureThreshold);
 
                     //Event is same as a log record. It's totally ignored by Azure Monitor exporter,
                     //but is picked up by OTLP exporter, so it can be received by Otel collector and sent to Jaeger, for example.

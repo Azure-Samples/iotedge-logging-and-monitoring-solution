@@ -1044,7 +1044,7 @@ function New-ELMSEnvironment() {
     #region generate monitoring deployment manifest
     if ($script:enable_monitoring) {
         if ($script:enable_distributed_tracing) {
-            $monitoring_template = "$($root_path)/DistributedTracing/EdgeSolution/deployment.template.json"
+            $monitoring_template = "$($root_path)/DistributedTracing/EdgeSolution/deployment.layerd.template.json"
             $monitoring_manifest = "$($root_path)/DistributedTracing/EdgeSolution/deployment.manifest.json"
             Remove-Item -Path $monitoring_manifest -ErrorAction Ignore
     

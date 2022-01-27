@@ -1,5 +1,6 @@
 
-FROM otel/opentelemetry-collector-contrib-dev
+# FROM otel/opentelemetry-collector-contrib-dev
+FROM otelcontribcol:latest
 
 
 COPY ./otel-collector-config.yml ./etc/otel/config.yaml 
