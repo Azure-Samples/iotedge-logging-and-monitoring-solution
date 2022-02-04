@@ -1044,10 +1044,10 @@ function New-ELMSEnvironment() {
     #region generate monitoring deployment manifest
     if ($script:enable_monitoring) {
         if ($script:enable_distributed_tracing) {
-            $distr_tracing_template = "$($root_path)/DistributedTracing/EdgeSolution/deployment.template.json"
+            $distr_tracing_template = "$($root_path)/DistributedTracing/EdgeSolution/deployment.layerd.template.json"
             $distr_tracing_manifest = "$($root_path)/DistributedTracing/EdgeSolution/deployment.manifest.json"
             Remove-Item -Path $distr_tracing_manifest -ErrorAction Ignore
-    
+
             (Get-Content -Path $distr_tracing_template -Raw) | ForEach-Object {
                 $_  -replace '\$\{INSTRUMENTATION_KEY\}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
                     -replace '\$\{AI_CONNECTION_STRING\}', $script:deployment_output.properties.outputs.appInsightsConnectionString.value

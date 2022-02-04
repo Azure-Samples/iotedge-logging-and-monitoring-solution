@@ -29,4 +29,8 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, jaeger_thrift, azuremonitor]
+      exporters: [azuremonitor]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, azuremonitor]
