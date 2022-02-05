@@ -76,9 +76,9 @@ stages:
               subscriptionId: $(AZURE_SUBSCRIPTION_ID)
               location: $(AZURE_LOCATION)
               templateLocation: "Linked artifact"
-              csmFile: "$(System.DefaultWorkingDirectory)/MoonitoringInstruments/workbook.json"
+              csmFile: "$(System.DefaultWorkingDirectory)/MonitoringInstruments/workbook.json"
               deploymentMode: "Incremental"
-              overrideParameters: -workbookSourceId /subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RG_NAME)/providers/Microsoft.Devices/IotHubs/$(IOTHUB_NAME)
+              overrideParameters: -iotHubName $(IOTHUB_NAME)
 
       # - job: Alerts_Deployment
       #   displayName: "Deployment of Alert templates"
