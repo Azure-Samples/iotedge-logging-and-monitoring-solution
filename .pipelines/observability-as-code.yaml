@@ -29,7 +29,7 @@ stages:
               subscriptionId: $(AZURE_SUBSCRIPTION_ID)
               location: $(AZURE_LOCATION)
               templateLocation: "Linked artifact"
-              csmFile: "$(System.DefaultWorkingDirectory)/MoonitoringInstruments/workbook.json"
+              csmFile: "$(System.DefaultWorkingDirectory)/MonitoringInstruments/workbook.json"
               deploymentMode: "Validation"
               overrideParameters: -iotHubName=$(IOTHUB_NAME)
 
