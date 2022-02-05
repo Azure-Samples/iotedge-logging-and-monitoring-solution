@@ -33,26 +33,26 @@ stages:
               deploymentMode: "Validation"
               overrideParameters: -iotHubName $(IOTHUB_NAME)
 
-      # - job: Alerts_Validation
-      #   displayName: "Validation of Alert templates"
-      #   steps:
-      #     - checkout: self
-      #       name: checkout_repository
-      #       displayName: Checkout repository
+      - job: Alerts_Validation
+        displayName: "Validation of Alert templates"
+        steps:
+          - checkout: self
+            name: checkout_repository
+            displayName: Checkout repository
 
-      #     - task: AzureResourceManagerTemplateDeployment@2
-      #       name: alerts_templates_validation
-      #       displayName: Alerts templates validation
-      #       inputs:
-      #         deploymentScope: "Subscription"
-      #         azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-      #         resourceGroupName: $(RG_NAME)
-      #         subscriptionId: $(AZURE_SUBSCRIPTION_ID)
-      #         location: $(AZURE_LOCATION)
-      #         templateLocation: "Linked artifact"
-      #         csmFile: "$(System.DefaultWorkingDirectory)/arm/iot-alerts.json"
-      #         deploymentMode: "Validation"
-      #         overrideParameters: -IotHubs_IoTStarter_iothub_externalid /subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RG_NAME)/providers/Microsoft.Devices/IotHubs/$(IOTHUB_NAME)
+          - task: AzureResourceManagerTemplateDeployment@2
+            name: alerts_templates_validation
+            displayName: Alerts templates validation
+            inputs:
+              deploymentScope: "Subscription"
+              azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+              resourceGroupName: $(RG_NAME)
+              subscriptionId: $(AZURE_SUBSCRIPTION_ID)
+              location: $(AZURE_LOCATION)
+              templateLocation: "Linked artifact"
+              csmFile: "$(System.DefaultWorkingDirectory)/MonitoringInstruments/alerts.json"
+              deploymentMode: "Validation"
+              overrideParameters: -iotHubName $(IOTHUB_NAME)
 
 
   - stage: Deployment
@@ -80,25 +80,25 @@ stages:
               deploymentMode: "Incremental"
               overrideParameters: -iotHubName $(IOTHUB_NAME)
 
-      # - job: Alerts_Deployment
-      #   displayName: "Deployment of Alert templates"
-      #   steps:
-      #     - checkout: self
-      #       name: checkout_repository
-      #       displayName: Checkout repository
+      - job: Alerts_Deployment
+        displayName: "Deployment of Alert templates"
+        steps:
+          - checkout: self
+            name: checkout_repository
+            displayName: Checkout repository
 
-      #     - task: AzureResourceManagerTemplateDeployment@2
-      #       name: alerts_templates_deployment
-      #       displayName: Alerts templates deployment
-      #       inputs:
-      #         deploymentScope: "Subscription"
-      #         azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-      #         resourceGroupName: $(RG_NAME)
-      #         subscriptionId: $(AZURE_SUBSCRIPTION_ID)
-      #         location: $(AZURE_LOCATION)
-      #         templateLocation: "Linked artifact"
-      #         csmFile: "$(System.DefaultWorkingDirectory)/arm/iot-alerts.json"
-      #         deploymentMode: "Incremental"
-      #         overrideParameters: -IotHubs_IoTStarter_iothub_externalid /subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RG_NAME)/providers/Microsoft.Devices/IotHubs/$(IOTHUB_NAME)
+          - task: AzureResourceManagerTemplateDeployment@2
+            name: alerts_templates_deployment
+            displayName: Alerts templates deployment
+            inputs:
+              deploymentScope: "Subscription"
+              azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+              resourceGroupName: $(RG_NAME)
+              subscriptionId: $(AZURE_SUBSCRIPTION_ID)
+              location: $(AZURE_LOCATION)
+              templateLocation: "Linked artifact"
+              csmFile: "$(System.DefaultWorkingDirectory)/MonitoringInstruments/alerts.json"
+              deploymentMode: "Incremental"
+              overrideParameters: -iotHubName $(IOTHUB_NAME)
 
     
