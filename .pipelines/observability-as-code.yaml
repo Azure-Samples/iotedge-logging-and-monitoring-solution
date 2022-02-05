@@ -31,7 +31,7 @@ stages:
               templateLocation: "Linked artifact"
               csmFile: "$(System.DefaultWorkingDirectory)/MonitoringInstruments/workbook.json"
               deploymentMode: "Validation"
-              overrideParameters: -iotHubName=$(IOTHUB_NAME)
+              overrideParameters: -iotHubName $(IOTHUB_NAME)
 
       # - job: Alerts_Validation
       #   displayName: "Validation of Alert templates"
