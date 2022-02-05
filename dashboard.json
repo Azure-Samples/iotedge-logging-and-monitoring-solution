@@ -15,9 +15,15 @@
         "description": "The gallery that the workbook will been shown under. Supported values include workbook, tsg, etc. Usually, this is 'workbook'"
       }
     },
+    "iotHubName": {
+      "type": "string",      
+      "metadata": {
+        "description": "IoT Hub Name"
+      }
+    },
     "workbookSourceId": {
       "type": "string",
-      "defaultValue": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name)]",
+      "defaultValue": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name, '/providers/Microsoft.Devices/IotHubs/',parameters('iotHubName'))]",
       "metadata": {
         "description": "The id of resource instance to which the workbook will be associated"
       }
@@ -138,7 +144,7 @@
                   "durationMs": 86400000
                 },
                 "queryType": 0,
-                "resourceType": "microsoft.resources/resourcegroups"
+                "resourceType": "microsoft.devices/iothubs"
               },
               {
                 "id": "fe279379-3e20-40a5-aaba-803e6ed31c0c",
@@ -153,7 +159,7 @@
                   "durationMs": 86400000
                 },
                 "queryType": 0,
-                "resourceType": "microsoft.resources/resourcegroups"
+                "resourceType": "microsoft.devices/iothubs"
               },
               {
                 "id": "66f0d20f-9015-446d-8215-1ff7b1d98c2b",
@@ -168,7 +174,7 @@
                   "durationMs": 86400000
                 },
                 "queryType": 0,
-                "resourceType": "microsoft.resources/resourcegroups",
+                "resourceType": "microsoft.devices/iothubs",
                 "value": "50"
               },
               {
@@ -184,7 +190,7 @@
                   "durationMs": 86400000
                 },
                 "queryType": 0,
-                "resourceType": "microsoft.resources/resourcegroups"
+                "resourceType": "microsoft.devices/iothubs"
               },
               {
                 "id": "3cf23305-a4d2-47a3-9b57-840f4d74f70c",
@@ -198,7 +204,7 @@
                   "durationMs": 86400000
                 },
                 "queryType": 0,
-                "resourceType": "microsoft.resources/resourcegroups"
+                "resourceType": "microsoft.devices/iothubs"
               },
               {
                 "id": "c4c17eb6-9eb3-4a05-a225-bc3c260b55aa",
@@ -213,7 +219,7 @@
                   "durationMs": 86400000
                 },
                 "queryType": 0,
-                "resourceType": "microsoft.resources/resourcegroups"
+                "resourceType": "microsoft.devices/iothubs"
               },
               {
                 "id": "ccaddda4-96a3-41db-94ca-536679cd5ec4",
@@ -228,7 +234,7 @@
                   "durationMs": 86400000
                 },
                 "queryType": 0,
-                "resourceType": "microsoft.resources/resourcegroups"
+                "resourceType": "microsoft.devices/iothubs"
               },
               {
                 "id": "d56d3d83-74b4-4f41-8f02-98e4a1fea37f",
@@ -243,12 +249,12 @@
                   "durationMs": 86400000
                 },
                 "queryType": 0,
-                "resourceType": "microsoft.resources/resourcegroups"
+                "resourceType": "microsoft.devices/iothubs"
               }
             ],
             "style": "formVertical",
             "queryType": 0,
-            "resourceType": "microsoft.resources/resourcegroups"
+            "resourceType": "microsoft.devices/iothubs"
           },
           "conditionalVisibility": {
             "parameterName": "selectedTab",
@@ -261,7 +267,7 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "let offlineThresholdMins = {offlineThresholdMins};\nlet messageFrequencyThreshold = {messageFrequencyThreshold};\nlet latencyThresholdMs = {latencyThresholdMs};\nlet errorsThreshold = {errorsThreshold};\nlet sloCoverage = {sloCoverage};\nlet sloFreshness = {sloFreshness};\nlet sloThroughput = {sloThroughput};\nlet sloCorrectness = {sloCorrectness};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n//    | extend device = strcat(iotresource, \"/\", extract(\"edge_device.:.([^,]+).,\", 1, Tags, typeof(string)));\n//    | extend device = extract(\"edge_device.:.([^,]+).,\", 1, Tags, typeof(string));\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\nlet device_number = toscalar(_data | summarize by device | summarize countif(strlen(device)>0));\n\n//_data\nlet offlineTimeByDevice = _data\n    | where Name == \"edgehub_gettwin_total\" or Name == \"edgeAgent_total_time_running_correctly_seconds\"\n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated)\n    | project device, next_device, next_time, offlineTime = case(next_device == device, datetime_diff('minute', next_time, TimeGenerated), datetime_diff('minute', now(), TimeGenerated))\n    | summarize maxOfflineTime = max(offlineTime) by device;\n\n\nlet deviceCoverage = offlineTimeByDevice\n  | summarize coverage=100*countif(maxOfflineTime<=offlineThresholdMins)/device_number;\n\n\nlet messageFrequencyByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated), next_val = next(Val)\n    | project device, Val, next_val, next_device, TimeGenerated, next_time, messageFrequency = case(next_device == device, (next_val - Val)/datetime_diff('minute', next_time, TimeGenerated), double(null))\n    | where isnotnull(messageFrequency)        \n    | summarize minMessageFrequency = min(messageFrequency) by device;\n\nlet messageFreshness = messageFrequencyByDevice\n    | summarize freshness=100*countif(minMessageFrequency >= messageFrequencyThreshold)/count();\n\nlet latencyByDevice = _data\n    | where Name == 'edgehub_message_send_duration_seconds'\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | extend quantile = tostring(dimensions.quantile)\n    | where quantile == '0.9'\n    | where Val != 'NaN' and isnotnull(Val)\n    | extend val = todouble(Val)\n    | summarize maxLatency = max(val*1000) by device;\n\n\nlet meessageThroughput = latencyByDevice\n  | summarize throughput=100*countif(maxLatency<=latencyThresholdMs)/count();\n\nlet messagesSentByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesSent = maxVal - minVal;\n\nlet messagesDroppedByDevice = _data\n    | where Name == \"edgehub_messages_dropped_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesDropped = maxVal - minVal;\n    \nlet messageCorrectness = messagesSentByDevice\n    | join kind=leftouter messagesDroppedByDevice on device\n    | extend device, messagesSent, messagesDropped = coalesce(messagesDropped,double(0))\n    | extend errorsRatio = case(messagesSent == 0, double(0), messagesDropped/messagesSent)\n    | summarize correctness=100*countif(errorsRatio <= errorsThreshold)/count();\n\n\ndeviceCoverage\n| project sliTitle = \"Device Coverage\", sliValue = coalesce(coverage,0), sloValue = sloCoverage,\n          sloText = strcat(sloCoverage,\"% of devices reported metrics no longer than \", offlineThresholdMins, \" mins ago (were online) for the observation interval\")\n| extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n         resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n         goodSliValue = case(sloValue > sliValue, 0, sliValue),\n         badSliValue = case(sloValue > sliValue, sliValue, 0)\n| union (messageFreshness \n        |project sliTitle = \"Data Freshness\", sliValue = coalesce(freshness,0), sloValue = sloFreshness,\n                 sloText = strcat(sloFreshness,\"% of online devices send temperature \", messageFrequencyThreshold, \" times per minute for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n               resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)\n)\n| union (meessageThroughput\n        |project sliTitle = \"Throughput\", sliValue = coalesce(throughput,0), sloValue = sloThroughput,\n                 sloText = strcat(sloThroughput, \"% of online devices deliver 90th percentile of messages within \", latencyThresholdMs, \"ms for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n                resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)\n)\n| union (messageCorrectness\n        |project sliTitle = \"Correctness\", sliValue = coalesce(correctness,0), sloValue = sloCorrectness,\n                 sloText = strcat(sloCorrectness, \"% of online devices deliver messages successfully with less than \", errorsThreshold, \"% of errors for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n                resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)                 \n                 );\n\n\n",
+            "query": "let offlineThresholdMins = {offlineThresholdMins};\nlet messageFrequencyThreshold = {messageFrequencyThreshold};\nlet latencyThresholdMs = {latencyThresholdMs};\nlet errorsThreshold = {errorsThreshold};\nlet sloCoverage = {sloCoverage};\nlet sloFreshness = {sloFreshness};\nlet sloThroughput = {sloThroughput};\nlet sloCorrectness = {sloCorrectness};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} \n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\nlet device_number = toscalar(_data | summarize by device | summarize countif(strlen(device)>0));\n\n//_data\nlet offlineTimeByDevice = _data\n    | where Name == \"edgehub_gettwin_total\" or Name == \"edgeAgent_total_time_running_correctly_seconds\"\n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated)\n    | project device, next_device, next_time, offlineTime = case(next_device == device, datetime_diff('minute', next_time, TimeGenerated), datetime_diff('minute', now(), TimeGenerated))\n    | summarize maxOfflineTime = max(offlineTime) by device;\n\n\nlet deviceCoverage = offlineTimeByDevice\n  | summarize coverage=100*countif(maxOfflineTime<=offlineThresholdMins)/device_number;\n\n\nlet messageFrequencyByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"    \n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated), next_val = next(Val)\n    | project device, Val, next_val, next_device, TimeGenerated, next_time, messageFrequency = case(next_device == device, (next_val - Val)/datetime_diff('minute', next_time, TimeGenerated), double(null))\n    | where isnotnull(messageFrequency) and not(isnan(messageFrequency))       \n    | summarize minMessageFrequency = min(messageFrequency) by device;\n\nlet messageFreshness = messageFrequencyByDevice\n    | summarize freshness=100*countif(minMessageFrequency >= messageFrequencyThreshold)/count();\n\nlet latencyByDevice = _data\n    | where Name == 'edgehub_message_send_duration_seconds'\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"    \n    | extend quantile = tostring(dimensions.quantile)\n    | where quantile == '0.9'\n    | where not(isnan(Val)) and isnotnull(Val)\n    | extend val = todouble(Val)\n    | summarize maxLatency = max(val*1000) by device;\n\n\nlet meessageThroughput = latencyByDevice\n  | summarize throughput=100*countif(maxLatency<=latencyThresholdMs)/count();\n\nlet messagesSentByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"        \n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesSent = maxVal - minVal;\n\nlet messagesDroppedByDevice = _data\n    | where Name == \"edgehub_messages_dropped_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"    \n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesDropped = maxVal - minVal;\n    \nlet messageCorrectness = messagesSentByDevice\n    | join kind=leftouter messagesDroppedByDevice on device\n    | extend device, messagesSent, messagesDropped = coalesce(messagesDropped,double(0))\n    | extend errorsRatio = case(messagesSent == 0, double(0), messagesDropped/messagesSent)\n    | summarize correctness=100*countif(errorsRatio <= errorsThreshold)/count();\n\n\ndeviceCoverage\n| project sliTitle = \"Device Coverage\", sliValue = coalesce(coverage,0), sloValue = sloCoverage,\n          sloText = strcat(sloCoverage,\"% of devices reported metrics no longer than \", offlineThresholdMins, \" mins ago (were online) for the observation interval\")\n| extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n         resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n         goodSliValue = case(sloValue > sliValue, 0, sliValue),\n         badSliValue = case(sloValue > sliValue, sliValue, 0)\n| union (messageFreshness \n        |project sliTitle = \"Data Freshness\", sliValue = coalesce(freshness,0), sloValue = sloFreshness,\n                 sloText = strcat(sloFreshness,\"% of online devices send temperature \", messageFrequencyThreshold, \" times per minute for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n               resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)\n)\n| union (meessageThroughput\n        |project sliTitle = \"Throughput\", sliValue = coalesce(throughput,0), sloValue = sloThroughput,\n                 sloText = strcat(sloThroughput, \"% of online devices deliver 90th percentile of messages within \", latencyThresholdMs, \"ms for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n                resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)\n)\n| union (messageCorrectness\n        |project sliTitle = \"Correctness\", sliValue = coalesce(correctness,0), sloValue = sloCorrectness,\n                 sloText = strcat(sloCorrectness, \"% of online devices deliver messages successfully with less than \", errorsThreshold, \"% of errors for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n                resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)                 \n                 );\n\n\n",
             "size": 4,
             "timeContext": {
               "durationMs": 86400000
@@ -269,7 +275,7 @@
             "exportFieldName": "sliTitle",
             "exportParameterName": "selectedSLI",
             "queryType": 0,
-            "resourceType": "microsoft.resources/resourcegroups",
+            "resourceType": "microsoft.devices/iothubs",
             "visualization": "tiles",
             "tileSettings": {
               "titleContent": {
@@ -357,13 +363,13 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "let errorsThreshold = {errorsThreshold};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\n\nlet messagesSentByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesSent = maxVal - minVal;\n\nlet messagesDroppedByDevice = _data\n    | where Name == \"edgehub_messages_dropped_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesDropped = maxVal - minVal;\n    \nlet messageCorrectness = messagesSentByDevice\n    | join kind=leftouter messagesDroppedByDevice on device\n    | extend device, messagesSent, messagesDropped = coalesce(messagesDropped,double(0))\n    | extend errorsRatio = case(messagesSent == 0, double(0), messagesDropped/messagesSent), messagesTotal = messagesSent + messagesDropped\n    | extend GroupName = case(errorsRatio >= errorsThreshold, \"Faulty\", \"Correct\")\n    | project device, messagesSent, messagesDropped, errorsRatio, GroupName, messagesTotal;\n\nmessageCorrectness;\n\n",
+            "query": "let errorsThreshold = {errorsThreshold};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\n\nlet messagesSentByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"\n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesSent = maxVal - minVal;\n\nlet messagesDroppedByDevice = _data\n    | where Name == \"edgehub_messages_dropped_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"    \n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesDropped = maxVal - minVal;\n    \nlet messageCorrectness = messagesSentByDevice\n    | join kind=leftouter messagesDroppedByDevice on device\n    | extend device, messagesSent, messagesDropped = coalesce(messagesDropped,double(0))\n    | extend errorsRatio = case(messagesSent == 0, double(0), messagesDropped/messagesSent), messagesTotal = messagesSent + messagesDropped\n    | extend GroupName = case(errorsRatio >= errorsThreshold, \"Faulty\", \"Correct\")\n    | project device, messagesSent, messagesDropped, errorsRatio, GroupName, messagesTotal;\n\nmessageCorrectness;\n\n",
             "size": 0,
             "timeContext": {
               "durationMs": 86400000
             },
             "queryType": 0,
-            "resourceType": "microsoft.resources/resourcegroups",
+            "resourceType": "microsoft.devices/iothubss",
             "gridSettings": {
               "formatters": [
                 {
@@ -416,7 +422,7 @@
                           "name": "IoTResources",
                           "source": "static",
                           "value": "value::all"
-                        }      
+                        }
                       ]
                     }
                   }
@@ -513,13 +519,13 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "let messageFrequencyThreshold = {messageFrequencyThreshold};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\n\nlet messageFrequencyByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated), next_val = next(Val)\n    | project device, Val, next_val, next_device, TimeGenerated, next_time, messageFrequency = case(next_device == device, (next_val - Val)/datetime_diff('minute', next_time, TimeGenerated), double(null))\n    | where isnotnull(messageFrequency);\n\n//messageFrequencyByDevice\n//| order by TimeGenerated desc;\n\nmessageFrequencyByDevice\n  | make-series Trend = min(messageFrequency) default = 0 on TimeGenerated step 10m by device\n  | project-away TimeGenerated\n  | join kind = inner (messageFrequencyByDevice\n                       | summarize minMessageFrequency = arg_min(messageFrequency,*), \n                                   maxMessageFrequency = max(messageFrequency),\n                                   p90MessageFrequency = percentile(messageFrequency, 90) by device \n                   ) on device\n  | project device, minMessageFrequency,\n            time_range = strcat(format_datetime(TimeGenerated, 'M/d H:m'), \" - \", format_datetime(next_time, 'M/d H:m')),\n            maxMessageFrequency, p90MessageFrequency,\n            GroupName = case(minMessageFrequency >= messageFrequencyThreshold, \"Frequent\", \"Rare\"), Trend\n  | order by minMessageFrequency asc;\n\n",
+            "query": "let messageFrequencyThreshold = {messageFrequencyThreshold};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\nlet messageFrequencyByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"\n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated), next_val = next(Val)\n    | project device, Val, next_val, next_device, TimeGenerated, next_time, messageFrequency = case(next_device == device, (next_val - Val)/datetime_diff('minute', next_time, TimeGenerated), double(null))\n    | where isnotnull(messageFrequency) and not(isnan(messageFrequency));  \n\n//messageFrequencyByDevice\n//| order by TimeGenerated desc;\nmessageFrequencyByDevice\n  | make-series Trend = min(messageFrequency) default = 0 on TimeGenerated step 10m by device\n  | project-away TimeGenerated\n  | join kind = inner (messageFrequencyByDevice\n                       | summarize minMessageFrequency = arg_min(messageFrequency,*), \n                                   maxMessageFrequency = max(messageFrequency),\n                                   p90MessageFrequency = percentile(messageFrequency, 90) by device \n                   ) on device\n  | project device, minMessageFrequency,\n            time_range = strcat(format_datetime(TimeGenerated, 'M/d H:m'), \" - \", format_datetime(next_time, 'M/d H:m')),\n            maxMessageFrequency, p90MessageFrequency,\n            GroupName = case(minMessageFrequency >= messageFrequencyThreshold, \"Frequent\", \"Rare\"), Trend\n  | order by minMessageFrequency asc;\n\n",
             "size": 0,
             "timeContext": {
               "durationMs": 86400000
             },
             "queryType": 0,
-            "resourceType": "microsoft.resources/resourcegroups",
+            "resourceType": "microsoft.devices/iothubs",
             "gridSettings": {
               "formatters": [
                 {
@@ -572,7 +578,7 @@
                           "name": "IoTResources",
                           "source": "static",
                           "value": "value::all"
-                        }      
+                        }
                       ]
                     }
                   }
@@ -617,31 +623,6 @@
                 {
                   "columnId": "device",
                   "label": "Device"
-                },
-                {
-                  "columnId": "minMessageFrequency",
-                  "label": "Message Frequency (min)",
-                  "comment": "Messages Per Minute"
-                },
-                {
-                  "columnId": "time_range",
-                  "label": "Min Frequency Timeframe"
-                },
-                {
-                  "columnId": "maxMessageFrequency",
-                  "label": "Message Frequency (max)"
-                },
-                {
-                  "columnId": "p90MessageFrequency",
-                  "label": "Message Frequency (p90)"
-                },
-                {
-                  "columnId": "GroupName",
-                  "label": "Frequent/Rare"
-                },
-                {
-                  "columnId": "Trend",
-                  "label": "Frequency Trend"
                 }
               ]
             }
@@ -664,14 +645,14 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "let latencyThresholdMs = {latencyThresholdMs};\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\nlet latencyByDevice = _data\n    | where Name == 'edgehub_message_send_duration_seconds'\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | extend quantile = tostring(dimensions.quantile)\n    | where quantile == '0.9'\n    | where Val != 'NaN' and isnotnull(Val)\n    | extend val = todouble(Val);\n\n\nlatencyByDevice\n| make-series Trend = max(val*1000) default = 0 on TimeGenerated step 10m by device\n| project-away TimeGenerated\n| join kind = inner (latencyByDevice\n                     | summarize maxLatency = arg_max(val*1000,*),\n                                 minLatency = min(val) by device\n    ) on device\n| extend isSlow = maxLatency > latencyThresholdMs\n| project device, maxLatency, TimeGenerated, GroupName = case(isSlow, \"Slow\", \"Fast\"), minLatency, Trend\n| order by maxLatency desc;\n\n\n",
+            "query": "let latencyThresholdMs = {latencyThresholdMs};\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\nlet latencyByDevice = _data\n    | where Name == 'edgehub_message_send_duration_seconds'\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"\n    | extend quantile = tostring(dimensions.quantile)\n    | where quantile == '0.9'\n    | where Val != 'NaN' and isnotnull(Val)\n    | extend val = todouble(Val);\n\n\nlatencyByDevice\n| make-series Trend = max(val*1000) default = 0 on TimeGenerated step 10m by device\n| project-away TimeGenerated\n| join kind = inner (latencyByDevice\n                     | summarize maxLatency = arg_max(val*1000,*),\n                                 minLatency = min(val) by device\n    ) on device\n| extend isSlow = maxLatency > latencyThresholdMs\n| project device, maxLatency, TimeGenerated, GroupName = case(isSlow, \"Slow\", \"Fast\"), minLatency, Trend\n| order by maxLatency desc;\n\n\n",
             "size": 0,
             "title": "Message Latency",
             "timeContext": {
               "durationMs": 2592000000
             },
             "queryType": 0,
-            "resourceType": "microsoft.resources/resourcegroups",
+            "resourceType": "microsoft.devices/iothubs",
             "visualization": "table",
             "gridSettings": {
               "formatters": [
@@ -721,12 +702,7 @@
                           "name": "timeRange",
                           "source": "parameter",
                           "value": "timerange"
-                        },
-                        {
-                          "name": "IoTResources",
-                          "source": "static",
-                          "value": "value::all"
-                        }      
+                        }
                       ]
                     }
                   }
@@ -840,7 +816,7 @@
             },
             "showRefreshButton": true,
             "queryType": 0,
-            "resourceType": "microsoft.resources/resourcegroups",
+            "resourceType": "microsoft.devices/iothubs",
             "visualization": "graph",
             "sortBy": [],
             "graphSettings": {
@@ -869,12 +845,7 @@
                         "name": "timeRange",
                         "source": "parameter",
                         "value": "timerange"
-                      },
-                      {
-                        "name": "IoTResources",
-                        "source": "static",
-                        "value": "value::all"
-                      }    
+                      }
                     ]
                   }
                 }
@@ -951,7 +922,7 @@
       ],
       "isLocked": false,
       "fallbackResourceIds": [
-        "/subscriptions/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/resourceGroups/XXX"
+        "/subscriptions/XXX/resourceGroups/XXX"
       ]
     },
     "updatedWorkbookContent": {
