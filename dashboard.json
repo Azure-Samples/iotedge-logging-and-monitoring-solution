@@ -15,19 +15,6 @@
         "description": "The gallery that the workbook will been shown under. Supported values include workbook, tsg, etc. Usually, this is 'workbook'"
       }
     },
-    // "azureSubscriptionId": {
-    //   "type": "string",
-    //   "defaultValue": "[subscription().id]",
-    //   "metadata": {
-    //     "description": "Azure Subscription Id"
-    //   }
-    // },
-    // "resourceGroupName": {
-    //   "type": "string",
-    //   "metadata": {
-    //     "description": "Resource Group Name"
-    //   }
-    // },
     "workbookSourceId": {
       "type": "string",
       "defaultValue": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name)]",
@@ -86,7 +73,7 @@
                 "type": 4,
                 "isRequired": true,
                 "value": {
-                  "durationMs": 900000
+                  "durationMs": 86400000
                 },
                 "typeSettings": {
                   "selectableValues": [
@@ -424,7 +411,12 @@
                           "name": "timeRange",
                           "source": "parameter",
                           "value": "timerange"
-                        }
+                        },
+                        {
+                          "name": "IoTResources",
+                          "source": "static",
+                          "value": "value::all"
+                        }      
                       ]
                     }
                   }
@@ -575,7 +567,12 @@
                           "name": "timeRange",
                           "source": "parameter",
                           "value": "timerange"
-                        }
+                        },
+                        {
+                          "name": "IoTResources",
+                          "source": "static",
+                          "value": "value::all"
+                        }      
                       ]
                     }
                   }
@@ -724,7 +721,12 @@
                           "name": "timeRange",
                           "source": "parameter",
                           "value": "timerange"
-                        }
+                        },
+                        {
+                          "name": "IoTResources",
+                          "source": "static",
+                          "value": "value::all"
+                        }      
                       ]
                     }
                   }
@@ -867,7 +869,12 @@
                         "name": "timeRange",
                         "source": "parameter",
                         "value": "timerange"
-                      }
+                      },
+                      {
+                        "name": "IoTResources",
+                        "source": "static",
+                        "value": "value::all"
+                      }    
                     ]
                   }
                 }

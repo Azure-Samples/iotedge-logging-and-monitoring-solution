@@ -70,8 +70,18 @@
       }                    
      },      
      "$edgeHub": {
-      "properties.desired.routes.tempSensor": "FROM /messages/modules/tempSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/FilterModule/inputs/input1\")",
-      "properties.desired.routes.FilterModule": "FROM /messages/modules/FilterModule/outputs/* INTO $upstream" 
-    }
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "sensorToFilterModule": "FROM /messages/modules/tempSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/FilterModule/inputs/input1\")",
+          "FilterModuleToIoTHub": "FROM /messages/modules/FilterModule/outputs/* INTO $upstream"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    }    
   }
 }
+
+
