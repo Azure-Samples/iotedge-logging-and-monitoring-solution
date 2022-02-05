@@ -1,0 +1,104 @@
+name: IoT Monitoring Tools Deployment
+
+trigger: none
+
+variables:
+  - group: iot-monitoring
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Validation
+    displayName: "Validation of Workbook templates"
+    jobs:
+      - job: Workbooks_Validation
+        displayName: "Validation of Workbook templates"
+        steps:
+          - checkout: self
+            name: checkout_repository
+            displayName: Checkout repository
+
+          - task: AzureResourceManagerTemplateDeployment@2
+            name: workbooks_templates_validation
+            displayName: Workbooks templates validation
+            inputs:
+              deploymentScope: "Subscription"
+              azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+              resourceGroupName: $(RG_NAME)
+              subscriptionId: $(AZURE_SUBSCRIPTION_ID)
+              location: $(AZURE_LOCATION)
+              templateLocation: "Linked artifact"
+              csmFile: "$(System.DefaultWorkingDirectory)/MoonitoringInstruments/workbook.json"
+              deploymentMode: "Validation"
+              overrideParameters: -iotHubName=$(IOTHUB_NAME)
+
+      # - job: Alerts_Validation
+      #   displayName: "Validation of Alert templates"
+      #   steps:
+      #     - checkout: self
+      #       name: checkout_repository
+      #       displayName: Checkout repository
+
+      #     - task: AzureResourceManagerTemplateDeployment@2
+      #       name: alerts_templates_validation
+      #       displayName: Alerts templates validation
+      #       inputs:
+      #         deploymentScope: "Subscription"
+      #         azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+      #         resourceGroupName: $(RG_NAME)
+      #         subscriptionId: $(AZURE_SUBSCRIPTION_ID)
+      #         location: $(AZURE_LOCATION)
+      #         templateLocation: "Linked artifact"
+      #         csmFile: "$(System.DefaultWorkingDirectory)/arm/iot-alerts.json"
+      #         deploymentMode: "Validation"
+      #         overrideParameters: -IotHubs_IoTStarter_iothub_externalid /subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RG_NAME)/providers/Microsoft.Devices/IotHubs/$(IOTHUB_NAME)
+
+
+  - stage: Deployment
+    displayName: "Deployment of Workbook templates"
+    dependsOn: Validation
+    jobs:
+      - job: Workbooks_Deployment
+        displayName: "Deployment of Workbook templates"
+        steps:
+          - checkout: self
+            name: checkout_repository
+            displayName: Checkout repository
+
+          - task: AzureResourceManagerTemplateDeployment@2
+            name: workbooks_templates_deployment
+            displayName: Workbooks templates deployment
+            inputs:
+              deploymentScope: "Subscription"
+              azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+              resourceGroupName: $(RG_NAME)
+              subscriptionId: $(AZURE_SUBSCRIPTION_ID)
+              location: $(AZURE_LOCATION)
+              templateLocation: "Linked artifact"
+              csmFile: "$(System.DefaultWorkingDirectory)/MoonitoringInstruments/workbook.json"
+              deploymentMode: "Incremental"
+              overrideParameters: -workbookSourceId /subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RG_NAME)/providers/Microsoft.Devices/IotHubs/$(IOTHUB_NAME)
+
+      # - job: Alerts_Deployment
+      #   displayName: "Deployment of Alert templates"
+      #   steps:
+      #     - checkout: self
+      #       name: checkout_repository
+      #       displayName: Checkout repository
+
+      #     - task: AzureResourceManagerTemplateDeployment@2
+      #       name: alerts_templates_deployment
+      #       displayName: Alerts templates deployment
+      #       inputs:
+      #         deploymentScope: "Subscription"
+      #         azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+      #         resourceGroupName: $(RG_NAME)
+      #         subscriptionId: $(AZURE_SUBSCRIPTION_ID)
+      #         location: $(AZURE_LOCATION)
+      #         templateLocation: "Linked artifact"
+      #         csmFile: "$(System.DefaultWorkingDirectory)/arm/iot-alerts.json"
+      #         deploymentMode: "Incremental"
+      #         overrideParameters: -IotHubs_IoTStarter_iothub_externalid /subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RG_NAME)/providers/Microsoft.Devices/IotHubs/$(IOTHUB_NAME)
+
+    
