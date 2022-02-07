@@ -31,7 +31,7 @@
       },
       "iotHubName": {
         "type": "string",
-        "defaultValue": "[concat('iothub-', parameters('environmentHashId')]",
+        "defaultValue": "[concat('iothub-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Name for IoT Hub resource."
         }

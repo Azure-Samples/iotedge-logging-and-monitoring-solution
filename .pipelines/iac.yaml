@@ -20,8 +20,8 @@ stages:
             displayName: Checkout repository
 
           - task: AzureResourceManagerTemplateDeployment@2
-            name: workbooks_templates_validation
-            displayName: Workbooks templates validation
+            name: arm_templates_validation
+            displayName: ARM templates validation
             inputs:
               deploymentScope: "Subscription"
               azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
