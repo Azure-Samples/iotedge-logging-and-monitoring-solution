@@ -12,7 +12,7 @@ stages:
   - stage: Validation
     displayName: "Validation of ARM templates"
     jobs:
-      - job: Workbooks_Validation
+      - job: ARM_Validation
         displayName: "Validation of ARM templates"
         steps:
           - checkout: self
@@ -34,30 +34,30 @@ stages:
               overrideParameters: -environmentHashId $(IOT_ENV_SUFFIX) -templateUrl https://raw.githubusercontent.com/$(Build.Repository.Name) -branchName $(Build.SourceBranch) 
 
 
-  # - stage: Deployment
-  #   displayName: "Deployment of Workbook templates"
-  #   dependsOn: Validation
-  #   jobs:
-  #     - job: Workbooks_Deployment
-  #       displayName: "Deployment of Workbook templates"
-  #       steps:
-  #         - checkout: self
-  #           name: checkout_repository
-  #           displayName: Checkout repository
+  - stage: Deployment
+    displayName: "Deployment of ARM templates"
+    dependsOn: Validation
+    jobs:
+      - job: ARM_Deployment
+        displayName: "Deployment of ARM templates"
+        steps:
+          - checkout: self
+            name: checkout_repository
+            displayName: Checkout repository
 
-  #         - task: AzureResourceManagerTemplateDeployment@2
-  #           name: workbooks_templates_deployment
-  #           displayName: Workbooks templates deployment
-  #           inputs:
-  #             deploymentScope: "Subscription"
-  #             azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-  #             resourceGroupName: $(RG_NAME)
-  #             subscriptionId: $(AZURE_SUBSCRIPTION_ID)
-  #             location: $(AZURE_LOCATION)
-  #             templateLocation: "Linked artifact"
-  #             csmFile: "$(System.DefaultWorkingDirectory)/MonitoringInstruments/workbook.json"
-  #             deploymentMode: "Incremental"
-  #             overrideParameters: -iotHubName $(IOTHUB_NAME)
+          - task: AzureResourceManagerTemplateDeployment@2
+            name: arm_templates_deployment
+            displayName: ARM templates deployment
+            inputs:
+              deploymentScope: "Subscription"
+              azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+              resourceGroupName: $(RG_NAME)
+              # subscriptionId: $(AZURE_SUBSCRIPTION_ID)
+              location: $(AZURE_LOCATION)
+              templateLocation: "Linked artifact"
+              csmFile: "$(System.DefaultWorkingDirectory)/Templates/azuredeploy.json"
+              deploymentMode: "Incremental"
+              overrideParameters: -environmentHashId $(IOT_ENV_SUFFIX) -templateUrl https://raw.githubusercontent.com/$(Build.Repository.Name) -branchName $(Build.SourceBranch) 
 
 
 

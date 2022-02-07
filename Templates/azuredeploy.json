@@ -146,7 +146,7 @@
       },
       "adminPassword": {
         "type": "secureString",
-        "defaultValue": "azurepassword",
+        "defaultValue": "Azurepassword1!",
         "metadata": {
           "description": "Specifies the username password for the Virtual Machine."
         }
@@ -193,7 +193,7 @@
       },
       "storageAccountName": {
         "type": "string",
-        "defaultValue": "[concat('storage-', parameters('environmentHashId'))]",
+        "defaultValue": "[concat('storage', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Logs storage account name."
         }
