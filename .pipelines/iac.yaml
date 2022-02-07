@@ -31,7 +31,7 @@ stages:
               templateLocation: "Linked artifact"
               csmFile: "$(System.DefaultWorkingDirectory)/Templates/azuredeploy.json"
               deploymentMode: "Validation"
-              overrideParameters: -environmentHashId $(IOT_ENV_SUFFIX) -templateUrl $(Build.Repository.Uri) -branchName $(Build.SourceBranch) 
+              overrideParameters: -environmentHashId $(IOT_ENV_SUFFIX) -templateUrl "https://raw.githubusercontent.com/"$(Build.Repository.Name) -branchName $(Build.SourceBranch) 
 
 
   # - stage: Deployment
