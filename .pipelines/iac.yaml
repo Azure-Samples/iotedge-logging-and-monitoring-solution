@@ -26,7 +26,6 @@ stages:
               deploymentScope: "Subscription"
               azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
               resourceGroupName: $(RG_NAME)
-              # subscriptionId: $(AZURE_SUBSCRIPTION_ID)
               location: $(AZURE_LOCATION)
               templateLocation: "Linked artifact"
               csmFile: "$(System.DefaultWorkingDirectory)/Templates/azuredeploy.json"
@@ -52,7 +51,6 @@ stages:
               deploymentScope: "Subscription"
               azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
               resourceGroupName: $(RG_NAME)
-              # subscriptionId: $(AZURE_SUBSCRIPTION_ID)
               location: $(AZURE_LOCATION)
               templateLocation: "Linked artifact"
               csmFile: "$(System.DefaultWorkingDirectory)/Templates/azuredeploy.json"
