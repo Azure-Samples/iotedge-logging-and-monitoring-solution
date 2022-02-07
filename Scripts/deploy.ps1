@@ -869,12 +869,12 @@ function New-ELMSEnvironment() {
     }
 
     $option = Get-InputSelection `
-        -options @("Logging", "Distributed Tracing") `
-        -text @("Do you want to deploy Logging or Distributed Tracing sample? Choose an option from the list (using its Index):") `
+        -options @("End-to-End Sample", "Logging") `
+        -text @("Do you want to deploy End-to-End Sample or only Logging sample? Choose an option from the list (using its Index):") `
         -default_index 1
     
     
-    $script:enable_distributed_tracing = ($option -eq 2)
+    $script:enable_e2e_sample = ($option -eq 1)
         
 
     #region select monitoring type
@@ -986,7 +986,7 @@ function New-ELMSEnvironment() {
         "metricsEncoding"             = @{ "value" = $script:metrics_encoding }
         "templateUrl"                 = @{ "value" = $github_repo_url }
         "branchName"                  = @{ "value" = $(git rev-parse --abbrev-ref HEAD) }
-        "createDistribTracing"        = @{ "value" = $script:enable_distributed_tracing }
+        "createE2ESample"        = @{ "value" = $script:enable_e2e_sample }
     }
 
     if ($script:create_iot_hub) {
@@ -1043,7 +1043,7 @@ function New-ELMSEnvironment() {
 
     #region generate monitoring deployment manifest
     if ($script:enable_monitoring) {
-        if ($script:enable_distributed_tracing) {
+        if ($script:enable_e2e_sample) {
             $distr_tracing_template = "$($root_path)/DistributedTracing/EdgeSolution/deployment.layerd.template.json"
             $distr_tracing_manifest = "$($root_path)/DistributedTracing/EdgeSolution/deployment.manifest.json"
             Remove-Item -Path $distr_tracing_manifest -ErrorAction Ignore
@@ -1107,7 +1107,7 @@ function New-ELMSEnvironment() {
                 --priority $priority | Out-Null
         }
 
-        if ($script:enable_distributed_tracing) {
+        if ($script:enable_e2e_sample) {
             # Create logging deployment
             $deployment_name = "sample-distributed-tracing"
             $priority += 1
@@ -1155,7 +1155,7 @@ function New-ELMSEnvironment() {
     #endregion
 
     #region backend apps
-    if ($script:enable_distributed_tracing) {
+    if ($script:enable_e2e_sample) {
         Write-Host
         Write-Host "Deploying code to dotnet backend app $script:function_app_dotnet_backend_name"            
         az functionapp deployment source config-zip -g $script:resource_group_name -n $script:function_app_dotnet_backend_name --src $script:zip_package_app_dotnet_backend_path | Out-Null

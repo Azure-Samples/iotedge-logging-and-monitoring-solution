@@ -510,11 +510,11 @@
           "description": "GitHub repo branch name."
         }
       },
-      "createDistribTracing": {
+      "createE2ESample": {
         "type": "bool",
         "defaultValue": true,
         "metadata": {
-          "description": "Create disributed tracing sample"
+          "description": "Create end-to-end sample"
         }
       }            
     },
@@ -911,7 +911,7 @@
         "type": "Microsoft.Web/serverfarms",
         "apiVersion": "[variables('functionApiVersion')]",
         "name": "[variables('functionAppDotNetHostingPlanName')]",
-        "condition": "[parameters('createDistribTracing')]",
+        "condition": "[parameters('createE2ESample')]",
         "location": "[parameters('location')]",
         "sku": {
           "name": "Y1",
@@ -926,7 +926,7 @@
         "type": "Microsoft.Web/serverfarms",
         "apiVersion": "[variables('functionApiVersion')]",
         "name": "[variables('functionAppJavaHostingPlanName')]",
-        "condition": "[parameters('createDistribTracing')]",
+        "condition": "[parameters('createE2ESample')]",
         "location": "[parameters('location')]",
         "sku": {
           "name": "Y1",
@@ -1127,7 +1127,7 @@
         "type": "Microsoft.Web/sites",
         "apiVersion": "[variables('functionApiVersion')]",
         "name": "[parameters('functionAppDotNetName')]",           
-        "condition": "[parameters('createDistribTracing')]",
+        "condition": "[parameters('createE2ESample')]",
         "location": "[parameters('location')]",
         "kind": "functionapp",
         "identity": {
@@ -1185,7 +1185,7 @@
         "type": "Microsoft.Web/sites",
         "apiVersion": "[variables('functionApiVersion')]",
         "name": "[parameters('functionAppJavaName')]",           
-        "condition": "[parameters('createDistribTracing')]",
+        "condition": "[parameters('createE2ESample')]",
         "location": "[parameters('location')]",
         "kind": "functionapp",
         "identity": {
