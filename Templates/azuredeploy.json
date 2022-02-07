@@ -45,6 +45,7 @@
       },
       "iotHubServicePolicyName": {
         "type": "string",
+        "defaultValue": "iotedge",
         "metadata": {
           "description": "IoT hub policy policy name."
         }
