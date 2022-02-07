@@ -44,6 +44,15 @@ stages:
             name: checkout_repository
             displayName: Checkout repository
 
+          - task: AzureResourceGroupDeployment@2
+            displayName: 'Azure Deployment:Create ACR'
+            inputs:
+              azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+              resourceGroupName: $(RG_NAME)
+              location: '$(AZURE_LOCATION)'
+              templateLocation: 'URL of the file'
+              csmFileLink: 'https://raw.githubusercontent.com/Azure-Samples/devops-iot-scripts/2281fc4e3142a2ed14655798bd3c82a44a470f86/arm-acr.json'
+              overrideParameters: -registryName iotacr-$(IOT_ENV_SUFFIX) -registrySku "Basic" -registryLocation "$(AZURE_LOCATION)"
           - task: AzureResourceManagerTemplateDeployment@2
             name: arm_templates_deployment
             displayName: ARM templates deployment
