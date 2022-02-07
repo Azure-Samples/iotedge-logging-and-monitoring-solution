@@ -19,10 +19,11 @@ stages:
     displayName: "Validation of ARM templates"
     jobs:
       - job: ARM_Validation
-        displayName: "Validation of ARM templates"
-      - template: templates/iac-template.yaml
-        parameters:
-          deployment_mode: Validation
+        displayName: "Validation of ARM templates"      
+        steps:
+        - template: templates/iac-template.yaml
+          parameters:
+            deployment_mode: Validation
 
   - stage: Deployment
     displayName: "Deployment of ARM templates"
@@ -30,8 +31,9 @@ stages:
     jobs:
       - job: ARM_Deployment
         displayName: "Deployment of ARM templates"
-      - template: templates/iac-template.yaml
-        parameters:
-          deployment_mode: Incremental
+        steps:
+        - template: templates/iac-template.yaml
+          parameters:
+            deployment_mode: Incremental
 
     
