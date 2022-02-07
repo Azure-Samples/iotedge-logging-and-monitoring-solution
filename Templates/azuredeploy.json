@@ -31,12 +31,14 @@
       },
       "iotHubName": {
         "type": "string",
+        "defaultValue": "[concat('iothub-', parameters('environmentHashId')]",
         "metadata": {
           "description": "Name for IoT Hub resource."
         }
       },
       "iotHubResourceGroup": {
         "type": "string",
+        "defaultValue": "[resourceGroup().name]",
         "metadata": {
           "description": "IoT Hub resource group."
         }
@@ -143,7 +145,7 @@
       },
       "adminPassword": {
         "type": "secureString",
-        "defaultValue": "",
+        "defaultValue": "azurepassword",
         "metadata": {
           "description": "Specifies the username password for the Virtual Machine."
         }
@@ -190,24 +192,28 @@
       },
       "storageAccountName": {
         "type": "string",
+        "defaultValue": "[concat('storage-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Logs storage account name."
         }
       },
       "storageAccountResourceGroup": {
         "type": "string",
+        "defaultValue": "[resourceGroup().name]",
         "metadata": {
           "description": "Logs storage account resource group."
         }
       },
       "storageContainerName": {
         "type": "string",
+        "defaultValue": "[concat('container-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Logs storage container name."
         }
       },
       "storageQueueName": {
         "type": "string",
+        "defaultValue": "[concat('queue-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Logs storage queue name."
         }
@@ -235,6 +241,7 @@
       },
       "eventGridSystemTopicName": {
         "type": "string",
+        "defaultValue": "[concat('topic-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Event grid system topic name for the logs storage account."
         }
@@ -262,12 +269,14 @@
       },
       "workspaceName": {
         "type": "string",
+        "defaultValue": "[concat('workspace-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Log analytics Workspace name."
         }
       },
       "workspaceResourceGroup": {
         "type": "string",
+        "defaultValue": "[resourceGroup().name]",
         "metadata": {
           "description": "Log analytics Workspace resource group."
         }
@@ -304,28 +313,28 @@
       },
       "eventHubResourceGroup": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[resourceGroup().name]",
         "metadata": {
           "description": "Event hubs namespace resource group."
         }
       },
       "eventHubsLocation": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[resourceGroup().location]",
         "metadata": {
           "description": "Event hubs namespace location."
         }
       },
       "eventHubsNamespace": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[concat('iot-ns-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Event hubs namespace name."
         }
       },
       "eventHubsName": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[concat('eventhub-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Event hubs name."
         }
@@ -346,21 +355,21 @@
       },
       "eventHubsEndpointName": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[concat('iot-endpoint-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "IoT hub custom endpoint name to event hubs."
         }
       },
       "eventHubsRouteName": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[concat('iot-route-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "IoT hub event hubs route name."
         }
       },
       "eventHubsRouteCondition": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "id = 'origin-iotedge-metrics-collector'",
         "metadata": {
           "description": "Condition to route IoT hub event messages to event hubs route."
         }
