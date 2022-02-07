@@ -2,13 +2,17 @@ parameters:
 - name: deployment_mode
   type: string
 
-variables:
-  - name: acr_name
-    value: iotacr$(IOT_ENV_SUFFIX)
-  - name: repo_name    
-    value: https://raw.githubusercontent.com/$(Build.Repository.Name)
-  - name: branch_name  
-    value: $(Build.SourceBranch) 
+- name: iot_env_suffix
+  type: string
+
+- name: acr_name
+  default: iotacr${{ parameters.iot_env_suffix }}
+
+- name: repo_name    
+  default: https://raw.githubusercontent.com/$(Build.Repository.Name)
+
+- name: branch_name  
+  default: $(Build.SourceBranch) 
 
 steps:
   - checkout: self
@@ -37,6 +41,6 @@ steps:
       templateLocation: "Linked artifact"
       csmFile: "$(System.DefaultWorkingDirectory)/Templates/azuredeploy.json"
       deploymentMode: ${{ parameters.deployment_mode }}
-      overrideParameters: -environmentHashId $(IOT_ENV_SUFFIX) -templateUrl $(repo_name) -branchName $(branch_name)
+      overrideParameters: -environmentHashId ${{ parameters.iot_env_suffix }} -templateUrl ${{ parameters.repo_name }} -branchName ${{ parameters.branch_name }}
 
 
