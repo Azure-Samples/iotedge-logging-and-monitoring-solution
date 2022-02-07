@@ -19,15 +19,15 @@ stages:
           parameters:
             deployment_mode: Validation            
 
-  # - stage: Deployment
-  #   displayName: "Deployment of ARM templates"
-  #   dependsOn: Validation
-  #   jobs:
-  #     - job: ARM_Deployment
-  #       displayName: "Deployment of ARM templates"
-  #       steps:
-  #       - template: templates/iac-template.yaml
-  #         parameters:
-  #           deployment_mode: Incremental
+  - stage: Deployment
+    displayName: "Deployment of ARM templates"
+    dependsOn: Validation
+    jobs:
+      - job: ARM_Deployment
+        displayName: "Deployment of ARM templates"
+        steps:
+        - template: templates/iac-template.yaml
+          parameters:
+            deployment_mode: Incremental
 
     
