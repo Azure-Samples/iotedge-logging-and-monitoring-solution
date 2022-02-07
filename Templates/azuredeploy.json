@@ -431,21 +431,21 @@
       },
       "functionAppName": {
         "type": "string",
-        "defaultValue": "test",
+        "defaultValue": "[concat('iotedgelogsapp-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Name for the Function App resource."
         }
       },
       "functionAppDotNetName": {
         "type": "string",
-        "defaultValue": "test",
+        "defaultValue": "[concat('iot-dotnet-backend-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Name for the Function App DotNet Backend resource."
         }
       },
       "functionAppJavaName": {
         "type": "string",
-        "defaultValue": "test",
+        "defaultValue": "[concat('iot-java-backend-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Name for the Function App Java Backend resource."
         }
