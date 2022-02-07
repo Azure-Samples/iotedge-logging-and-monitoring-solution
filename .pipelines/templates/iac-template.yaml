@@ -2,6 +2,14 @@ parameters:
 - name: deployment_mode
   type: string
 
+variables:
+  - name: acr_name
+    value: iotacr$(IOT_ENV_SUFFIX)
+  - name: repo_name    
+    value: https://raw.githubusercontent.com/$(Build.Repository.Name)
+  - name: branch_name  
+    value: $(Build.SourceBranch) 
+
 steps:
   - checkout: self
     name: checkout_repository
