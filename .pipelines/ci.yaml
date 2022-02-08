@@ -11,11 +11,9 @@ variables:
     value: "$(Build.BuildId)"
   - name: ACR_NAME
     value: iotacr$(IOT_ENV_SUFFIX)
-  # - name: System.Debug
-  #   value: true
+  - name: System.Debug
+    value: true
 
-# TODO: Backend
-#       logging modules
 jobs:
   - job: edge_build
     displayName: "Build IoT Edge Modules"      
