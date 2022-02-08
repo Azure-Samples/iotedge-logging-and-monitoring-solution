@@ -8,10 +8,11 @@ steps:
       dotnet restore
       dotnet build --configuration Release
     workingDirectory: Backend/${{ parameters.function_name }}
-    displayName: 
+    displayName: Build Function
   - task: DotNetCoreCLI@2    
+    displayName: Publish Function
     inputs:
-      workingDirectory: Backend/${{ parameters.function_name }}
+      workingDirectory: $(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}
       command: publish
       arguments: '--configuration Release --output publish_output'
       projects: '*.csproj'
