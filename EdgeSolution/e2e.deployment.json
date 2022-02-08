@@ -25,7 +25,7 @@
             "tempSensor": {
               "settings": {
                 "image": "${MODULES.SimulatedTemperatureSensor}",
-                "createOptions": ""
+                "createOptions": {}
               },
               "type": "docker",
               "env": {
@@ -55,7 +55,7 @@
             "FilterModule": {
               "settings": {
                 "image": "${MODULES.FilterModule}",
-                "createOptions": ""
+                "createOptions": {}
               },
               "type": "docker",
               "env": {
@@ -82,7 +82,7 @@
             "Opentelemetrycollector": {
               "settings": {
                 "image": "kaizentm/iotsample-opentelemetrycollector:0.0.2",
-                "createOptions": ""
+                "createOptions": {}
               },
               "type": "docker",
               "status": "running",
