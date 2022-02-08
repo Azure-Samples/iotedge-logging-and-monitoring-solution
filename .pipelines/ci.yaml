@@ -71,7 +71,7 @@ jobs:
             **/module.json
             #  edgeSmokeTest.sh
             #  moduleAcrPromotion.sh
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
 
       - task: PublishPipelineArtifact@1
         displayName: 'Publish artifacts'
