@@ -1,0 +1,18 @@
+FROM mcr.microsoft.com/dotnet/sdk:3.1 AS build-env
+WORKDIR /app
+
+COPY *.csproj ./
+RUN dotnet restore
+
+COPY . ./
+RUN dotnet publish -c Release -o out
+
+FROM mcr.microsoft.com/dotnet/runtime:3.1-nanoserver-ltsc202
+WORKDIR /app
+COPY --from=build-env /app/out ./
+
+ENV OTLP_ENDPOINT="http://opentelemetrycollector:4317"
+ENV LOGGING_LEVEL="Information"
+ENV TRACE_SAMPLE_RAIO=1
+
+ENTRYPOINT ["dotnet", "FilterModule.dll"]
