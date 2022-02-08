@@ -63,11 +63,11 @@ jobs:
         displayName: 'Copy Files to: Drop folder'
         inputs:
           Contents: |
-          config/*.json
-          **/module.json
-          #  edgeSmokeTest.sh
-          #  moduleAcrPromotion.sh
-          TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
+            config/*.json
+            **/module.json
+            #  edgeSmokeTest.sh
+            #  moduleAcrPromotion.sh
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
 
       - task: PublishPipelineArtifact@1
         displayName: 'Publish artifacts'
