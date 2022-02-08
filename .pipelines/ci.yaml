@@ -57,7 +57,7 @@ jobs:
 
   - job: publish_artifcats
     displayName: "Publish Artifacts"   
-    dependsOn: edge_build, backend_build
+    dependsOn: [edge_build, backend_build]
     steps:   
       - task: CopyFiles@2
         displayName: 'Copy Files to: Drop folder'
