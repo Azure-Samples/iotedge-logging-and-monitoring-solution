@@ -1,0 +1,20 @@
+
+parameters:
+- name: function_name
+  type: string
+
+steps:
+  - script: |
+      dotnet restore
+      dotnet build --configuration Release
+    workingDirectory: Backend/${{ parameters.function_name }}
+    displayName: 
+  - task: DotNetCoreCLI@2
+    workingDirectory: Backend/${{ parameters.function_name }}
+    inputs:
+      command: publish
+      arguments: '--configuration Release --output publish_output'
+      projects: '*.csproj'
+      publishWebProjects: false
+      modifyOutputPath: false
+      # zipAfterPublish: false
