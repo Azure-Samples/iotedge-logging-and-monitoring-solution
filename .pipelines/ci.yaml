@@ -90,6 +90,7 @@ stages:
       runOnce:
         deploy:   
           steps:  
+            - checkout: self
             - script: |
                 ls -ltr $(Pipeline.Workspace)      
               displayName: Check
