@@ -1,0 +1,18 @@
+# Stash ACR Credentials in ACR_USER, ACR_PASSWORD, and ACR_ADDRESS.
+parameters:
+- name: armServiceConnection
+  displayName: Name of the ARM Service Connection
+  type: string
+- name: acrName
+  displayName: Name of the ACR to get credentials for
+  type: string
+
+steps:
+- task: AzureCLI@2
+  displayName: 'Get ACR credentials'
+  inputs:
+    azureSubscription: ${{ parameters.armServiceConnection }}
+    scriptType: bash
+    scriptLocation: scriptPath
+    scriptPath: .pipelines/templates/get-acr-creds.sh
+    arguments: ${{ parameters.acrName }}

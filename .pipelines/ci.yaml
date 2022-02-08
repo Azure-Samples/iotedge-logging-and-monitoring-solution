@@ -21,7 +21,7 @@ steps:
     command: test
     projects: 'EdgeSolution/tests/FilterModuleUnitTest/*.csproj'
 
-- template: tasks/get-acr-creds.yml
+- template: templates/get-acr-creds.yaml
   parameters:
     armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
     acrName: $(ACR_NAME)
