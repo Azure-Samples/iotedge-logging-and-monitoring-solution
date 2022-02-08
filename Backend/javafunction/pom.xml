@@ -14,7 +14,7 @@
         <java.version>11</java.version>
         <azure.functions.maven.plugin.version>1.14.1</azure.functions.maven.plugin.version>
         <azure.functions.java.library.version>1.4.2</azure.functions.java.library.version>
-        <functionAppName>javafunction-iotsample</functionAppName>
+        <functionAppName>javafunction</functionAppName>
     </properties>
 
     <dependencies>
