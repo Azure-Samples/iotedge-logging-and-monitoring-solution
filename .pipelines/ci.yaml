@@ -54,6 +54,7 @@ stages:
           inputs:
             Contents: |
               EdgeSolution/config/*.json
+              EdgeSolution/e2e.deployment-3.json
               **/module.json
               #  edgeSmokeTest.sh
               #  moduleAcrPromotion.sh
@@ -82,22 +83,46 @@ stages:
     #         artifactName: backend          
 
 - stage: Deploy_Dev
-  displayName: 'Deploy_Dev'
+  displayName: 'Deploy_Dev'  
   jobs:
   - deployment: Deploy_to_dev
     environment: dev
+    variables:
+      - group: iot-monitoring # Could be iot-monitoring-dev
+      - name: ACR_NAME
+        value: iotacr$(IOT_ENV_SUFFIX)
+      - name: IOTHUB_NAME
+        value: iothub-$(IOT_ENV_SUFFIX)
     strategy: 
       runOnce:
         deploy:   
           steps:  
             - checkout: self
-            - script: |
-                ls -ltr $(Pipeline.Workspace)      
-              displayName: Check
+            # - script: |
+            #     ls -ltr $(Pipeline.Workspace)      
+            #   displayName: Check
             - template: templates/get-acr-creds.yaml
               parameters:
                 armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
                 acrName: $(ACR_NAME)
+
+            - task: AzureIoTEdge@2
+              displayName: 'Azure IoT Edge - Generate deployment manifest'
+              inputs:
+                action: 'Generate deployment manifest'
+                templateFilePath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/e2e.deployment-3.json'
+                deploymentManifestOutputPath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/config/deployment.json'
+
+            - task: AzureIoTEdge@2
+              displayName: 'Azure IoT Edge - Deploy to IoT Edge devices'
+              inputs:
+                action: 'Deploy to IoT Edge devices'
+                deploymentFilePath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/config/deployment.json'
+                azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+                iothubname: $(IOTHUB_NAME)
+                deploymentid: '$(System.TeamProject)-Dev-$(Build.BuildId)'
+                deviceOption: 'Multiple Devices'
+                targetcondition: 'tags.environment=''Dev'''
 
 
 
