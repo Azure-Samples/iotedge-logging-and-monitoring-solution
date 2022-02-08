@@ -61,8 +61,8 @@ jobs:
       - task: PublishBuildArtifacts@1
         displayName: 'Publish artifacts'
         inputs:
-          pathToPublish: '$(Build.ArtifactStagingDirectory)'
-          artifactName: drop          
+          pathToPublish: '$(Build.ArtifactStagingDirectory)/drop'
+          artifactName: backend          
 
   # - job: publish_artifcats
   #   displayName: "Publish Artifacts"   
