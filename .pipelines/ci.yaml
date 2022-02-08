@@ -1,5 +1,5 @@
 trigger:
-- master
+- main
 
 pool:
   vmImage: ubuntu-18.04
@@ -28,34 +28,34 @@ steps:
 
 - task: UsePythonVersion@0
 
-# - script: ./edgeLocalTest.sh
-#   displayName: 'Test device locally'
-#   env: 
-#       DEVICE_CONNECTION_STRING: $(DEV_DEVICE_CONNECTION_STRING)
-#       DEPLOYMENT_FILE_PATH: $(BuildModuleImages.DEPLOYMENT_FILE_PATH)
+- script: ./Scripts/edgeLocalTest.sh
+  displayName: 'Test device locally'
+  env: 
+      DEVICE_CONNECTION_STRING: $(DEV_DEVICE_CONNECTION_STRING)
+      DEPLOYMENT_FILE_PATH: $(BuildModuleImages.DEPLOYMENT_FILE_PATH)
 
-# - task: AzureIoTEdge@2
-#   displayName: 'Azure IoT Edge - Push module images'
-#   inputs:
-#     action: 'Push module images'
-#     azureSubscriptionEndpoint: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-#     azureContainerRegistry: '{"loginServer":"$(ACR_NAME).azurecr.io"}'
-#     fillRegistryCredential: false
+- task: AzureIoTEdge@2
+  displayName: 'Azure IoT Edge - Push module images'
+  inputs:
+    action: 'Push module images'
+    azureSubscriptionEndpoint: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+    azureContainerRegistry: '{"loginServer":"$(ACR_NAME).azurecr.io"}'
+    fillRegistryCredential: false
 
-# - task: CopyFiles@2
-#   displayName: 'Copy Files to: Drop folder'
-#   inputs:
-#     Contents: |
-#      config/*.json
-#      **/module.json
-#     #  edgeSmokeTest.sh
-#     #  moduleAcrPromotion.sh
-#     TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
+- task: CopyFiles@2
+  displayName: 'Copy Files to: Drop folder'
+  inputs:
+    Contents: |
+     config/*.json
+     **/module.json
+    #  edgeSmokeTest.sh
+    #  moduleAcrPromotion.sh
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
 
-# - task: PublishPipelineArtifact@1
-#   displayName: 'Publish artifacts'
-#   inputs:
-#     targetPath: '$(Build.ArtifactStagingDirectory)/drop'
-#     artifactType: 'pipeline'
-#     artifactName: 'drop'
-#     parallel: true
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish artifacts'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/drop'
+    artifactType: 'pipeline'
+    artifactName: 'drop'
+    parallel: true
