@@ -93,6 +93,11 @@ stages:
             - script: |
                 ls -ltr $(Pipeline.Workspace)      
               displayName: Check
+            - template: templates/get-acr-creds.yaml
+              parameters:
+                armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+                acrName: $(ACR_NAME)
+
 
 
 
