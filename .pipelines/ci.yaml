@@ -54,6 +54,9 @@ jobs:
       - template: templates/build-function.yaml
         parameters:
           function_name: dotnetfunction
+      - template: templates/build-function.yaml
+        parameters:
+          function_name: javafunction
 
   - job: publish_artifcats
     displayName: "Publish Artifacts"   
