@@ -3,6 +3,20 @@
       "$edgeAgent": {
         "properties.desired": {
           "schemaVersion": "1.0",
+          "runtime": {
+            "type": "docker",
+            "settings": {
+              "minDockerVersion": "v1.25",
+              "loggingOptions": "",
+              "registryCredentials": {
+                "my_acr": {
+                  "username": "${ACR_USER}",
+                  "password": "${ACR_PASSWORD}",
+                  "address": "${ACR_ADDRESS}"
+                }
+              }
+            }
+          },          
           "systemModules": {
             "edgeAgent": {
               "type": "docker",
@@ -88,7 +102,31 @@
               "status": "running",
               "restartPolicy": "always",
               "version": "1.0"
-            }  
+            },
+            "IoTEdgeMetricsCollector": {
+              "settings": {
+                  "image": "mcr.microsoft.com/azureiotedge-metrics-collector:1.0",
+                  "createOptions": {}
+              },
+              "type": "docker",
+              "env": {
+                  "ResourceId": {
+                      "value": "${IOTHUB_ARM_RESOURCEID}"
+                  },
+                  "UploadTarget": {
+                      "value": "AzureMonitor"
+                  },
+                  "LogAnalyticsWorkspaceId": {
+                      "value": "${LOG_ANALYTICS_WSID}"
+                  },
+                  "LogAnalyticsSharedKey": {
+                      "value": "${LOG_ANALYTICS_SHARED_KEY}"
+                  }
+              },
+              "status": "running",
+              "restartPolicy": "always",
+              "version": "1.0"
+          }              
           }
         }         
       },                    
