@@ -14,9 +14,9 @@ steps:
     inputs:
       workingDirectory: $(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}
       command: publish
-      arguments: '--configuration Release'
+      arguments: '--configuration Release -o $(Build.ArtifactStagingDirectory)/Output'
       packDirectory: '$(Build.ArtifactStagingDirectory)'
       # projects: '*.csproj'
       publishWebProjects: false
-      modifyOutputPath: false
-      # zipAfterPublish: false
+      modifyOutputPath: true
+      zipAfterPublish: true
