@@ -16,9 +16,9 @@ steps:
       goals: 'package'
       # options: '--batch-mode'
   - task: ArchiveFiles@2
-    displayName: Create zipped package
+    displayName: Publish Function
     inputs:
-      rootFolderOrFile: 'target/azure-functions/${{ parameters.function_name }}'
+      rootFolderOrFile: '$(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}/target/azure-functions/${{ parameters.function_name }}'
       includeRootFolder: false 
       archiveType: 'zip'
       archiveFile: '$(Build.ArtifactStagingDirectory)/drop/$(funcAppName)$(Build.BuildId).zip'
