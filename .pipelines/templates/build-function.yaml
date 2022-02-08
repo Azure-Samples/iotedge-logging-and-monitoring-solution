@@ -9,9 +9,9 @@ steps:
       dotnet build --configuration Release
     workingDirectory: Backend/${{ parameters.function_name }}
     displayName: 
-  - task: DotNetCoreCLI@2
-    workingDirectory: Backend/${{ parameters.function_name }}
+  - task: DotNetCoreCLI@2    
     inputs:
+      workingDirectory: Backend/${{ parameters.function_name }}
       command: publish
       arguments: '--configuration Release --output publish_output'
       projects: '*.csproj'
