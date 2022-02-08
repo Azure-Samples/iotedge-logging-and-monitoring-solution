@@ -1,0 +1,24 @@
+
+parameters:
+- name: function_name
+  type: string
+
+steps:
+  - task: Maven@3
+    displayName: Build function
+    inputs:
+      mavenPomFile: $(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}/pom.xml
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      # jdkArchitectureOption: 'x64'
+      # publishJUnitResults: false
+      # testResultsFiles: '**/TEST-*.xml'
+      goals: 'package'
+      # options: '--batch-mode'
+  - task: ArchiveFiles@2
+    displayName: Create zipped package
+    inputs:
+      rootFolderOrFile: 'target/azure-functions/${{ parameters.function_name }}'
+      includeRootFolder: false 
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/drop/$(funcAppName)$(Build.BuildId).zip'
