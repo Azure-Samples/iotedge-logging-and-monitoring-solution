@@ -68,7 +68,7 @@
         "restartPolicy": "always",
         "version": "1.0"
       }                    
-     },      
+     },           
      "$edgeHub": {
       "properties.desired": {
         "schemaVersion": "1.0",
@@ -80,7 +80,8 @@
           "timeToLiveSecs": 7200
         }
       }
-    }    
+    },
+    "systemModules": {}    
   }
 }
 
