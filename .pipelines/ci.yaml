@@ -58,29 +58,35 @@ jobs:
         parameters:
           function_name: javafunction
 
-  - job: publish_artifcats
-    displayName: "Publish Artifacts"   
-    # dependsOn: [edge_build, backend_build]
-    dependsOn: backend_build
-    steps:   
-      - task: CopyFiles@2
-        displayName: 'Copy Files to: Drop folder'
-        inputs:
-          Contents: |
-            EdgeSolution/config/*.json
-            **/module.json
-            #  edgeSmokeTest.sh
-            #  moduleAcrPromotion.sh
-          TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
-
-      - script: |
-          ls -ltr $(Build.ArtifactStagingDirectory)/drop
-        displayName: test drop folder 
-
-      - task: PublishPipelineArtifact@1
+      - task: PublishBuildArtifacts@1
         displayName: 'Publish artifacts'
         inputs:
-          targetPath: '$(Build.ArtifactStagingDirectory)/drop'
-          artifactType: 'pipeline'
-          artifactName: 'drop'
-          parallel: true
+          pathToPublish: '$(Build.ArtifactStagingDirectory)'
+          artifactName: drop          
+
+  # - job: publish_artifcats
+  #   displayName: "Publish Artifacts"   
+  #   # dependsOn: [edge_build, backend_build]
+  #   dependsOn: backend_build
+  #   steps:   
+  #     - task: CopyFiles@2
+  #       displayName: 'Copy Files to: Drop folder'
+  #       inputs:
+  #         Contents: |
+  #           EdgeSolution/config/*.json
+  #           **/module.json
+  #           #  edgeSmokeTest.sh
+  #           #  moduleAcrPromotion.sh
+  #         TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
+
+  #     - script: |
+  #         ls -ltr $(Build.ArtifactStagingDirectory)/drop
+  #       displayName: test drop folder 
+
+  #     - task: PublishPipelineArtifact@1
+  #       displayName: 'Publish artifacts'
+  #       inputs:
+  #         targetPath: '$(Build.ArtifactStagingDirectory)/drop'
+  #         artifactType: 'pipeline'
+  #         artifactName: 'drop'
+  #         parallel: true
