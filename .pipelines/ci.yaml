@@ -15,12 +15,6 @@ variables:
   #   value: true
 
 steps:
-- task: DotNetCoreCLI@2
-  displayName: 'dotnet test'
-  inputs:
-    command: test
-    projects: 'EdgeSolution/tests/FilterModuleUnitTest/*.csproj'
-
 - template: templates/get-acr-creds.yaml
   parameters:
     armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
