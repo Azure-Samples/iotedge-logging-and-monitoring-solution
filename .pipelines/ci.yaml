@@ -51,10 +51,10 @@ jobs:
   - job: backend_build
     displayName: "Build Backend"      
     steps:
-      - template: templates/build-dotneet-function.yaml
+      - template: templates/build-dotnet-function.yaml
         parameters:
           function_name: dotnetfunction
-      - template: templates/build-jaava-function.yaml
+      - template: templates/build-java-function.yaml
         parameters:
           function_name: javafunction
 
