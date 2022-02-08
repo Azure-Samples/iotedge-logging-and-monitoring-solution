@@ -21,4 +21,4 @@ steps:
       rootFolderOrFile: '$(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}/target/azure-functions/${{ parameters.function_name }}'
       includeRootFolder: false 
       archiveType: 'zip'
-      archiveFile: '$(Build.ArtifactStagingDirectory)/drop/${{ parameters.function_name }}$(Build.BuildId).zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/drop/${{ parameters.function_name }}/${{ parameters.function_name }}.zip'

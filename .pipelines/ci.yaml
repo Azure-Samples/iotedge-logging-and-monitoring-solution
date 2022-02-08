@@ -17,36 +17,52 @@ variables:
 # TODO: Backend
 #       logging modules
 jobs:
-  # - job: edge_build
-  #   displayName: "Build IoT Edge Modules"      
-  #   steps:
-  #     - template: templates/get-acr-creds.yaml
-  #       parameters:
-  #         armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-  #         acrName: $(ACR_NAME)
+  - job: edge_build
+    displayName: "Build IoT Edge Modules"      
+    steps:
+      - template: templates/get-acr-creds.yaml
+        parameters:
+          armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+          acrName: $(ACR_NAME)
 
-  #     - task: AzureIoTEdge@2
-  #       name: BuildE2EImages
-  #       displayName: 'Azure IoT Edge - Build E2E module images'
-  #       inputs:
-  #         templateFilePath: 'EdgeSolution/e2e.deployment.json'  
+      - task: AzureIoTEdge@2
+        name: BuildE2EImages
+        displayName: 'Azure IoT Edge - Build E2E module images'
+        inputs:
+          templateFilePath: 'EdgeSolution/e2e.deployment.json'  
 
-  #     - task: UsePythonVersion@0
+      - task: UsePythonVersion@0
 
-  #     - script: ./Scripts/edgeLocalTest.sh
-  #       displayName: 'Test device locally'
-  #       env: 
-  #           DEVICE_CONNECTION_STRING: $(DEV_DEVICE_CONNECTION_STRING)
-  #           DEPLOYMENT_FILE_PATH: $(BuildE2EImages.DEPLOYMENT_FILE_PATH)
+      - script: ./Scripts/edgeLocalTest.sh
+        displayName: 'Test device locally'
+        env: 
+            DEVICE_CONNECTION_STRING: $(DEV_DEVICE_CONNECTION_STRING)
+            DEPLOYMENT_FILE_PATH: $(BuildE2EImages.DEPLOYMENT_FILE_PATH)
 
-  #     - task: AzureIoTEdge@2
-  #       displayName: 'Azure IoT Edge - Push E2E module images'
-  #       inputs:
-  #         action: 'Push module images'
-  #         azureSubscriptionEndpoint: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-  #         azureContainerRegistry: '{"loginServer":"$(ACR_NAME).azurecr.io"}'
-  #         templateFilePath: 'EdgeSolution/e2e.deployment.json'  
-  #         fillRegistryCredential: false
+      - task: AzureIoTEdge@2
+        displayName: 'Azure IoT Edge - Push E2E module images'
+        inputs:
+          action: 'Push module images'
+          azureSubscriptionEndpoint: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+          azureContainerRegistry: '{"loginServer":"$(ACR_NAME).azurecr.io"}'
+          templateFilePath: 'EdgeSolution/e2e.deployment.json'  
+          fillRegistryCredential: false
+
+      - task: CopyFiles@2
+        displayName: 'Copy Files to: Drop folder'
+        inputs:
+          Contents: |
+            EdgeSolution/config/*.json
+            **/module.json
+            #  edgeSmokeTest.sh
+            #  moduleAcrPromotion.sh
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish artifacts'
+        inputs:
+          pathToPublish: '$(Build.ArtifactStagingDirectory)/drop'
+          artifactName: edge          
   
   - job: backend_build
     displayName: "Build Backend"      
@@ -64,29 +80,4 @@ jobs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)/drop'
           artifactName: backend          
 
-  # - job: publish_artifcats
-  #   displayName: "Publish Artifacts"   
-  #   # dependsOn: [edge_build, backend_build]
-  #   dependsOn: backend_build
-  #   steps:   
-  #     - task: CopyFiles@2
-  #       displayName: 'Copy Files to: Drop folder'
-  #       inputs:
-  #         Contents: |
-  #           EdgeSolution/config/*.json
-  #           **/module.json
-  #           #  edgeSmokeTest.sh
-  #           #  moduleAcrPromotion.sh
-  #         TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
-
-  #     - script: |
-  #         ls -ltr $(Build.ArtifactStagingDirectory)/drop
-  #       displayName: test drop folder 
-
-  #     - task: PublishPipelineArtifact@1
-  #       displayName: 'Publish artifacts'
-  #       inputs:
-  #         targetPath: '$(Build.ArtifactStagingDirectory)/drop'
-  #         artifactType: 'pipeline'
-  #         artifactName: 'drop'
-  #         parallel: true
+  
