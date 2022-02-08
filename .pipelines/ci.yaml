@@ -86,13 +86,13 @@ stages:
   jobs:
   - deployment: Deploy_to_dev
     environment: dev
-      strategy:
-        runOnce:
-          deploy:   
-            steps:  
-              - script: |
-                  ls -ltr $(Pipeline.Workspace)      
-                displayName: Check
+    strategy: 
+      runOnce:
+        deploy:   
+          steps:  
+            - script: |
+                ls -ltr $(Pipeline.Workspace)      
+              displayName: Check
 
 
 
