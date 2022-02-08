@@ -28,8 +28,9 @@ steps:
 
 - task: AzureIoTEdge@2
   name: BuildE2EImages
-  templateFilePath: 'EdgeSolution/e2e.deployment.json'
   displayName: 'Azure IoT Edge - Build E2E module images'
+  inputs:
+    templateFilePath: 'EdgeSolution/e2e.deployment.json'  
 
 - task: UsePythonVersion@0
 
