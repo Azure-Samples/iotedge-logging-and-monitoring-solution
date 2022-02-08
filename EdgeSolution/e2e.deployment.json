@@ -20,7 +20,8 @@
                 "createOptions": "{}"
               }
             }
-          },        
+          } 
+        },         
         "properties.desired.modules.tempSensor": {
           "settings": {
             "image": "${MODULES.SimulatedTemperatureSensor}",
@@ -100,8 +101,7 @@
           "timeToLiveSecs": 7200
         }
       }
-    },
-    "systemModules": {}    
+    }
   }
 }
 
