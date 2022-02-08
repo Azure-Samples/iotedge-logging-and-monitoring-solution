@@ -14,7 +14,8 @@ steps:
     inputs:
       workingDirectory: $(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}
       command: publish
-      arguments: '--configuration Release --output publish_output'
+      arguments: '--configuration Release'
+      packDirectory: '$(Build.ArtifactStagingDirectory)'
       # projects: '*.csproj'
       publishWebProjects: false
       modifyOutputPath: false
