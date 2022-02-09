@@ -139,13 +139,18 @@ stages:
       runOnce:
         deploy:   
           steps:  
-            # - checkout: self
             - task: AzureFunctionApp@1 
               displayName: 'Deploy dotnet backend'
               inputs:
                 azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
                 appName: $(DOTNET_APP_NAME)
-                package: $(PIPELINE.WORKSPACE)/Backend/dotnetfunction/dotnetfunction.zip
+                package: $(PIPELINE.WORKSPACE)/backend/dotnetfunction/dotnetfunction.zip
+            - task: AzureFunctionApp@1 
+              displayName: 'Deploy java backend'
+              inputs:
+                azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+                appName: $(JAVA_APP_NAME)
+                package: $(PIPELINE.WORKSPACE)/backend/javafunction/javafunction.zip
 
 
   
