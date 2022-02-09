@@ -46,12 +46,6 @@
               "MessageDelay": {
                 "value": "00:00:05"
               },
-              "INSTRUMENTATION_KEY": {
-                "value": "${INSTRUMENTATION_KEY}"
-              },
-              "AI_CONNECTION_STRING": {
-                "value": "${AI_CONNECTION_STRING}"
-              },
               "OTLP_ENDPOINT": {
                 "value": "http://opentelemetrycollector:4317"
               },
@@ -73,12 +67,6 @@
             },
             "type": "docker",
             "env": {
-              "INSTRUMENTATION_KEY": {
-                "value": "${INSTRUMENTATION_KEY}"
-              },
-              "AI_CONNECTION_STRING": {
-                "value": "${AI_CONNECTION_STRING}"
-              },
               "OTLP_ENDPOINT": {
                 "value": "http://opentelemetrycollector:4317"
               },
