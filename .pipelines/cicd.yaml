@@ -18,117 +18,134 @@ stages:
 - stage: Build
   displayName: 'Build'
   jobs:
-    - job: edge_build
-      displayName: "Build IoT Edge Modules"      
-      steps:
-        - template: templates/get-acr-creds.yaml
-          parameters:
-            armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-            acrName: $(ACR_NAME)
-
-        - task: AzureIoTEdge@2
-          name: BuildE2EImages
-          displayName: 'Azure IoT Edge - Build E2E module images'
-          inputs:
-            templateFilePath: 'EdgeSolution/e2e.deployment.json'  
-
-        - task: UsePythonVersion@0
-
-        - script: ./Scripts/edgeLocalTest.sh
-          displayName: 'Test device locally'
-          env: 
-              DEVICE_CONNECTION_STRING: $(DEV_DEVICE_CONNECTION_STRING)
-              DEPLOYMENT_FILE_PATH: $(BuildE2EImages.DEPLOYMENT_FILE_PATH)
-
-        - task: AzureIoTEdge@2
-          displayName: 'Azure IoT Edge - Push E2E module images'
-          inputs:
-            action: 'Push module images'
-            azureSubscriptionEndpoint: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-            azureContainerRegistry: '{"loginServer":"$(ACR_NAME).azurecr.io"}'
-            templateFilePath: 'EdgeSolution/e2e.deployment.json'  
-            fillRegistryCredential: false
-
-        - task: CopyFiles@2
-          displayName: 'Copy Files to: Drop folder'
-          inputs:
-            Contents: |
-              EdgeSolution/config/*.json
-              # EdgeSolution/e2e.deployment-3.json
-              **/module.json
-              #  edgeSmokeTest.sh
-              #  moduleAcrPromotion.sh
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
-
-        - task: PublishBuildArtifacts@1
-          displayName: 'Publish artifacts'
-          inputs:
-            pathToPublish: '$(Build.ArtifactStagingDirectory)/drop'
-            artifactName: edge          
-    
-    # - job: backend_build
-    #   displayName: "Build Backend"      
+    # - job: edge_build
+    #   displayName: "Build IoT Edge Modules"      
     #   steps:
-    #     - template: templates/build-dotnet-function.yaml
+    #     - template: templates/get-acr-creds.yaml
     #       parameters:
-    #         function_name: dotnetfunction
-    #     - template: templates/build-java-function.yaml
-    #       parameters:
-    #         function_name: javafunction
+    #         armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+    #         acrName: $(ACR_NAME)
+
+    #     - task: AzureIoTEdge@2
+    #       name: BuildE2EImages
+    #       displayName: 'Azure IoT Edge - Build E2E module images'
+    #       inputs:
+    #         templateFilePath: 'EdgeSolution/e2e.deployment.json'  
+
+    #     - task: UsePythonVersion@0
+
+    #     - script: ./Scripts/edgeLocalTest.sh
+    #       displayName: 'Test device locally'
+    #       env: 
+    #           DEVICE_CONNECTION_STRING: $(DEV_DEVICE_CONNECTION_STRING)
+    #           DEPLOYMENT_FILE_PATH: $(BuildE2EImages.DEPLOYMENT_FILE_PATH)
+
+    #     - task: AzureIoTEdge@2
+    #       displayName: 'Azure IoT Edge - Push E2E module images'
+    #       inputs:
+    #         action: 'Push module images'
+    #         azureSubscriptionEndpoint: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+    #         azureContainerRegistry: '{"loginServer":"$(ACR_NAME).azurecr.io"}'
+    #         templateFilePath: 'EdgeSolution/e2e.deployment.json'  
+    #         fillRegistryCredential: false
+
+    #     - task: CopyFiles@2
+    #       displayName: 'Copy Files to: Drop folder'
+    #       inputs:
+    #         Contents: |
+    #           EdgeSolution/config/*.json
+    #           # EdgeSolution/e2e.deployment-3.json
+    #           **/module.json
+    #           #  edgeSmokeTest.sh
+    #           #  moduleAcrPromotion.sh
+    #         TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
 
     #     - task: PublishBuildArtifacts@1
     #       displayName: 'Publish artifacts'
     #       inputs:
     #         pathToPublish: '$(Build.ArtifactStagingDirectory)/drop'
-    #         artifactName: backend          
+    #         artifactName: edge          
+    
+    - job: backend_build
+      displayName: "Build Backend"      
+      steps:
+        - template: templates/build-dotnet-function.yaml
+          parameters:
+            function_name: dotnetfunction
+        - template: templates/build-java-function.yaml
+          parameters:
+            function_name: javafunction
+
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publish artifacts'
+          inputs:
+            pathToPublish: '$(Build.ArtifactStagingDirectory)/drop'
+            artifactName: backend          
 
 - stage: Deploy_Dev
   displayName: 'Deploy_Dev'  
   jobs:
-  - deployment: Deploy_to_dev
+  # - deployment: Deploy_Edge_to_dev
+  #   environment: dev
+  #   variables:
+  #     - group: iot-monitoring # Could be iot-monitoring-dev
+  #     - name: ACR_NAME
+  #       value: iotacr$(IOT_ENV_SUFFIX)
+  #     - name: IOTHUB_NAME
+  #       value: iothub-$(IOT_ENV_SUFFIX)
+  #     - name: IOTHUB_ARM_RESOURCEID
+  #       value: /subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RG_NAME)/providers/Microsoft.Devices/IotHubs/$(IOTHUB_NAME)
+  #   strategy: 
+  #     runOnce:
+  #       deploy:   
+  #         steps:  
+  #           - checkout: self
+  #           # - script: |
+  #           #     ls -ltr $(Pipeline.Workspace)      
+  #           #   displayName: Check
+  #           - template: templates/get-acr-creds.yaml
+  #             parameters:
+  #               armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+  #               acrName: $(ACR_NAME)
+
+  #           - task: AzureIoTEdge@2
+  #             displayName: 'Azure IoT Edge - Generate deployment manifest'
+  #             inputs:
+  #               action: 'Generate deployment manifest'
+  #               # templateFilePath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/e2e.deployment-3.json'
+  #               templateFilePath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/config/e2e.deployment.json'
+  #               deploymentManifestOutputPath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/config/deployment.json'
+
+  #           - task: AzureIoTEdge@2
+  #             displayName: 'Azure IoT Edge - Deploy to IoT Edge devices'
+  #             inputs:
+  #               action: 'Deploy to IoT Edge devices'
+  #               deploymentFilePath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/config/deployment.json'
+  #               azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+  #               iothubname: $(IOTHUB_NAME)
+  #               deploymentid: '$(System.TeamProject)-Dev-$(Build.BuildId)'
+  #               deviceOption: 'Multiple Devices'
+  #               targetcondition: 'tags.logPullEnabled=''true'''
+
+  - deployment: Deploy_Backend_to_dev
     environment: dev
     variables:
       - group: iot-monitoring # Could be iot-monitoring-dev
-      - name: ACR_NAME
-        value: iotacr$(IOT_ENV_SUFFIX)
-      - name: IOTHUB_NAME
-        value: iothub-$(IOT_ENV_SUFFIX)
-      - name: IOTHUB_ARM_RESOURCEID
-        value: /subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(RG_NAME)/providers/Microsoft.Devices/IotHubs/$(IOTHUB_NAME)
+      - name: DOTNET_APP_NAME
+        value: iot-dotnet-backend-$(IOT_ENV_SUFFIX)
+      - name: JAVA_APP_NAME
+        value: iot-java-backend-$(IOT_ENV_SUFFIX)
     strategy: 
       runOnce:
         deploy:   
           steps:  
-            - checkout: self
-            # - script: |
-            #     ls -ltr $(Pipeline.Workspace)      
-            #   displayName: Check
-            - template: templates/get-acr-creds.yaml
-              parameters:
-                armServiceConnection: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-                acrName: $(ACR_NAME)
-
-            - task: AzureIoTEdge@2
-              displayName: 'Azure IoT Edge - Generate deployment manifest'
+            # - checkout: self
+            - task: AzureFunctionApp@1 
+              displayName: 'Deploy dotnet backend'
               inputs:
-                action: 'Generate deployment manifest'
-                # templateFilePath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/e2e.deployment-3.json'
-                templateFilePath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/config/e2e.deployment.json'
-                deploymentManifestOutputPath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/config/deployment.json'
-
-            - task: AzureIoTEdge@2
-              displayName: 'Azure IoT Edge - Deploy to IoT Edge devices'
-              inputs:
-                action: 'Deploy to IoT Edge devices'
-                deploymentFilePath: '$(PIPELINE.WORKSPACE)/edge/EdgeSolution/config/deployment.json'
                 azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
-                iothubname: $(IOTHUB_NAME)
-                deploymentid: '$(System.TeamProject)-Dev-$(Build.BuildId)'
-                deviceOption: 'Multiple Devices'
-                targetcondition: 'tags.logPullEnabled=''true'''
-
-
-
+                appName: $(DOTNET_APP_NAME)
+                package: $(PIPELINE.WORKSPACE)/Backend/dotnetfunction/dotnetfunction.zip
 
 
   
