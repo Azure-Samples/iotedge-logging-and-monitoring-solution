@@ -122,6 +122,13 @@ stages:
                 deploymentid: '$(System.TeamProject)-Dev-$(Build.BuildId)'
                 deviceOption: 'Multiple Devices'
                 targetcondition: 'tags.logPullEnabled=''true'''
+            - task: AzureCLI@2
+              displayName: 'Smoke Test'
+              inputs:
+                azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+                scriptType: bash
+                scriptPath: ./Scripts/edgeSmokeTest.sh
+                arguments: '$(IOTHUB_NAME) true $(System.TeamProject)-Dev-$(Build.BuildId)'                
 
   - deployment: Deploy_Backend_to_dev
     environment: dev
@@ -147,6 +154,3 @@ stages:
                 azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
                 appName: $(JAVA_APP_NAME)
                 package: $(PIPELINE.WORKSPACE)/backend/javafunction/javafunction.zip
-
-
-  
