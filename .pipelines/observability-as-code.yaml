@@ -4,6 +4,9 @@ trigger: none
 
 variables:
   - group: iot-monitoring
+  - name: IOTHUB_NAME
+    value: iothub-$(IOT_ENV_SUFFIX)
+
 
 pool:
   vmImage: ubuntu-latest
