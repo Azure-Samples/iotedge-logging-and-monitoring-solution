@@ -10,11 +10,7 @@ steps:
       mavenPomFile: $(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}/pom.xml
       javaHomeOption: 'JDKVersion'
       jdkVersionOption: '1.11'
-      # jdkArchitectureOption: 'x64'
-      # publishJUnitResults: false
-      # testResultsFiles: '**/TEST-*.xml'
       goals: 'package'
-      # options: '--batch-mode'
   - task: ArchiveFiles@2
     displayName: Publish Function
     inputs:

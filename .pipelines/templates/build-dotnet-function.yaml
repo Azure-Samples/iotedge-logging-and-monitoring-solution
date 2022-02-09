@@ -16,7 +16,6 @@ steps:
       command: publish
       arguments: '--configuration Release -o $(Build.ArtifactStagingDirectory)/drop/${{ parameters.function_name }}'
       packDirectory: '$(Build.ArtifactStagingDirectory)'
-      # projects: '*.csproj'
       publishWebProjects: false
       modifyOutputPath: true
       zipAfterPublish: true
