@@ -47,8 +47,12 @@ namespace FilterModule
         private const string healthCheck = "healthcheck";
         private static int counter;
         private static ModuleClient ioTHubModuleClient;
-        private static int temperatureThreshold = 25;
+        private static int minTemperatureThreshold = 0;
+        private static int maxTemperatureThreshold = 100;
         private static ILogger<Program> logger;
+
+        private static string loggingLevel;
+        private static string traceSampleRaio;
 
         private static readonly ActivitySource FilterModuleActivitySource = new ActivitySource(
         "IoTSample.FilterModule");
@@ -61,6 +65,10 @@ namespace FilterModule
                 .AddEnvironmentVariables()
                 .Build();
 
+            loggingLevel = configuration.GetSection("LOGGING_LEVEL").Value;
+            traceSampleRaio = configuration.GetSection("TRACE_SAMPLE_RAIO").Value;
+
+            Init().Wait();
 
             /*
             * Configuring ILogger to 
@@ -74,7 +82,7 @@ namespace FilterModule
                 builder
                     .SetMinimumLevel(
                         (LogLevel)Enum.Parse(typeof(LogLevel),
-                                                 configuration.GetSection("LOGGING_LEVEL").Value,
+                                                 loggingLevel,
                                                  true))
                     .AddOpenTelemetry(options =>
                     {
@@ -101,7 +109,7 @@ namespace FilterModule
             * OTLP (to be caught by OpenTelemetry collector)
             */
             using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-                .SetSampler(new TraceIdRatioBasedSampler(Convert.ToDouble(configuration.GetSection("TRACE_SAMPLE_RAIO").Value)))
+                .SetSampler(new TraceIdRatioBasedSampler(Convert.ToDouble(traceSampleRaio)))
                 .AddSource("IoTSample.FilterModule")
                 .SetResourceBuilder(ResourceBuilder.CreateDefault()
                     .AddTelemetrySdk()
@@ -115,9 +123,7 @@ namespace FilterModule
                 // {
                 //     o.ConnectionString = configuration.GetSection("AI_CONNECTION_STRING").Value;
                 // })
-                .Build();
-
-            Init().Wait();
+                .Build();            
 
             // Wait until the app unloads or is cancelled
             var cts = new CancellationTokenSource();
@@ -148,9 +154,7 @@ namespace FilterModule
             // Open a connection to the Edge runtime
             ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings).ConfigureAwait(false);
             await ioTHubModuleClient.OpenAsync().ConfigureAwait(false);
-            logger.LogInformation("IoT Hub module client initialized.");
 
-            // Read the TemperatureThreshold value from the module twin's desired properties
             var moduleTwin = await ioTHubModuleClient.GetTwinAsync().ConfigureAwait(false);
             await OnDesiredPropertiesUpdate(moduleTwin.Properties.Desired, ioTHubModuleClient);
 
@@ -161,32 +165,32 @@ namespace FilterModule
             await ioTHubModuleClient.SetInputMessageHandlerAsync("input1", FilterMessagesAsync, ioTHubModuleClient).ConfigureAwait(false);
 
             await ioTHubModuleClient.SetMethodHandlerAsync(healthCheck, HealthCheckAsync, ioTHubModuleClient).ConfigureAwait(false);
-            logger.LogInformation("Set Healthcheck Method Handler:HealthCheckAsync.");
         }
 
         static Task OnDesiredPropertiesUpdate(TwinCollection desiredProperties, object userContext)
         {
-            const string tempThresholdProperty = "TemperatureThreshold";
-            try
-            {
-                logger.LogInformation("Desired property change:");
-                logger.LogInformation(JsonConvert.SerializeObject(desiredProperties));
+            const string minTempThresholdProperty = "minTemperatureThreshold";
+            const string maxTempThresholdProperty = "maxTemperatureThreshold";
+            const string lggingLevelProperty = "loggingLevel";
+            const string traceSampleRaioProperty = "traceSampleRatio";
 
-                if (desiredProperties[tempThresholdProperty] != null)
-                    temperatureThreshold = desiredProperties[tempThresholdProperty];
+            
+            if (desiredProperties.Contains(minTempThresholdProperty))
+                minTemperatureThreshold = (int)desiredProperties[minTempThresholdProperty];
 
-            }
-            catch (AggregateException ex)
-            {
-                foreach (Exception exception in ex.InnerExceptions)
-                {
-                    logger.LogError(exception, "Error receiving desired property");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error receiving desired property");
-            }
+            if (desiredProperties.Contains(maxTempThresholdProperty))
+                maxTemperatureThreshold = (int)desiredProperties[maxTempThresholdProperty];
+
+            if (desiredProperties.Contains(lggingLevelProperty))
+                loggingLevel = (string)desiredProperties[lggingLevelProperty];
+
+            if (desiredProperties.Contains(traceSampleRaioProperty))
+                traceSampleRaio = (string)desiredProperties[traceSampleRaioProperty];
+
+            
+            var moduleClient = (ModuleClient)userContext;
+            var patch = new TwinCollection($"{{ \"{lggingLevelProperty}\":\"{loggingLevel}\", \"{traceSampleRaioProperty}\": \"{traceSampleRaio}\"}}");
+            moduleClient.UpdateReportedPropertiesAsync(patch); // Just report back last desired property.
 
             return Task.CompletedTask;
         }
@@ -253,15 +257,16 @@ namespace FilterModule
             if (messageBody != null)
             {
                 activity?.SetTag("MachineTemperature", messageBody.machine.temperature);
-                activity?.SetTag("TemperatureThreshhold", temperatureThreshold);
+                activity?.SetTag("MinTemperatureThreshhold", minTemperatureThreshold);
+                activity?.SetTag("MaxTemperatureThreshhold", maxTemperatureThreshold);
 
-                if (messageBody.machine.temperature > temperatureThreshold)
+                if (messageBody.machine.temperature >= minTemperatureThreshold && messageBody.machine.temperature <= maxTemperatureThreshold)
                 {
-                    logger.LogDebug("Machine temperature {messageBody.machine.temperature} exceeds threshold {temperatureThreshold}", messageBody.machine.temperature, temperatureThreshold);
+                    logger.LogDebug("Machine temperature {messageBody.machine.temperature} is within limits {minTemperatureThreshold}-{maxTemperatureThreshold}", messageBody.machine.temperature, minTemperatureThreshold, maxTemperatureThreshold);
 
                     //Event is same as a log record. It's totally ignored by Azure Monitor exporter,
                     //but is picked up by OTLP exporter, so it can be received by Otel collector and sent to Jaeger, for example.
-                    activity?.AddEvent(new ActivityEvent($"Machine temperature {messageBody.machine.temperature} exceeds threshold {temperatureThreshold}"));
+                    activity?.AddEvent(new ActivityEvent($"Machine temperature {messageBody.machine.temperature} is within limits {minTemperatureThreshold}-{maxTemperatureThreshold}"));
 
                     var filteredMessage = new Message(messageBytes)
                     {
@@ -275,20 +280,20 @@ namespace FilterModule
                     }
 
                     filteredMessage.Properties.Add("MessageType", "Alert");
-                    logger.LogTrace("Message passed threshold");
+                    logger.LogDebug("Message passed threshold");
                     activity?.AddEvent(new ActivityEvent($"Message passed threshold"));
 
                     return filteredMessage;
                 }
                 else
                 {
-                    logger.LogTrace("Message didn't pass threshold");
-                    activity?.AddEvent(new ActivityEvent($"Message didn't pass threshold"));
+                    logger.LogDebug($"Message didn't pass threshold {minTemperatureThreshold}-{maxTemperatureThreshold}");
+                    activity?.AddEvent(new ActivityEvent($"Message didn't pass threshold {minTemperatureThreshold}-{maxTemperatureThreshold}"));
                 }
             }
             else
             {
-                logger.LogTrace("Empty message body");
+                logger.LogDebug("Empty message body");
             }
 
 
@@ -298,7 +303,6 @@ namespace FilterModule
 
         private static async Task<MethodResponse> HealthCheckAsync(MethodRequest methodRequest, object userContext)
         {
-            logger.LogInformation("Received method [{methodRequest.Name}]", methodRequest.Name);
             var request = JsonConvert.DeserializeObject<HealthCheckRequestPayload>(methodRequest.DataAsJson);
 
             var messageBody = Encoding.UTF8.GetBytes($"Device [{Environment.GetEnvironmentVariable("IOTEDGE_DEVICEID")}], Module [FilterModule] Running");
@@ -309,7 +313,6 @@ namespace FilterModule
                 healthCheckMessage.Properties.Add("correlationId", request.CorrelationId);
 
             await ioTHubModuleClient.SendEventAsync(healthCheck, healthCheckMessage).ConfigureAwait(false);
-            logger.LogInformation("Sent method response via event [{healthCheck}]", healthCheck);
 
             var responseMsg = JsonConvert.SerializeObject(new HealthCheckResponsePayload() { ModuleResponse = string.IsNullOrEmpty(request.CorrelationId) ? "" : $"Invoked with correlationId:{request.CorrelationId}" });
             return new MethodResponse(Encoding.UTF8.GetBytes(responseMsg), 200);

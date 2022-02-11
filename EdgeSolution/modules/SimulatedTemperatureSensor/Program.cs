@@ -51,6 +51,8 @@ namespace SimulatedTemperatureSensor
         static TimeSpan messageDelay;
         static bool sendData = true;
 
+        static string deviceId;
+
         public enum ControlCommandEnum
         {
             Reset = 0,
@@ -125,10 +127,10 @@ namespace SimulatedTemperatureSensor
 
 
             messageDelay = configuration.GetValue("MessageDelay", TimeSpan.FromSeconds(5));
-            int messageCount = configuration.GetValue(MessageCountConfigKey, 500);
+            int messageCount = configuration.GetValue(MessageCountConfigKey, 10000);
             var simulatorParameters = new SimulatorParameters
             {
-                MachineTempMin = configuration.GetValue<double>("machineTempMin", 21),
+                MachineTempMin = configuration.GetValue<double>("machineTempMin", 0),
                 MachineTempMax = configuration.GetValue<double>("machineTempMax", 100),
                 MachinePressureMin = configuration.GetValue<double>("machinePressureMin", 1),
                 MachinePressureMax = configuration.GetValue<double>("machinePressureMax", 10),
@@ -166,6 +168,10 @@ namespace SimulatedTemperatureSensor
                     logger.LogInformation("Sending data disabled. Change twin configuration to start sending again.");
                 }
             }
+            
+            deviceId = configuration.GetSection("IOTEDGE_DEVICEID").Value;
+            
+            
 
             ModuleClient userContext = moduleClient;
             await moduleClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertiesUpdated, userContext);
@@ -259,14 +265,16 @@ namespace SimulatedTemperatureSensor
                     Reset.Set(false);
                 }
 
-                if (currentTemp > sim.MachineTempMax)
-                {
-                    currentTemp += Rnd.NextDouble() - 0.5; // add value between [-0.5..0.5]
-                }
-                else
-                {
-                    currentTemp += -0.25 + (Rnd.NextDouble() * 1.5); // add value between [-0.25..1.25] - average +0.5
-                }
+                // if (currentTemp > sim.MachineTempMax)
+                // {
+                //     currentTemp += Rnd.NextDouble() - 0.5; // add value between [-0.5..0.5]
+                // }
+                // else
+                // {
+                //     currentTemp += -0.25 + (Rnd.NextDouble() * 1.5); // add value between [-0.25..1.25] - average +0.5
+                // }
+
+                currentTemp = Rnd.NextDouble()*(sim.MachineTempMax - sim.MachineTempMin) + sim.MachineTempMin;
 
                 if (sendData)
                 {
@@ -295,6 +303,7 @@ namespace SimulatedTemperatureSensor
                         //Add custom tags to the span (Activity) 
                         activity?.SetTag("MessageString", Encoding.UTF8.GetString(encodedMessage));
                         activity?.SetTag("MachineTemperature", currentTemp);
+                        activity?.SetTag("DeviceId", deviceId);
 
                         eventMessage.ContentEncoding = "utf-8";
                         eventMessage.ContentType = "application/json";
