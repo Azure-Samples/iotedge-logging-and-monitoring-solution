@@ -1,87 +1,185 @@
 # IoT ELMS
 
-IoT **E**dge **L**ogging and **M**onitoring **S**olution (pronounced *Lm's*) provides architecture and sample implementations of collecting all three pillars of the observability data from IoT Edge devices and delivering logs, metrics and distributed tracing to Azure Monitor.
+IoT **E**dge **L**ogging and **M**onitoring **S**olution (pronounced *Lm's*) provides an implementation of an observability solution for a common IoT scenario. It demonstrates best practices and techniques regarding both observability pillars:
+ 
+ - Measuring and Monitoring
+ - Troubleshooting
 
-ELMS provides a sample cloud workflow to process logs uploaded by the device to a blob storage container, as well as metrics arriving as device-to-cloud messages in IoT Hub. The workflow enables secure and automated retrieval of workload logs and metrics from IoT Edge devices without any additional host-level components. It leverages IoT Edge Agent's [built-in functionality to retrieve logs](https://docs.microsoft.com/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2020-11) and IoT [Edge metrics collector](https://aka.ms/edgemon-logs) for metrics.
+## Use Case
 
-ELMS also provides [architecture patterns](docs/iot-edge-distributed-tracing.md) and a [sample implementation](DistributedTracing/README.md) of end-to-end distributed tracing for a common `IoT Edge to Cloud` scenario. 
+In order to have not just abstract considerations, the sample implementation is based on a "real-life" use case:
 
-The samples can be deployed either in a sandbox environment or integrated with existing resources using an intuitive CLI wizard.
+### La Niña.
 
+The La Niña service measures surface temperature in Pacific Ocean to predict La Niña winters. There is a number of buoys in the ocean with IoT Edge devices sending the surface temperature to Azure Cloud. The telemetry data with the temperature is pre-processed by a custom module on the IoT Edge device before sending it to the cloud. In the cloud the data is processed by a chain of two backend Azure Functions and saved to a Blob Storage. The clients of the service (sending data to ML inference workflow, decision making systems, various UIs, etc.) can pick up messages with temperature data from the Blob Storage
 
-## Logging architecture reference
+The topology of the sample is represented on the following diagram:
 
-![Logging architecture](docs/logging-architecture.png)
+![end-to-end-sample](docs/iot-e2e-sample.png)
 
+There is an IoT Edge device with `Temperature Sensor` custom module (C#) that generates some temperature value and sends it upstream with a telemetry message. This message is routed to another custom module `Filter` (C#). This module checks the received temperature against a threshold window (0-100 degrees) and if it the temperature is within the window, the FilterModule sends the telemetry message to the cloud.
 
-
-### High-level process flow
-
-1. **InvokeUploadModuleLogs** is an [HTTP triggered](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=csharp) Azure Function that invokes the [upload module logs](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2018-06#upload-module-logs) direct method on the edge agent running on every IoT edge device that matches certain criteria.
-2. **ScheduleUploadModuleLogs** is a [timer triggered](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=csharp) Azure Function that recurrently calls the function **InvokeUploadModuleLogs** via HTTP Get call.
-3. The edge agent captures the logs for the requested modules and uploads them as blobs to a storage container.
-4. The associated storage account is subscribed to an [event grid](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-event-overview) that will send all `create blob` events to a storage queue.
-5. **ProcessModuleLogs** is a [storage queue triggered](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-queue) Azure Function that loads log files and sends them to a Log Analytics workspace.
-
+In the cloud the message is processed by the backend. The backend consists of a chain of two Azure Functions and a Storage Account. 
+Azure .Net Function picks up the telemetry message from the IoT Hub events endpoint, processes it and sends it to Azure Java Function. The Java function saves the message to the storage account container. 
 
 
-> IMPORTANT: It is important to understand that every IoT edge solution will be unique, as modules running will have different log formats and some teams may be interested in more logs than others. This solution is not meant to be a one-size-fits-all, but as an integration process to be owned, customized and deployed based on the needs of each project or team.
+## Measuring and Monitoring
+
+The clients of the La Niña service have some expectations from it. These expectation may be defined as Service Level Objectives reflecting the following factors:
+  
+  - **_Coverage._** The data is coming from the majority of installed buoys
+  - **_Freshness._** The data coming from the buoys is fresh and relevant
+  - **_Throughput._** The temperature data is delivered from the buoys without significant delays.
+  - **_Correctness._** The ratio of lost messages (errors) is small
+
+These factors can be measured with the following Service Level Indicators:
+
+|**Indicator** | **Factors** |
+|----------|------|
+|Ratio of on-line devices to the total number of devices| Coverage|
+|Ratio of devices reporting frequently to the number of reporting devices| Freshness, Throughput|
+|Ratio of devices successfully delivering messages to the total number of devices|Correctness|
+|Ratio of devices delivering messages fast to the total number of devices| Throughput |  
+
+To determine if the service satisfies the client's expectations, the Service Level Indicators (SLIs) measurements are compared to the values defined in the formal Service Level Objectives (SLOs):
+
+|**Statement**|**Factor**|
+|-------------|----------|
+|90% of devices reported metrics no longer than 10 mins ago (were online) for the observation interval| Coverage |
+|95% of online devices send temperature 10 times per minute for the observation interval| Freshness, Throughput |
+|99% of online devices deliver messages successfully with less than 5% of errors for the observation interval| Correctness |
+|95% of online devices deliver 90th percentile of messages within 50ms for the observation interval|Throughput|
+
+Measuring templates applicable to all SLIs:
+- Observation interval: 24h
+- Aggregation interval: 10 mins
+- Measurements frequency: 5 min
+- What is measured: interaction between IoT Device and IoT Hub, further consumption of the temperature data is out of scope.
+
+Service Level Indicators are measured by the means of metrics. An IoT Hub device comes with system modules `edgeHub` and `edgeAgent`. These modules expose through a Prometheus endpoint [a list of built-in metrics](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-access-built-in-metrics?view=iotedge-2020-11#available-metrics) that are collected and pushed to Azure Monitor Log Analytics service by the [Metrics Collector module](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-collect-and-transport-metrics?view=iotedge-2020-11&tabs=iothub) running on the IoT Edge device.
+
+SLOs and corresponding SLIs are monitored with Azure Monitor Workbooks. To achieve the best user experience the workbooks system follows he **_glance -> scan -> commit_** concept:
+
+ - **_Glance_**. SLIs at the fleet level
+ - **_Scan_**. Details on how devices contribute to SLIs. Easy to identify "problematic" devices.
+ - **_Commit_**. Details on a specific device
+  
+### Glance
+![iot-glance](docs/iot-glance.png)
+
+### Scan
+![diagram](docs/iot-scan.png)
+
+### Commit
+![diagram](docs/iot-commit.png)
+
+Another monitoring instrument, which is used besides the workbooks, is Alerts. In addition to SLIs defined in SLOs, Alerts monitor secondary metrics (KPIs) to predict and prevent the defined SLOs violations: 
+
+|**Metric**|**Factor**|
+|----------|----------|
+|Device last seen time | Coverage |
+|Device upstream message ratio (messages per min)| Freshness, Throughput|
+|Device messages Queue Len|Throughput|
+|Device messages Latency|Throughput|
+|Device CPU, Memory, disk usage | Coverage, Freshness, Throughput |
+|Device messages error ratio| Correctness |
 
 
+## Troubleshooting 
 
-## Monitoring architecture reference
+While **_Measuring and Monitoring_** allows to observe and predict the system behavior, compare it to the defined expectations and ultimately detect existing or potential issues, the **_Troubleshooting_** lets identify and locate the cause of the issue.
 
-If the monitoring option is enabled, the following components will be created in addition to the logging architecture:
+There are two observability instruments serving the troubleshooting purposes: **_Traces_** and **_Logs_**. In this sample Traces show how a telemetry message with the ocean surface temperature is traveling from the sensor to the storage in the cloud, what is invoking what and with what parameters. Logs give information on what is happening inside each system component during this process. The real power of Traces and Logs comes when they are correlated. With that it's possible to read the logs of a specific system component, such as a module on IoT device or a backend function, while it was processing a specific telemetry message.
+
+It is very common in IoT scenarios when there is only one way connectivity from the devices to the cloud. Due to unstable and complicated networking setup there is no way to connect from the cloud to the devices at scale. This sample is built with this limitation in mind, so the observability data (as any data) is supposed to be pushed to the cloud rather than pulled. Please refer to the [Overview of Distributed Tracing with IoT Edge](./docs/iot-edge-distributed-tracing.md) for the detailed considerations and different architecture patterns on distributed tracing.  
+
+### OpenTelemetry
+
+The C# components of the sample, such as device modules and backend Azure .Net Function use [OpenTelemetry for .Net](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry.Api/README.md#introduction-to-opentelemetry-net-tracing-api) to produce tracing data.
+
+IoT Edge modules `Tempperature Sensor` and `Filter` export the logs and tracing data via OTLP protocol to the [OpenTelemetryCollector](https://opentelemetry.io/docs/collector/) module, running on the same edge device. The `OpenTelemetryCollector` module, in its turn, exports logs and traces to Azure Monitor Application Insights service.
+
+The Azure .Net backend Function sends the tracing data to Application Insights with [Azure Monitor Open Telemetry direct exporter](https://docs.microsoft.com/en-us/azure/azure-monitor/app/opentelemetry-enable?tabs=net). It also send correlated logs directly to Application Insights with a configured ILogger instance.
+
+The Java backend function uses [OpenTelemetry auto-instrumentation Java agent](https://docs.microsoft.com/en-us/azure/azure-monitor/app/java-in-process-agent) to produce and export tracing data and correlated logs to the Application Insights instance.  
+
+The IoT Edge module `Tempperature Sensor` starts the whole process and therefore it starts an OpenTelemetry trace. It puts a [W3C traceparent](https://www.w3.org/TR/trace-context/#relationship-between-the-headers) value into the outgoing message property. The `Filter` receives the message on the device, extracts the `traceparent` property and uses it to continue the trace with a new span. The module puts a new value of the `traceparent` (with the new parent_id) into the outgoing message. The .Net Azure Function retrieves the message from the IoT Hub endpoint, extracts the `traceparent` property, continues the same trace with a new span and sends the new `traceparent` value in the header of the HTTP request to the Azure Java Function. The Azure Java Function is auto-instrumented with OpenTelemetry, so the framework "understands" the `traceparent` header, starts a new span in the same trace and creates the following spans while communicating to Azure Blob Storage and Managed Identity service. 
+  
+As a result, the entire end-to-end process from the sensor to the storage can be monitored with Application Map in Application Insights:
+
+![application-map](./docs/application-map.png)
+
+Blobs in Azure Storage with the IoT messages are tagged with the `trace_id` (`Operation Id` in Application Insights) value. We can find and investigate in details end-to-end transaction for every message.   
+
+![transaction](./docs/iot-distr-tracing-transaction.png)
+
+We can go deeper and drill down and explore correlated logs for a specific trace or a specific span. In Application Insights terminology `Operation Id` corresponds to `TraceId` and `Id` corresponds to `SpanId`:
+
+![logs](./docs/iot-distr-tracing-logs.png)
+
+Besides Application Insights, the `OpenTelemetryCollector` module can be configured to export the tracing data to alternative observability backends, working on the factory floor (for example [Jaeger](https://www.jaegertracing.io) or [Zipkin](https://zipkin.io)). This enables the scenarios when the device goes offline but we still want to analyze what is happening on the device or we want to do the device analysis without a roundtrip to the cloud. 
+
+_Note_: Jaeger/Zipkin installation is not included in this sample. If you have a Jaeger installation that you want to work with this sample, provide a value of the `JAEGER_ENDPOINT` environment variable (e.g. http://myjaeger:14268/api/traces) in the device deployment template.
+
+![jaeger](./docs/iot-distr-tracing-jaeger.png)
+
+## DevOps practices
+
+Implementing DevOps practices is a common way to handle with the growing complexity of observability implementation and related operational costs. 
+This sample comes with the following Azure Pipelines:
+
+### Infrastructure-as-code
+
+[Infrastructure-as-code pipeline](.pipelines/iac.yaml) provisions all necessary Azure resources for this sample. It is referencing `iot-monitoring` variable group that should be created manually in your Azure DevOps project with the following variables:
+
+|**Variable**|**Description**|**Example**|
+|----------|----------|----------|
+|AZURE_RESOURCE_MANAGER_CONNECTION_NAME| Name of ARM service connection in the Azure DevOps project | iotsample-arm-con |
+|AZURE_LOCATION| Azure Location | West US 2 |
+|RG_NAME| Azure Resource Group Name | iot-e2e-rg|
+|IOT_ENV_SUFFIX| Unique suffix that will be added to all provisioned resources | iote2esampl |
+
+### Observability-as-code
+
+[Observability-as-code pipeline](.pipelines/observability-as-code.yaml) deploys a sample Workbook and a set of Alerts and assigns them to IoT Hub.
+It requires to add the following variables in the `iot-monitoring` variable group (in addition to the variables defined for IaC): 
+
+|**Variable**|**Description**|**Example**|
+|----------|----------|----------|
+|AZURE_SUBSCRIPTION_ID| Azure subscription Id where IoT Hub is provisioned | XXX-XXX-XXX-XXX-XXX |
+
+### CI/CD
+
+[CI/CD pipeline](.pipelines/cicd.yaml) performs the following:
+  
+  - Builds IoT Edge Modules Docker Images
+  - Runs a local smoke test to check the IoT Edge Modules containers work without errors
+  - Pushes the images to ACR (provisioned by the IaC pipeline)
+  - Builds and archives to zip files backend Azure Functions
+  - Publishes artifacts consisting of IoT Edge devices deployment profiles and backend functions archives
+  - Creates a new IoT Edge device deployment in IoT Hub
+  - Runs a smoke test to check the deployment is applied and the devices are up and running
+  - Deploys backend Azure Functions
+
+It requires to add the following variables in the `iot-monitoring` variable group (in addition to the variables defined for IaC): 
+
+|**Variable**|**Description**|**Example**|
+|----------|----------|----------|
+|LOG_ANALYTICS_SHARED_KEY| Log Analytics Shared Key, used by devices to export metrics | XXX |
+|LOG_ANALYTICS_WSID| Log Analytics Workspace Id, used by devices to export metrics | XXX-XXX-XXX-XXX-XXX |
+|APPINSIGHTS_INSTRUMENTATION_KEY| Application Insights Instrumentation Key, used by devices to export logs and traces | XXX |
 
 
+## Deployment with a script
 
-![Monitoring architecture](docs/monitoring-architecture.png)
+While Azure Pipelines is a must have for a production environment, the sample comes with an alternative and convenient option for the quick `deploy-n-play`. You can deploy everything with a PowerShell script `./Scripts/deploy.ps1`. The script provisions all necessary Azure resources, deploys a sample workbook and alerts, deploys IoT Edge Modules and backend Azure Functions.  
 
-
-
-### High-level process flow:
-
-1. The [**Metrics collector**](https://aka.ms/edgemon-docs) module will be deployed to the edge devices to scrape metrics from the modules running at the edge in Prometheus format.
-2. The metrics-collector module supports uploading metrics in two ways:
-   - **HTTP Post to Azure Monitor** endpoint. This option requires outbound internet connectivity from the edge device(s).
-   - To other IoT modules/Hub as **IoT messages**. This option is useful for local consumption.
-3. If the monitoring option is configured to upload metrics as IoT messages, an event hubs namespace and event hub instance will be used to route metric messages from IoT Hub to the Azure function **CollectMetrics**, that will then send them to Log Analytics.
+_Note_: The script prompts to select one of the available deployment options: `End-to-End Sample` or `Cloud Workflow Sample`. The `End-to-End Sample` option deploys the sample described above in this document and `Cloud Workflow Sample` option deploys a sample of a cloud workflow to process logs uploaded by the device to a blob storage container, as well as metrics arriving as device-to-cloud messages in IoT Hub. Refer to the [Cloud Workflow Sample](docs/CloudWorkflow.md) for the details.
 
 
+### Pre-requisites
 
-## Monitor alerts architecture reference
-
-After the solution has been deployed with the monitoring option enabled, you can run the wizard again and create/update Azure Monitor alerts in your IoT hub. The architecture below illustrates the involved resources:
-
-![Alerts architecture](docs/monitor-alerts-architecture.png)
-
-### High-level process flow:
-
-1. Alert rules are created on Azure Monitor and scoped to your IoT hub.
-2. The wizard flow will give you the following choices to choose from:
-   1. Pull logs from IoT edge devices periodically. This is the default behavior when you deploy the solution.
-   2. Proactively pull logs from edge devices only when alerts are triggered, in which case the alerts will be linked to an Azure Function that kicks off the logs retrieval process to store them in Log Analytics for troubleshooting.
-3. Optionally, you can link an existing action group to the alerts. At the moment this document was written, action groups support email, SMS, push notifications, ITSM, webhooks, Azure Functions, Logic Apps and Automation Runbooks.
-
-
-
-> NOTE: As of August 2021, the wizard creates three query alert rules in your IoT hub that check for:
->
-> - Edge devices with high disk space usage
-> - Edge devices with high edge hub queue length
-> - Edge devices that are offline or not sending messages upstream at an expected rate
->
-> Additional alert rules can be created at any time through Azure CLI, Azure PowerShell or the Azure Portal.
-
-
-## Distributed Tracing
-
-Refer to the [Distributed Tracing Sample](DistributedTracing) for the sample description in deployment instructions.
-
-
-## Pre-requisites
-
-In order to successfully deploy this solution, you will need the following:
+In order to successfully deploy this sample with a script, you will need the following:
 
 - [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.1).
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) version 2.21 or later.
@@ -98,7 +196,7 @@ Verify your prerequisites to ensure you have the right version for Azure CLI. Op
 
 
 
-## Get the code
+### Get the code
 
 Clone the repository:
 
@@ -107,144 +205,14 @@ git clone https://github.com/Azure-Samples/iotedge-logging-and-monitoring-soluti
 ```
 
 
-
-## Deploy the solution
-
-There are two options to deploy the solution.
-
-### Use PowerShell script
-
-Now you will deploy the entire solution, open a PowerShell console and run the code below:
+### Deploy the sample
 
 ```powershell
 cd iotedge-logging-and-monitoring-solution\
 .\Scripts\deploy.ps1
 ```
-
-The script will ask some questions regarding deployment options. Depending on the answers you provide, ELMS will have deployed the following main resources:
-
-- IoT Hub
-- Device Provisioning Service
-- IoT Edge virtual machine
-- Storage accounts
-- App service plan and Function app 
-- Application Insights
-- Event grid topic
-- Event hubs namespace
-
-### Use Terraform
-
-Refer to [this documentation](docs/provision-elms-with-terraform.md) for information on how to provision the ELMS infrastructure using terraform.
-
-> Note: [Monitor alert architecture](#monitor-alerts-architecture-reference), Device Provisioning Service and [Distributed Tracing Sample](DistributedTracing)s are not supported with the Terraform deployment.
-
-## Understanding required application settings
-
-The function solution receives its configuration through the application settings, these settings determine how your function will handle logs. Let's take a look at them:
-
-- **HubHostName**: IoT Hub host name (ending in `azure-devices.net`). IoT Hub access will be granted through AAD managed identity. More info about IoT access security can be found [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-security).
-- **HubResourceId**: IoT Hub resource Id. This setting is used to map logs to the Azure resource and enable features like workbooks and monitoring dashboards on Azure.
-- **DeviceQuery**: IoT Hub query based on device twin information to target one or many IoT edge devices. This solution adds the tag `logPullEnabled="true"` to the IoT edge device twin, so the query to target it is `SELECT * FROM devices WHERE tags.logPullEnabled='true'`. More info about querying IoT Hub for devices and modules can be found [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-query-language#device-and-module-twin-queries).
-- **StorageAccountName**: Name of the storage account that will host the container to store logs and queue to publish events.
-- **StorageName__serviceUri**: Uri pointing to the logs storage account in the format of `https://<StorageAccountName>.queue.core.windows.net/`
-- **ContainerName**: Container name to upload log files to.
-- **QueueName**: Storage queue to publish events to.
-- **WorkspaceId**: Log analytics workspace Id. More info on how to retrieve the workspace Id can be found [here](https://www.cloudsma.com/2020/08/log-analytics-keys/).
-- **WorkspaceKey**: Log analytics workspace shared key. More info on how to retrieve the shared key can be found [here](https://www.cloudsma.com/2020/08/log-analytics-keys/).
-- **WorkspaceDomainSuffix**: Log analytics domain suffix. It will match the cloud you are using: `azure.com` for Azure Commercial Cloud, `azure.us` for Azure Government Cloud and `azure.cn` for Azure China Cloud.
-- **LogType**: A name to group logs by in Log analytics. It can be something like `iotedgemodulelogs`.
-- **EventHubName**: Event Hubs namespace authorization key with `listen` rights. It is **OPTIONAL** and required only when uploading metrics as IoT messages.
-- **EventHubConsumerGroup**: Event Hubs instance consumer group to read events from. Default is `$default`. It is **OPTIONAL** and required only when uploading metrics as IoT messages.
-- **EventHub__fullyQualifiedNamespace**: Event Hubs fully qualified namespace(ending in `.servicebus.windows.net`). It is **OPTIONAL** and required only when uploading metrics as IoT messages.
-- **LogsIdRegex**: A regular expression that supplies the IoT edge module name. It can match multiple modules. You can use `.*` if you want to capture logs for all modules running on the IoT edge device. [.NET Regular Expressions](https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expressions) format is expected.
-- **LogsSince**: Only returns logs since this time, as a duration (1d, 90m, 2 days 3 hours 2 minutes), rfc3339 timestamp, or UNIX timestamp. It is **OPTIONAL**, if not provided, it will attempt to retrieve all logs.
-- **LogsLogLevel**: Despite what the [official documentation](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2018-06#upload-module-logs) says for the edge agent's direct methods, this setting filters log lines that match exactly the log level, following the [Syslog severity level](https://en.wikipedia.org/wiki/Syslog#Severity_level) standard. It is **OPTIONAL**, if not provided, it will retrieve logs for all log levels.
-- **LogsRegex**: Used to filter log lines with content that matches the specified regular expression. [.NET Regular Expressions](https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expressions) format is expected. **OPTIONAL**.
-- **LogsTail**: Number of log lines in the past to retrieve starting from the latest. **OPTIONAL**.
-- **LogsEncoding**: Logs encoding format. Options are `gzip` or `none`. Default is `gzip`.
-- **LogsContentType**: Logs content type. Options are `json` or `text`. Default is `json`.
-- **CompressForUpload**: Whether to compress logs and metrics when uploading them to Azure Log Analytics or IoT messages in the case of metrics. Default is `true`.
-
-### Local development and debugging
-You can find a sample of the application settings needed to run the solution locally in this [file](FunctionApp/FunctionApp/sample.local.settings.json). It needs to be adapted based on the chosen scenario.
-
-## Logging considerations
-
-Now that you have seen the available configuration options for the solution, let's discuss some important considerations and scenarios:
-
-- ELMS receives a single IoT hub access connection string, as a consequence only IoT edge devices within the IoT hub provided will be invoked. If your application involves monitoring multiple IoT hubs, consider deploying this solution for each IoT hub or modify the code to handle a list of IoT hub access connection strings.
-- Use the **DeviceQuery** settings to target the IoT edge devices you want to capture logs from. You can add the tag `logPullEnabled="true"` to your IoT edge devices' twins to make them identifiable.
-- All the resources in this solution should be deployed in the same region as the IoT Hub to avoid incurring in ingress/egress traffic and reduce latency.
-
-- [Retrieve log](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2018-06#recommended-logging-format) methods from the edge agent are tightly coupled with [syslog severity level](https://en.wikipedia.org/wiki/Syslog#Severity_level) standard. For best compatibility with the log retrieval feature, the recommended logging format is `<{Log Level}> {Timestamp} {Message Text}`, where `{Timestamp}` should be formatted as `yyyy-MM-dd hh:mm:ss.fff zzz`, and `{Log Level}` should follow the syslog severity level standard referenced before. Try to keep this in mind when developing your own edge modules. When you don't own or maintain the edge modules, most likely logs will differ and you won't be able to obtain the ideal format. In those cases, you can:
-
-  - Use **LogsLogLevel** to capture exactly the log level you need to retrieve (if it matches the syslog standard) and/or use **LogsRegex** to capture certain patterns in your log lines.
-  - Implement your own business logic in the **ProcessModuleLogs** function by casting the retrieved logs with the [`LogAnalyticsLog`](FunctionApp/FunctionApp/Models/Logs.cs#L26) class used in this solution.
-
-- Some applications are very verbose, generating a log of trace and information logs. Although it is good to know that your application is performing well, it is more important to take action when things go wrong and keep costs under control. It order to achieve those goals, you should try to retrieve logs that match `warning` level or higher.
-
-  Assume you have a module with a log output like the one below:
-
-  ```
-  <2> 2021-03-25 14:56:09.122 +00:00 [CRIT] Quantity is what you count, quality is what you count on.
-  <7> 2021-03-25 14:57:09.162 +00:00 [DBG] If you're not supposed to eat at night, why is there a light bulb in the refrigerator?
-  <2> 2021-03-25 14:58:09.171 +00:00 [CRIT] The road to success is always under construction.
-  <7> 2021-03-25 14:59:09.213 +00:00 [DBG] I think the worst time to have a heart attack is during a game of charades.
-  <4> 2021-03-25 15:00:09.272 +00:00 [WRN] Always remember you're unique, just like everyone else.
-  <6> 2021-03-25 15:01:09.292 +00:00 [INF] Quantity is what you count, quality is what you count on.
-  <7> 2021-03-25 15:02:09.353 +00:00 [DBG] Experience is a wonderful thing. It enables you to recognise a mistake when you make it again.
-  <7> 2021-03-25 15:03:09.413 +00:00 [ERR] The road to success is always under construction.
-  <7> 2021-03-25 15:04:09.462 +00:00 [DBG] I don't need a hair stylist, my pillow gives me a new hairstyle every morning.
-  <2> 2021-03-25 15:05:09.502 +00:00 [CRIT] I asked God for a bike, but I know God doesn't work that way. So I stole a bike and asked for forgiveness.
-  ```
-
   
 
-  If you the set **LogsLogLevel** to `2`, the solution will only retrieve logs that match the `CRITICAL` level:
 
-  ```
-      <2> 2021-03-25 14:56:09.122 +00:00 [CRIT] Quantity is what you count, quality is what you count on.
-      <2> 2021-03-25 14:58:09.171 +00:00 [CRIT] The road to success is always under construction.
-      <2> 2021-03-25 15:05:09.502 +00:00 [CRIT] I asked God for a bike, but I know God doesn't work that way. So I stole a bike and asked for forgiveness.
-  ```
-
-  
-
-  Alternatively, if you the set **LogsRegex** to `\b(WRN?|ERR?|CRIT?|FTL?)\b`, the solution will retrieve the following:
-
-  ```
-  <2> 2021-03-25 14:56:09.122 +00:00 [CRIT] Quantity is what you count, quality is what you count on.
-  <2> 2021-03-25 14:58:09.171 +00:00 [CRIT] The road to success is always under construction.
-  <4> 2021-03-25 15:00:09.272 +00:00 [WRN] Always remember you're unique, just like everyone else.
-  <7> 2021-03-25 15:03:09.413 +00:00 [ERR] The road to success is always under construction.
-  <2> 2021-03-25 15:05:09.502 +00:00 [CRIT] I asked God for a bike, but I know God doesn't work that way. So I stole a bike and asked for forgiveness.
-  ```
-
-  
-
-  > NOTE: If you want to know more about how to standardize your edge modules to generate logs consistently, you can take a look at the [sample IoT edge deployment](EdgeSolution/README.md) section to see use cases for .NET Core and Python 3.x.
-
-  
-
-- The property **LogsSince** determines how far back to get logs, it should be aligned with how often the timer function [InvokeUploadModuleLogs](FunctionApp/FunctionApp/InvokeUploadModuleLogs.cs) runs to avoid having duplicate data or data gaps in Log analytics. If you configured the function to run every hour, then this property should be set to `1h` as well.
-
-  > IMPORTANT: The longer you wait to run the function, the larger the log files will be, the more time it will take to process them and the longer you will have to wait to query those logs in Log analytics. Try to run them every hour or less to have access to useful data within a reasonable timeframe.
-
-
-
-## Query logging data from Log analytics
-
-One the solution has been deployed and it has been running enough time to let the modules generate logs; you will be able to query them in Log analytics. Go to your Log analytics resource in the Azure portal, choose Logs from the left menu and run the following sample query:
-
-```sql
-iotedgemodulelogs_CL
-| where timestamp_t <= ago(24h)
-| project timestamp_t, iotHub_s, deviceId_s, moduleId_s, logLevel_d, Message
-```
-
-
-
-The sample query above will return an output like the image below:
-
-![log analytics query](docs/logquery.png)
+ 
 

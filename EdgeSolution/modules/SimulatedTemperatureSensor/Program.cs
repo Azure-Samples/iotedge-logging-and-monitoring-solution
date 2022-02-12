@@ -113,7 +113,7 @@ namespace SimulatedTemperatureSensor
             * OTLP (to be caught by OpenTelemetry collector)
             */
             using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-                .SetSampler(new TraceIdRatioBasedSampler(Convert.ToDouble(configuration.GetSection("TRACE_SAMPLE_RAIO").Value)))
+                .SetSampler(new TraceIdRatioBasedSampler(Convert.ToDouble(configuration.GetSection("TRACE_SAMPLE_RATIO").Value)))
                 .AddSource("IoTSample.SimulatedTemperatureSensor")
                 .SetResourceBuilder(ResourceBuilder.CreateDefault()
                     .AddTelemetrySdk()

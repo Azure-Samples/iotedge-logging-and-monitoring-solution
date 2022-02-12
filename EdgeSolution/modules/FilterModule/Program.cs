@@ -66,7 +66,7 @@ namespace FilterModule
                 .Build();
 
             loggingLevel = configuration.GetSection("LOGGING_LEVEL").Value;
-            traceSampleRaio = configuration.GetSection("TRACE_SAMPLE_RAIO").Value;
+            traceSampleRaio = configuration.GetSection("TRACE_SAMPLE_RATIO").Value;
 
             Init().Wait();
 

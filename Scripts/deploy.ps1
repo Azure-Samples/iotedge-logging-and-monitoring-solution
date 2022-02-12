@@ -869,8 +869,8 @@ function New-ELMSEnvironment() {
     }
 
     $option = Get-InputSelection `
-        -options @("End-to-End Sample", "Logging") `
-        -text @("Do you want to deploy End-to-End Sample or only Logging sample? Choose an option from the list (using its Index):") `
+        -options @("End-to-End Sample", "Cloud Workflow Sample") `
+        -text @("Do you want to deploy End-to-End Sample or Cloud Workflow Sample? Choose an option from the list (using its Index):") `
         -default_index 1
     
     

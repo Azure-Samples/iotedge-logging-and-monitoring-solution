@@ -18,6 +18,6 @@ USER moduleuser
 
 ENV OTLP_ENDPOINT="http://opentelemetrycollector:4317"
 ENV LOGGING_LEVEL="Information"
-ENV TRACE_SAMPLE_RAIO=1
+ENV TRACE_SAMPLE_RATIO=1
 
 ENTRYPOINT ["dotnet", "SimulatedTemperatureSensor.dll"]

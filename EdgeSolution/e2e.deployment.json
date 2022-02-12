@@ -52,7 +52,7 @@
                 "LOGGING_LEVEL": {
                   "value": "Debug"
                 },
-                "TRACE_SAMPLE_RAIO": {
+                "TRACE_SAMPLE_RATIO": {
                   "value": "1"
                 }                                
               },
@@ -73,7 +73,7 @@
                 "LOGGING_LEVEL": {
                   "value": "Debug"
                 },
-                "TRACE_SAMPLE_RAIO": {
+                "TRACE_SAMPLE_RATIO": {
                   "value": "1"
                 }                                                              
               },
