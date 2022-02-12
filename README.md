@@ -13,7 +13,7 @@ In order to go beyond just abstract considerations, the sample implementation is
 
 ![buoy](docs/buoy.png)
 
-The La Niña service measures surface temperature in Pacific Ocean to predict La Niña winters. There is a number of buoys in the ocean with IoT Edge devices sending the surface temperature to Azure Cloud. The telemetry data with the temperature is pre-processed by a custom module on the IoT Edge device before sending it to the cloud. In the cloud the data is processed by a chain of two backend Azure Functions and saved to a Blob Storage. The clients of the service (sending data to ML inference workflow, decision making systems, various UIs, etc.) can pick up messages with temperature data from the Blob Storage
+The La Niña service measures surface temperature in Pacific Ocean to predict La Niña winters. There is a number of buoys in the ocean with IoT Edge devices sending the surface temperature to Azure Cloud. The telemetry data with the temperature is pre-processed by a custom module on the IoT Edge device before sending it to the cloud. In the cloud the data is processed by a chain of two backend Azure Functions and saved to a Blob Storage. The clients of the service (sending data to ML inference workflow, decision making systems, various UIs, etc.) can pick up messages with temperature data from the Blob Storage.
 
 The topology of the sample is represented on the following diagram:
 
