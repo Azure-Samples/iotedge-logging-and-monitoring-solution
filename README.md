@@ -58,7 +58,7 @@ Measuring templates applicable to all SLIs:
 - Measurements frequency: 5 min
 - What is measured: interaction between IoT Device and IoT Hub, further consumption of the temperature data is out of scope.
 
-Service Level Indicators are measured by the means of metrics. An IoT Hub device comes with system modules `edgeHub` and `edgeAgent`. These modules expose through a Prometheus endpoint [a list of built-in metrics](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-access-built-in-metrics?view=iotedge-2020-11#available-metrics) that are collected and pushed to Azure Monitor Log Analytics service by the [Metrics Collector module](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-collect-and-transport-metrics?view=iotedge-2020-11&tabs=iothub) running on the IoT Edge device. 
+Service Level Indicators are measured by the means of **_Metrics_**. An IoT Hub device comes with system modules `edgeHub` and `edgeAgent`. These modules expose through a Prometheus endpoint [a list of built-in metrics](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-access-built-in-metrics?view=iotedge-2020-11#available-metrics) that are collected and pushed to Azure Monitor Log Analytics service by the [Metrics Collector module](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-collect-and-transport-metrics?view=iotedge-2020-11&tabs=iothub) running on the IoT Edge device. 
 
 _Note_: Alternatively, metrics can be delivered to the cloud through IoT Hub messages channel and then submitted to the Log Analytics with a cloud workflow. See [Cloud Workflow Sample](docs/CloudWorkflow.md#monitoring-architecture-reference) for the details on this architecture pattern. 
 
