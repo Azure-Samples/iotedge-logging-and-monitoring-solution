@@ -58,7 +58,7 @@ Measuring templates applicable to all SLIs:
 - Measurements frequency: 5 min
 - What is measured: interaction between IoT Device and IoT Hub, further consumption of the temperature data is out of scope.
 
-Service Level Indicators are measured by the means of metrics. An IoT Hub device comes with system modules `edgeHub` and `edgeAgent`. These modules expose through a Prometheus endpoint [a list of built-in metrics](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-access-built-in-metrics?view=iotedge-2020-11#available-metrics) that are collected and pushed to Azure Monitor Log Analytics service by the [Metrics Collector module](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-collect-and-transport-metrics?view=iotedge-2020-11&tabs=iothub) running on the IoT Edge device.
+Service Level Indicators are measured by the means of metrics. An IoT Hub device comes with system modules `edgeHub` and `edgeAgent`. These modules expose through a Prometheus endpoint [a list of built-in metrics](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-access-built-in-metrics?view=iotedge-2020-11#available-metrics) that are collected and pushed to Azure Monitor Log Analytics service by the [Metrics Collector module](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-collect-and-transport-metrics?view=iotedge-2020-11&tabs=iothub) running on the IoT Edge device. Alternatively, metrics can be delivered to the cloud through IoT Hub messages channel and then submitted to the Log Analytics with a cloud workflow. See [Cloud Workflow Sample](docs/CloudWorkflow.md#monitoring-architecture-reference) for the details on this architecture pattern. 
 
 SLOs and corresponding SLIs are monitored with Azure Monitor Workbooks. To achieve the best user experience the workbooks system follows he **_glance -> scan -> commit_** concept:
 
@@ -146,9 +146,9 @@ This sample comes with the following Azure Pipelines:
 [Observability-as-code pipeline](.pipelines/observability-as-code.yaml) deploys a sample Workbook and a set of Alerts and assigns them to IoT Hub.
 It requires to add the following variables in the `iot-monitoring` variable group (in addition to the variables defined for IaC): 
 
-|**Variable**|**Description**|**Example**|
-|----------|----------|----------|
-|AZURE_SUBSCRIPTION_ID| Azure subscription Id where IoT Hub is provisioned | XXX-XXX-XXX-XXX-XXX |
+|**Variable**|**Description**|
+|----------|----------|
+|AZURE_SUBSCRIPTION_ID| Azure subscription Id where IoT Hub is provisioned |
 
 ### CI/CD
 
@@ -165,11 +165,11 @@ It requires to add the following variables in the `iot-monitoring` variable grou
 
 It requires to add the following variables in the `iot-monitoring` variable group (in addition to the variables defined for IaC): 
 
-|**Variable**|**Description**|**Example**|
-|----------|----------|----------|
-|LOG_ANALYTICS_SHARED_KEY| Log Analytics Shared Key, used by devices to export metrics | XXX |
-|LOG_ANALYTICS_WSID| Log Analytics Workspace Id, used by devices to export metrics | XXX-XXX-XXX-XXX-XXX |
-|APPINSIGHTS_INSTRUMENTATION_KEY| Application Insights Instrumentation Key, used by devices to export logs and traces | XXX |
+|**Variable**|**Description**|
+|----------|----------|
+|LOG_ANALYTICS_SHARED_KEY| Log Analytics Shared Key, used by devices to export metrics |
+|LOG_ANALYTICS_WSID| Log Analytics Workspace Id, used by devices to export metrics |
+|APPINSIGHTS_INSTRUMENTATION_KEY| Application Insights Instrumentation Key, used by devices to export logs and traces |
 
 
 ## Deployment with a script
