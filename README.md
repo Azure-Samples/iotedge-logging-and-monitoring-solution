@@ -99,7 +99,7 @@ It is very common in IoT scenarios when there is only one way connectivity from 
 
 The C# components of the sample, such as device modules and backend Azure .Net Function use [OpenTelemetry for .Net](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry.Api/README.md#introduction-to-opentelemetry-net-tracing-api) to produce tracing data.
 
-IoT Edge modules `Tempperature Sensor` and `Filter` export the logs and tracing data via OTLP protocol to the [OpenTelemetryCollector](https://opentelemetry.io/docs/collector/) module, running on the same edge device. The `OpenTelemetryCollector` module, in its turn, exports logs and traces to Azure Monitor Application Insights service.
+IoT Edge modules `Tempperature Sensor` and `Filter` export the logs and tracing data via OTLP protocol to the [OpenTelemetryCollector](https://opentelemetry.io/docs/collector/) module, running on the same edge device. The `OpenTelemetryCollector` module, in its turn, exports logs and traces to Azure Monitor Application Insights service. Alternatively, for the use cases when there is a connection from the cloud to devices, logs from the deices can be delivered on request using [direct method invocation](https://docs.microsoft.com/azure/iot-edge/how-to-retrieve-iot-edge-logs?view=iotedge-2020-11). See [Cloud Workflow Sample](docs/CloudWorkflow.md#logging-architecture-reference) for the details on this architecture pattern.
 
 The Azure .Net backend Function sends the tracing data to Application Insights with [Azure Monitor Open Telemetry direct exporter](https://docs.microsoft.com/en-us/azure/azure-monitor/app/opentelemetry-enable?tabs=net). It also send correlated logs directly to Application Insights with a configured ILogger instance.
 
