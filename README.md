@@ -131,7 +131,7 @@ _Note_: Jaeger/Zipkin installation is not included in this sample. If you have a
 
 ## DevOps practices
 
-Implementing DevOps practices is a common way to handle with the growing complexity of observability implementation and related operational costs. 
+Implementing DevOps practices is a common way to handle with the growing complexity of observability solution and related operational costs. 
 This sample comes with the following Azure Pipelines:
 
 ### Infrastructure-as-code
