@@ -7,7 +7,7 @@ IoT **E**dge **L**ogging and **M**onitoring **S**olution (pronounced *Lm's*) pro
 
 ## Use Case
 
-In order to have not just abstract considerations, the sample implementation is based on a "real-life" use case:
+In order to go beyond just abstract considerations, the sample implementation is based on a "real-life" use case:
 
 ### La Niña.
 
