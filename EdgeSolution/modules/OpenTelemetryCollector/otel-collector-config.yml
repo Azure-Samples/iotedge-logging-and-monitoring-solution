@@ -7,11 +7,11 @@ receivers:
 
 exporters:
   azuremonitor:
-    instrumentation_key: My_key
+    instrumentation_key: {{APPINSIGHTS_INSTRUMENTATION_KEY}}
   logging:
     loglevel: debug
   jaeger_thrift:
-    endpoint: "http://host.docker.internal:14268/api/traces"
+    endpoint: {{JAEGER_ENDPOINT}}
 
 processors:
   batch:

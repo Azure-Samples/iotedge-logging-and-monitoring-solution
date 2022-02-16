@@ -83,13 +83,21 @@
             },
             "Opentelemetrycollector": {
               "settings": {
-                "image": "kaizentm/iotsample-opentelemetrycollector:0.0.3",
+                "image": "${MODULES.SimulatedTemperatureSensor}",
                 "createOptions": {}
               },
               "type": "docker",
               "status": "running",
               "restartPolicy": "always",
-              "version": "1.0"
+              "version": "1.0",
+              "env": {
+                "APPINSIGHTS_INSTRUMENTATION_KEY": {
+                  "value": "${APPINSIGHTS_INSTRUMENTATION_KEY}"
+                },
+                "JAEGER_ENDPOINT": {
+                  "value": "${JAEGER_ENDPOINT}"
+                }
+              }                
             },
             "IoTEdgeMetricsCollector": {
               "settings": {

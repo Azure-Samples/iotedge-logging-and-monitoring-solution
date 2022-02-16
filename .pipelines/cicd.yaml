@@ -54,10 +54,7 @@ stages:
           inputs:
             Contents: |
               EdgeSolution/config/*.json
-              # EdgeSolution/e2e.deployment-3.json
               **/module.json
-              #  edgeSmokeTest.sh
-              #  moduleAcrPromotion.sh
             TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
 
         - task: PublishBuildArtifacts@1

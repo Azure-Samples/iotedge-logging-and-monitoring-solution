@@ -1044,14 +1044,18 @@ function New-ELMSEnvironment() {
     #region generate monitoring deployment manifest
     if ($script:enable_monitoring) {
         if ($script:enable_e2e_sample) {
-            $distr_tracing_template = "$($root_path)/DistributedTracing/EdgeSolution/deployment.layerd.template.json"
-            $distr_tracing_manifest = "$($root_path)/DistributedTracing/EdgeSolution/deployment.manifest.json"
-            Remove-Item -Path $distr_tracing_manifest -ErrorAction Ignore
+            $e2e_template = "$($root_path)/EdgeSolution/e2e.deployment.template.json"
+            $e2e_manifest = "$($root_path)/EdgeSolution/e2e.deployment.manifest.json"
+            Remove-Item -Path $e2e_manifest -ErrorAction Ignore
 
-            (Get-Content -Path $distr_tracing_template -Raw) | ForEach-Object {
+            (Get-Content -Path $e2e_template -Raw) | ForEach-Object {
                 $_  -replace '\$\{INSTRUMENTATION_KEY\}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
-                    -replace '\$\{AI_CONNECTION_STRING\}', $script:deployment_output.properties.outputs.appInsightsConnectionString.value
-            } | Set-Content -Path $distr_tracing_manifest    
+                    -replace '\$\{APPINSIGHTS_INSTRUMENTATION_KEY\}', $script:deployment_output.properties.outputs.appInsightsConnectionString.value `
+                    -replace '\$\{IOTHUB_ARM_RESOURCEID\}', $script:deployment_output.properties.outputs.iotHubResourceId.value `
+                    -replace '\$\{LOG_ANALYTICS_WSID\}', $script:deployment_output.properties.outputs.workspaceId.value `
+                    -replace '\$\{LOG_ANALYTICS_SHARED_KEY\}', $script:deployment_output.properties.outputs.workspaceSharedKey.value
+
+            } | Set-Content -Path $e2e_manifest    
         } 
         $script:scrape_frequency = 300
         if ($script:metrics_encoding -eq "gzip") {
@@ -1118,7 +1122,7 @@ function New-ELMSEnvironment() {
                 --layered `
                 -d "$deployment_name" `
                 --hub-name $script:iot_hub_name `
-                --content $distr_tracing_manifest `
+                --content $e2e_manifest `
                 --target-condition=$script:deployment_condition `
                 --priority $priority | Out-Null           
 
