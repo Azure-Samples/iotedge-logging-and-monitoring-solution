@@ -1124,7 +1124,17 @@ function New-ELMSEnvironment() {
                 --hub-name $script:iot_hub_name `
                 --content $e2e_manifest `
                 --target-condition=$script:deployment_condition `
-                --priority $priority | Out-Null           
+                --priority $priority | Out-Null  
+
+            az deployment group create `
+                --resource-group $script:resource_group_name `
+                --template-file $($root_path)/MonitoringInstruments/alerts.json `
+                --parameters iotHubName=$script:iot_hub_name             
+
+            az deployment group create `
+                --resource-group $script:resource_group_name `
+                --template-file $($root_path)/MonitoringInstruments/workbook.json `
+                --parameters iotHubName=$script:iot_hub_name             
 
         } else {
             # Create logging deployment
