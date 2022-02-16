@@ -1403,7 +1403,7 @@
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
         "name": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]",
         "resourceGroup": "[parameters('storageAccountResourceGroup')]",
-        "condition": "[parameters('createDistribTracing')]",
+        "condition": "[parameters('createE2ESample')]",
         "dependsOn": [
             "[variables('eventGridDeploymentName')]",
             "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"            
@@ -1425,7 +1425,7 @@
               "value": "[variables('storageBlobDataContributor')]"
             },
             "principalId": {
-              "value": "[if(parameters('createDistribTracing'),reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId,'')]"
+              "value": "[if(parameters('createE2ESample'),reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId,'')]"
             },
             "principalType": {
               "value": "ServicePrincipal"
@@ -1438,7 +1438,7 @@
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
         "name": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]",
         "resourceGroup": "[parameters('storageAccountResourceGroup')]",
-        "condition": "[parameters('createDistribTracing')]",
+        "condition": "[parameters('createE2ESample')]",
         "dependsOn": [
             "[variables('eventGridDeploymentName')]",
             "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"            
@@ -1460,7 +1460,7 @@
               "value": "[variables('storageQueueDataContributor')]"
             },
             "principalId": {
-              "value": "[if(parameters('createDistribTracing'),reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId,'')]"
+              "value": "[if(parameters('createE2ESample'),reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId,'')]"
             },
             "principalType": {
               "value": "ServicePrincipal"
