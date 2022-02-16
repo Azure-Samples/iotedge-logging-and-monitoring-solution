@@ -716,8 +716,8 @@ function New-ELMSEnvironment() {
     $script:alert_function_name = "MonitorAlerts"
     $script:zip_package_name = "deploy.zip"
     $script:zip_package_path = "$($root_path)/FunctionApp/FunctionApp/$($zip_package_name)"
-    $script:zip_package_app_dotnet_backend_path = "$($root_path)/DistributedTracing/Backend/dotnetfunction/iot-dotnet-backend.zip"
-    $script:zip_package_app_java_backend_path = "$($root_path)/DistributedTracing/Backend/javafunction/iot-java-backend.zip"
+    $script:zip_package_app_dotnet_backend_path = "$($root_path)/Backend/dotnetfunction/iot-dotnet-backend.zip"
+    $script:zip_package_app_java_backend_path = "$($root_path)/Backend/javafunction/iot-java-backend.zip"
     #endregion
 
     #region greetings
@@ -749,17 +749,32 @@ function New-ELMSEnvironment() {
     # set azure susbcription
     Set-AzureAccount
 
-    #region deployment option
-    $deployment_options = @(
-        "Create a sandbox environment for testing (fastest)",
-        "Custom deployment (most flexible)",
-        "Deploy Monitoring alerts (requires an existing ELMS deployment with metrics collection enabled)"
-    )
+    $option = Get-InputSelection `
+        -options @("End-to-End Sample", "Cloud Workflow Sample") `
+        -text @("Do you want to deploy End-to-End Sample or Cloud Workflow Sample? Choose an option from the list (using its Index):") `
+        -default_index 1
+    
+    
+    $script:enable_e2e_sample = ($option -eq 1)
 
-    $deployment_option = Get-InputSelection `
-        -options $deployment_options `
-        -text "Choose a deployment option from the list (using its Index):"
-    #endregion
+    if ($script:enable_e2e_sample) {
+        $deployment_option = 1
+    }   
+    else {
+        #region deployment option
+        $deployment_options = @(
+            "Create a sandbox environment for testing (fastest)",
+            "Custom deployment (most flexible)",
+            "Deploy Monitoring alerts (requires an existing ELMS deployment with metrics collection enabled)"
+        )
+
+        $deployment_option = Get-InputSelection `
+            -options $deployment_options `
+            -text "Choose a deployment option from the list (using its Index):"
+        #endregion
+    }    
+    
+    
 
     #region obtain resource group name
     if ($deployment_option -eq 1 -or $deployment_option -eq 2) {
@@ -867,14 +882,6 @@ function New-ELMSEnvironment() {
             $script:enable_monitoring = $true
         }
     }
-
-    $option = Get-InputSelection `
-        -options @("End-to-End Sample", "Cloud Workflow Sample") `
-        -text @("Do you want to deploy End-to-End Sample or Cloud Workflow Sample? Choose an option from the list (using its Index):") `
-        -default_index 1
-    
-    
-    $script:enable_e2e_sample = ($option -eq 1)
         
 
     #region select monitoring type
@@ -1049,8 +1056,7 @@ function New-ELMSEnvironment() {
             Remove-Item -Path $e2e_manifest -ErrorAction Ignore
 
             (Get-Content -Path $e2e_template -Raw) | ForEach-Object {
-                $_  -replace '\$\{INSTRUMENTATION_KEY\}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
-                    -replace '\$\{APPINSIGHTS_INSTRUMENTATION_KEY\}', $script:deployment_output.properties.outputs.appInsightsConnectionString.value `
+                $_  -replace '\$\{APPINSIGHTS_INSTRUMENTATION_KEY\}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
                     -replace '\$\{IOTHUB_ARM_RESOURCEID\}', $script:deployment_output.properties.outputs.iotHubResourceId.value `
                     -replace '\$\{LOG_ANALYTICS_WSID\}', $script:deployment_output.properties.outputs.workspaceId.value `
                     -replace '\$\{LOG_ANALYTICS_SHARED_KEY\}', $script:deployment_output.properties.outputs.workspaceSharedKey.value
@@ -1128,12 +1134,12 @@ function New-ELMSEnvironment() {
 
             az deployment group create `
                 --resource-group $script:resource_group_name `
-                --template-file $($root_path)/MonitoringInstruments/alerts.json `
+                --template-file "$($root_path)/MonitoringInstruments/alerts.json" `
                 --parameters iotHubName=$script:iot_hub_name             
 
             az deployment group create `
                 --resource-group $script:resource_group_name `
-                --template-file $($root_path)/MonitoringInstruments/workbook.json `
+                --template-file "$($root_path)/MonitoringInstruments/workbook.json" `
                 --parameters iotHubName=$script:iot_hub_name             
 
         } else {
