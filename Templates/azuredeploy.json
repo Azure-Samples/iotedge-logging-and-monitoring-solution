@@ -564,7 +564,7 @@
     "storageQueueRoleAssignmentDeploymentName": "[concat('queue-roleassignments-', parameters('environmentHashId'))]",
     "storageBlobRoleAssignmentDeploymentName": "[concat('blob-roleassignments-', parameters('environmentHashId'))]",
     "eventHubsConsumerGroup": "$default",
-    "linkedDeploymentApiVersion": "2020-10-01",
+    "linkedDeploymentApiVersion": "2021-04-01-preview",
     "managedIdentityName": "monitoringIdentity",
     "ioTHubDataContributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4fc6c259-987e-4a07-842e-c321cc9d413f')]",
     "eventHubsDataReceiver": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'a638d3c7-ab3a-418d-83e6-5f17a39d4fde')]",
@@ -1265,8 +1265,7 @@
         "type": "Microsoft.Authorization/roleAssignments",
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
         "name": "[variables('iotHubRoleAssignmentDeploymentName')]",
-        "scope": "[concat('Microsoft.Devices/Iothubs', '/', parameters('iotHubName'))]",
-        "resourceGroup": "[parameters('iotHubResourceGroup')]",
+        "scope": "[concat('Microsoft.Devices/Iothubs', '/', parameters('iotHubName'))]",        
         "dependsOn": [
             "[variables('iotHubDeploymentName')]",
             "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"            
