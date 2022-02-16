@@ -1090,39 +1090,14 @@ function New-ELMSEnvironment() {
     #region edge deployments
     if ($script:create_iot_hub) {
 
-        # Create main deployment
-        Write-Host "`r`nCreating main IoT edge device deployment"
 
-        az iot edge deployment create `
-            -d "main-deployment" `
-            --hub-name $script:iot_hub_name `
-            --content "$($root_path)/EdgeSolution/deployment.manifest.json" `
-            --target-condition=$script:deployment_condition | Out-Null
-
-        $priority = 0
-
-        # Create monitoring deployment
-        if ($script:enable_monitoring) {
-            $deployment_name = "edge-monitoring"
-            $priority += 1
-            
-            Write-Host "`r`nCreating IoT edge monitoring layered deployment $deployment_name"
-
-            az iot edge deployment create `
-                --layered `
-                -d "$deployment_name" `
-                --hub-name $script:iot_hub_name `
-                --content $monitoring_manifest `
-                --target-condition=$script:deployment_condition `
-                --priority $priority | Out-Null
-        }
 
         if ($script:enable_e2e_sample) {
             # Create logging deployment
-            $deployment_name = "sample-distributed-tracing"
-            $priority += 1
+            $deployment_name = "e2e-sample"
+            $priority = 0
             
-            Write-Host "`r`nCreating IoT edge distributed tracing layered deployment $deployment_name"
+            Write-Host "`r`nCreating end-to-end IoT edge sample deployment $deployment_name"
 
             az iot edge deployment create `
                 --layered `
@@ -1143,6 +1118,33 @@ function New-ELMSEnvironment() {
                 --parameters iotHubName=$script:iot_hub_name             
 
         } else {
+            # Create main deployment
+            Write-Host "`r`nCreating main IoT edge device deployment"
+
+            az iot edge deployment create `
+                -d "main-deployment" `
+                --hub-name $script:iot_hub_name `
+                --content "$($root_path)/EdgeSolution/deployment.manifest.json" `
+                --target-condition=$script:deployment_condition | Out-Null
+
+            $priority = 0
+
+            # Create monitoring deployment
+            if ($script:enable_monitoring) {
+                $deployment_name = "edge-monitoring"
+                $priority += 1
+                
+                Write-Host "`r`nCreating IoT edge monitoring layered deployment $deployment_name"
+
+                az iot edge deployment create `
+                    --layered `
+                    -d "$deployment_name" `
+                    --hub-name $script:iot_hub_name `
+                    --content $monitoring_manifest `
+                    --target-condition=$script:deployment_condition `
+                    --priority $priority | Out-Null
+            }
+            
             # Create logging deployment
             $deployment_name = "sample-logging"
             $priority += 1
