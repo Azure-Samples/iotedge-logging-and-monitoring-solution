@@ -189,7 +189,7 @@ namespace FunctionApp
             };
 
             // Specify permissions for the SAS.
-            sasBuilder.SetPermissions(BlobAccountSasPermissions.All);
+            sasBuilder.SetPermissions(BlobAccountSasPermissions.Write);
           
             // Add the SAS token to the container URI.
             BlobUriBuilder blobUriBuilder = new BlobUriBuilder(blobContainerClient.Uri)
