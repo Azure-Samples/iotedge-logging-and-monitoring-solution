@@ -146,7 +146,7 @@
         "deviceToCloudUploadProperties": {
           "uploadOn": true,
           "uploadOrder": "OldestFirst",
-          "cloudStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=oteldata;AccountKey=tEAHbpW/htcr+Z6a0rhsCpnCjOtwv+FR7eTBeCs2p0j8RNEy3Swe5imlsUejbzp9FYwYqj33DWjN4DR4rrTqyg==;EndpointSuffix=core.windows.net",
+          "cloudStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=<AZURE STORAGE ACCOUNT NAME>AccountKey=<AZURE STORAGE ACCOUNT KEY>;EndpointSuffix=core.windows.net",
           "storageContainersForUpload": {
             "logs": {},
             "traces": {}
