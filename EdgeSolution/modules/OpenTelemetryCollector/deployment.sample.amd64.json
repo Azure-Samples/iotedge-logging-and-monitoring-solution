@@ -1,0 +1,159 @@
+{
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "my_acr": {
+                "username": "${ACR_USER}",
+                "password": "${ACR_PASSWORD}",
+                "address": "${ACR_ADDRESS}"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": "{}"
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"5671/tcp\":[{\"HostPort\":\"5671\"}],\"8883/tcp\":[{\"HostPort\":\"8883\"}],\"443/tcp\":[{\"HostPort\":\"443\"}]}}}"
+            }
+          }
+        },
+        "modules": {
+          "tempSensor": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "simulatedtemperaturesensor:0.0.test-amd64",
+              "createOptions": "{}"
+            },
+            "env": {
+              "MessageDelay": {
+                "value": "00:00:05"
+              },
+              "OTLP_ENDPOINT": {
+                "value": "http://opentelemetrycollector:4317"
+              }  
+            }
+          },
+          "FilterModule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "filtermodule:0.0.test-amd64",
+              "createOptions": "{}"
+            },
+            "env": {
+              "OTLP_ENDPOINT": {
+                "value": "http://opentelemetrycollector:4317"
+              }  
+            }
+          },
+          "OpenTelemetryCollector": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "kaizentm/iotsample-opentelemetrycollector:1.0.1"
+            },
+            "env": {
+              "CONNECTION_STRING": {
+                "value": "DefaultEndpointsProtocol=https;BlobEndpoint=http://azureblobstorageoniotedge:11002/otel;AccountName=otel;AccountKey=<ANY KEY. https://generate.plus/en/base64>"
+              }  
+            }
+          },
+          "azureblobstorageoniotedge": {
+            "settings": {
+              "image": "mcr.microsoft.com/azure-blob-storage:latest",
+              "createOptions": "{ \"Env\":[\"LOCAL_STORAGE_ACCOUNT_NAME=otel\",\"LOCAL_STORAGE_ACCOUNT_KEY=<ANY KEY. https://generate.plus/en/base64>\"],\"HostConfig\": {\"Binds\": [\"otel:/blobroot\"],\"PortBindings\":{\"11002/tcp\": [{\"HostPort\":\"11002\"}]}}}"
+            },
+            "env": {
+              "deviceToCloudUploadProperties__uploadOn": {
+                "value": true
+              },
+              "deviceToCloudUploadProperties__cloudStorageConnectionString": {
+                "value": "DefaultEndpointsProtocol=https;AccountName=<AZURE STORAGE ACCOUNT NAME>;AccountKey=<AZURE STORAGE ACCOUNT KEY>;EndpointSuffix=core.windows.net"
+              },
+              "deviceToCloudUploadProperties__deleteAfterUpload": {
+                "value": true
+              },
+              "deviceToCloudUploadProperties__storageContainersForUpload__logs__target": {
+                "value": "logs"
+              },
+              "deviceToCloudUploadProperties__storageContainersForUpload__traces__target": {
+                "value": "traces"
+              }                            
+            },
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "version": "1.0"
+          },          
+          "prometheus": {
+            "settings": {
+              "image": "kaizentm/iot-prometheus",
+              "createOptions": ""
+            },
+            "type": "docker",
+            "env": {
+              "SERVER_URL": {
+                "value": "${PROMETHEUS_SERVER_URL}"
+              }
+            },
+            "status": "running",
+            "restartPolicy": "always",
+            "version": "1.0"
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "sensorToFilterModule": "FROM /messages/modules/tempSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/FilterModule/inputs/input1\")",
+          "FilterModuleToIoTHub": "FROM /messages/modules/FilterModule/outputs/* INTO $upstream"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    }
+    ,
+    "azureblobstorageoniotedge":{
+      "properties.desired": {
+        "deviceToCloudUploadProperties": {
+          "uploadOn": true,
+          "uploadOrder": "OldestFirst",
+          "cloudStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=oteldata;AccountKey=tEAHbpW/htcr+Z6a0rhsCpnCjOtwv+FR7eTBeCs2p0j8RNEy3Swe5imlsUejbzp9FYwYqj33DWjN4DR4rrTqyg==;EndpointSuffix=core.windows.net",
+          "storageContainersForUpload": {
+            "logs": {},
+            "traces": {}
+          },
+          "deleteAfterUpload": true
+        }
+      }
+    }    
+  }
+}
