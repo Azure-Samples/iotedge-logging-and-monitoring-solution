@@ -83,7 +83,7 @@
             },
             "Opentelemetrycollector": {
               "settings": {
-                "image": "${MODULES.SimulatedTemperatureSensor}",
+                "image": "${MODULES.OpenTelemetryCollector}",
                 "createOptions": {}
               },
               "type": "docker",

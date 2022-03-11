@@ -1,6 +1,5 @@
 
-# FROM otel/opentelemetry-collector-contrib-dev
-FROM otelcontribcol:latest as prep
+FROM otel/opentelemetry-collector-contrib-dev:latest as prep
 
 FROM alpine:latest
 
