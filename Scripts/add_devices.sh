@@ -1,16 +1,13 @@
 #!/bin/bash
 
-# Simple script to provision N devices
-
-SUFFIX=56ed9473
-N=10
-RESOURCE_GROUP=iot-e2e-tutorial
-
-IOTHUB_NAME=iothub-$SUFFIX
+SUFFIX=$1
+N=$2
+RESOURCE_GROUP=$3
+IOTHUB_NAME=$4
 
 az extension add --name azure-iot -y
 
-for i in {1..$N}
+for i in `seq 2 $N`
 do
     DEVICE_ID=iotedgevm$i-$SUFFIX    
     az iot hub device-identity create --hub-name $IOTHUB_NAME --device-id $DEVICE_ID --edge-enabled --output none
