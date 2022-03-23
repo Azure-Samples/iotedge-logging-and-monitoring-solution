@@ -1,3 +1,5 @@
+param($deployment_profile, $deployment_parameters)
+
 $root_path = Split-Path $PSScriptRoot -Parent
 Import-Module "$root_path/Scripts/PS-Library"
 $github_repo_url = "https://raw.githubusercontent.com/eedorenko/iotedge-logging-and-monitoring-solution"
@@ -749,12 +751,16 @@ function New-ELMSEnvironment() {
     # set azure susbcription
     Set-AzureAccount
 
-    $option = Get-InputSelection `
-        -options @("End-to-End Sample", "Cloud Workflow Sample") `
-        -text @("Do you want to deploy End-to-End Sample or Cloud Workflow Sample? Choose an option from the list (using its Index):") `
-        -default_index 1
-    
-    
+    if ($deployment_profile -eq 'e2e') {
+      $option = 1
+    }
+    else {
+        $option = Get-InputSelection `
+            -options @("End-to-End Sample", "Cloud Workflow Sample") `
+            -text @("Do you want to deploy End-to-End Sample or Cloud Workflow Sample? Choose an option from the list (using its Index):") `
+            -default_index 1
+    }
+            
     $script:enable_e2e_sample = ($option -eq 1)
 
     if ($script:enable_e2e_sample) {
@@ -1288,3 +1294,15 @@ function New-ELMSEnvironment() {
 }
 
 New-ELMSEnvironment
+# Set-EnvironmentHash
+
+# Write-Host $deployment_option
+
+$output_parameters = @{
+    "environmentHashId"           = @{ "value" = $script:env_hash }
+    "iotHubName"                  = @{ "value" = $script:iot_hub_name }
+    "iotHubResourceGroup"         = @{ "value" = $script:iot_hub_resource_group }
+    "edgeVmName"                  = @{ "value" = $script:vm_name }
+}
+
+Set-Variable -Name $deployment_parameters -Value $output_parameters -Scope 1 

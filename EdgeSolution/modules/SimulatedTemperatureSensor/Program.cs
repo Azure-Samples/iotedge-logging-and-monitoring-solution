@@ -63,6 +63,12 @@ namespace SimulatedTemperatureSensor
 
         private static readonly ActivitySource SimulatedTemperatureSensorActivitySource = new ActivitySource("IoTSample.SimulatedTemperatureSensor");
 
+        private static string loggingLevel;
+        private static string traceSampleRaio;
+
+        //private static ModuleClient ioTHubModuleClient;
+
+
 
         static async Task<int> MainAsync()
         {
@@ -71,6 +77,61 @@ namespace SimulatedTemperatureSensor
                 .AddJsonFile("config/appsettings.json", optional: true)
                 .AddEnvironmentVariables()
                 .Build();
+
+            
+            loggingLevel = configuration.GetSection("LOGGING_LEVEL").Value;
+            traceSampleRaio = configuration.GetSection("TRACE_SAMPLE_RATIO").Value;
+
+            // MqttTransportSettings mqttSetting = new MqttTransportSettings(TransportType.Mqtt_Tcp_Only);
+            // ITransportSettings[] settings = { mqttSetting };
+
+            // // Open a connection to the Edge runtime
+            // ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings).ConfigureAwait(false);
+            // await ioTHubModuleClient.OpenAsync().ConfigureAwait(false);
+
+
+            messageDelay = configuration.GetValue("MessageDelay", TimeSpan.FromSeconds(5));
+            int messageCount = configuration.GetValue(MessageCountConfigKey, 10000);
+            var simulatorParameters = new SimulatorParameters
+            {
+                MachineTempMin = configuration.GetValue<double>("machineTempMin", 0),
+                MachineTempMax = configuration.GetValue<double>("machineTempMax", 100),
+                MachinePressureMin = configuration.GetValue<double>("machinePressureMin", 1),
+                MachinePressureMax = configuration.GetValue<double>("machinePressureMax", 10),
+                AmbientTemp = configuration.GetValue<double>("ambientTemp", 21),
+                HumidityPercent = configuration.GetValue("ambientHumidity", 25)
+            };
+
+
+            TransportType transportType = configuration.GetValue("ClientTransportType", TransportType.Amqp_Tcp_Only);
+
+            ModuleClient moduleClient = await CreateModuleClientAsync(
+                transportType,
+                DefaultTimeoutErrorDetectionStrategy,
+                DefaultTransientRetryStrategy);
+            await moduleClient.OpenAsync();
+            await moduleClient.SetMethodHandlerAsync("reset", ResetMethod, null);
+
+            (CancellationTokenSource cts, ManualResetEventSlim completed, Option<object> handler) = ShutdownHandler.Init(TimeSpan.FromSeconds(5), null);
+
+            Twin currentTwinProperties = await moduleClient.GetTwinAsync();
+            if (currentTwinProperties.Properties.Desired.Contains(SendIntervalConfigKey))
+            {
+                messageDelay = TimeSpan.FromSeconds((int)currentTwinProperties.Properties.Desired[SendIntervalConfigKey]);
+            }
+
+            if (currentTwinProperties.Properties.Desired.Contains(SendDataConfigKey))
+            {
+                sendData = (bool)currentTwinProperties.Properties.Desired[SendDataConfigKey];
+            }
+            
+            deviceId = configuration.GetSection("IOTEDGE_DEVICEID").Value;
+            
+            
+
+            ModuleClient userContext = moduleClient;
+            var moduleTwin = await userContext.GetTwinAsync().ConfigureAwait(false);
+            await OnDesiredPropertiesUpdated(moduleTwin.Properties.Desired, userContext);
 
             /*
             * Configuring ILogger to 
@@ -84,7 +145,7 @@ namespace SimulatedTemperatureSensor
                 builder
                     .SetMinimumLevel(
                         (LogLevel)Enum.Parse(typeof(LogLevel),
-                                                 configuration.GetSection("LOGGING_LEVEL").Value,
+                                                 loggingLevel,
                                                  true))
                     .AddOpenTelemetry(options =>
                     {
@@ -113,7 +174,7 @@ namespace SimulatedTemperatureSensor
             * OTLP (to be caught by OpenTelemetry collector)
             */
             using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-                .SetSampler(new TraceIdRatioBasedSampler(Convert.ToDouble(configuration.GetSection("TRACE_SAMPLE_RATIO").Value)))
+                .SetSampler(new TraceIdRatioBasedSampler(Convert.ToDouble(traceSampleRaio)))
                 .AddSource("IoTSample.SimulatedTemperatureSensor")
                 .SetResourceBuilder(ResourceBuilder.CreateDefault()
                     .AddTelemetrySdk()
@@ -123,61 +184,13 @@ namespace SimulatedTemperatureSensor
                 {
                     opt.Endpoint = new Uri(configuration.GetSection("OTLP_ENDPOINT").Value);
                 })
-                .Build();
+                .Build();            
 
-
-            messageDelay = configuration.GetValue("MessageDelay", TimeSpan.FromSeconds(5));
-            int messageCount = configuration.GetValue(MessageCountConfigKey, 10000);
-            var simulatorParameters = new SimulatorParameters
-            {
-                MachineTempMin = configuration.GetValue<double>("machineTempMin", 0),
-                MachineTempMax = configuration.GetValue<double>("machineTempMax", 100),
-                MachinePressureMin = configuration.GetValue<double>("machinePressureMin", 1),
-                MachinePressureMax = configuration.GetValue<double>("machinePressureMax", 10),
-                AmbientTemp = configuration.GetValue<double>("ambientTemp", 21),
-                HumidityPercent = configuration.GetValue("ambientHumidity", 25)
-            };
-
-            logger.LogInformation(
-                $"Initializing simulated temperature sensor to send {(SendUnlimitedMessages(messageCount) ? "unlimited" : messageCount.ToString())} "
-                + $"messages, at an interval of {messageDelay.TotalSeconds} seconds.\n"
-                + $"To change this, set the environment variable {MessageCountConfigKey} to the number of messages that should be sent (set it to -1 to send unlimited messages).");
-
-            TransportType transportType = configuration.GetValue("ClientTransportType", TransportType.Amqp_Tcp_Only);
-
-            ModuleClient moduleClient = await CreateModuleClientAsync(
-                transportType,
-                DefaultTimeoutErrorDetectionStrategy,
-                DefaultTransientRetryStrategy);
-            await moduleClient.OpenAsync();
-            await moduleClient.SetMethodHandlerAsync("reset", ResetMethod, null);
-
-            (CancellationTokenSource cts, ManualResetEventSlim completed, Option<object> handler) = ShutdownHandler.Init(TimeSpan.FromSeconds(5), null);
-
-            Twin currentTwinProperties = await moduleClient.GetTwinAsync();
-            if (currentTwinProperties.Properties.Desired.Contains(SendIntervalConfigKey))
-            {
-                messageDelay = TimeSpan.FromSeconds((int)currentTwinProperties.Properties.Desired[SendIntervalConfigKey]);
-            }
-
-            if (currentTwinProperties.Properties.Desired.Contains(SendDataConfigKey))
-            {
-                sendData = (bool)currentTwinProperties.Properties.Desired[SendDataConfigKey];
-                if (!sendData)
-                {
-                    logger.LogInformation("Sending data disabled. Change twin configuration to start sending again.");
-                }
-            }
-            
-            deviceId = configuration.GetSection("IOTEDGE_DEVICEID").Value;
-            
-            
-
-            ModuleClient userContext = moduleClient;
             await moduleClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertiesUpdated, userContext);
             await moduleClient.SetInputMessageHandlerAsync("control", ControlMessageHandle, userContext);
             await SendEvents(moduleClient, messageCount, simulatorParameters, cts);
             await cts.Token.WhenCanceled();
+
 
             completed.Set();
             handler.ForEach(h => GC.KeepAlive(h));
@@ -363,6 +376,10 @@ namespace SimulatedTemperatureSensor
 
         static async Task OnDesiredPropertiesUpdated(TwinCollection desiredPropertiesPatch, object userContext)
         {
+            const string lggingLevelProperty = "loggingLevel";
+            const string traceSampleRaioProperty = "traceSampleRatio";
+
+            
             // At this point just update the configure configuration.
             if (desiredPropertiesPatch.Contains(SendIntervalConfigKey))
             {
@@ -372,16 +389,19 @@ namespace SimulatedTemperatureSensor
             if (desiredPropertiesPatch.Contains(SendDataConfigKey))
             {
                 bool desiredSendDataValue = (bool)desiredPropertiesPatch[SendDataConfigKey];
-                if (desiredSendDataValue != sendData && !desiredSendDataValue)
-                {
-                    logger.LogInformation("Sending data disabled. Change twin configuration to start sending again.");
-                }
-
                 sendData = desiredSendDataValue;
             }
 
+            if (desiredPropertiesPatch.Contains(lggingLevelProperty))
+                loggingLevel = (string)desiredPropertiesPatch[lggingLevelProperty];
+
+            if (desiredPropertiesPatch.Contains(traceSampleRaioProperty))
+                traceSampleRaio = (string)desiredPropertiesPatch[traceSampleRaioProperty];
+
+
+
             var moduleClient = (ModuleClient)userContext;
-            var patch = new TwinCollection($"{{ \"SendData\":{sendData.ToString().ToLower()}, \"SendInterval\": {messageDelay.TotalSeconds}}}");
+            var patch = new TwinCollection($"{{ \"SendData\":{sendData.ToString().ToLower()}, \"SendInterval\": {messageDelay.TotalSeconds}, \"{lggingLevelProperty}\":\"{loggingLevel}\", \"{traceSampleRaioProperty}\": \"{traceSampleRaio}\"}}");
             await moduleClient.UpdateReportedPropertiesAsync(patch); // Just report back last desired property.
         }
 
@@ -391,7 +411,7 @@ namespace SimulatedTemperatureSensor
             RetryStrategy retryStrategy = null)
         {
             var retryPolicy = new RetryPolicy(transientErrorDetectionStrategy, retryStrategy);
-            retryPolicy.Retrying += (_, args) => { logger.LogInformation($"[Error] Retry {args.CurrentRetryCount} times to create module client and failed with exception:{Environment.NewLine}{args.LastException}"); };
+            retryPolicy.Retrying += (_, args) => {};
 
             ModuleClient client = await retryPolicy.ExecuteAsync(
                 async () =>
@@ -413,11 +433,9 @@ namespace SimulatedTemperatureSensor
                     }
 
                     ITransportSettings[] settings = GetTransportSettings();
-                    logger.LogInformation("[Information]: Trying to initialize module client using transport type [{transportType}].", transportType);
                     ModuleClient moduleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
                     await moduleClient.OpenAsync();
 
-                    logger.LogInformation("[Information]: Successfully initialized module client of transport type [{transportType}].", transportType);
                     return moduleClient;
                 });
 
