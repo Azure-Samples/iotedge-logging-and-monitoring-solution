@@ -1,0 +1,20 @@
+
+parameters:
+- name: function_name
+  type: string
+
+steps:
+  - task: Maven@3
+    displayName: Build function
+    inputs:
+      mavenPomFile: $(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}/pom.xml
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      goals: 'package'
+  - task: ArchiveFiles@2
+    displayName: Publish Function
+    inputs:
+      rootFolderOrFile: '$(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}/target/azure-functions/${{ parameters.function_name }}'
+      includeRootFolder: false 
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/drop/${{ parameters.function_name }}/${{ parameters.function_name }}.zip'

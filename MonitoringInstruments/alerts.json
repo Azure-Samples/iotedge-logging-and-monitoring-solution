@@ -1,0 +1,471 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "iotHubName": {
+            "type": "string",      
+            "metadata": {
+              "description": "IoT Hub Name"
+            }
+          }        
+    },
+    "variables": {
+        "iot_hub_scope_resource_id": "[resourceId('microsoft.devices/iothubs/', parameters('iotHubName'))]",        
+        "evaluationFrequency": "PT5M", // 5 mins (5 mins, 15 mins, 30 mins, etc.)
+        "aggregationPeriod": "PT5M" // 5 mins (5 mins, 15 mins, 30 mins, etc.)
+    },
+    "resources": [
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Correctness is below SLO",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Correctness is below SLO",
+                "description": "Less than 99% of online devices deliver messages successfully with less than 5% of errors for the last day",
+                "severity": 0,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let errorsThreshold = 5;\nlet _data=InsightsMetrics\n| extend iotresource = split(_ResourceId, \"/\")[-1]\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device);\nlet messagesSentByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesSent = maxVal - minVal;\nlet messagesDroppedByDevice = _data\n    | where Name == \"edgehub_messages_dropped_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\"\n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesDropped = maxVal - minVal;\nmessagesSentByDevice\n    | join kind=leftouter messagesDroppedByDevice on device\n    | extend device, messagesSent, messagesDropped = coalesce(messagesDropped,double(0))\n    | extend errorsRatio = case(messagesSent == 0, double(0), messagesDropped/messagesSent)\n    | summarize correctness=100*countif(errorsRatio <= errorsThreshold)/count()\n\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "correctness",
+                            "dimensions": [],
+                            "operator": "LessThan",
+                            "threshold": 99,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Data Freshness below SLO",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Data Freshness below SLO",
+                "description": "Less than 95% of online devices send temperature 10 times per minute for the last day",
+                "severity": 0,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let messageFrequencyThreshold = 10;\nInsightsMetrics\n| extend iotresource = split(_ResourceId, \"/\")[-1]\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| where Name == \"edgehub_messages_sent_total\"\n| extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n| where target has \"Upstream\"\n| order by device, TimeGenerated asc\n| serialize\n| extend\n    next_device = next(device),\n    next_time = next(TimeGenerated),\n    next_val = next(Val)\n| project\n    device,\n    Val,\n    next_val,\n    next_device,\n    TimeGenerated,\n    next_time,\n    messageFrequency = case(next_device == device, (next_val - Val) / datetime_diff('minute', next_time, TimeGenerated), double(null))\n| where isnotnull(messageFrequency)        \n| summarize minMessageFrequency = min(messageFrequency) by device\n| summarize freshness=100 * countif(minMessageFrequency >= messageFrequencyThreshold) / count()\n\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "freshness",
+                            "dimensions": [],
+                            "operator": "LessThan",
+                            "threshold": 95,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Data Freshness is close to SLO",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Data Freshness is close to SLO",
+                "description": "Less han 99% of online devices send temperature 10 times per minute for the last day",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let messageFrequencyThreshold = 10;\nInsightsMetrics\n| extend iotresource = split(_ResourceId, \"/\")[-1]\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| where Name == \"edgehub_messages_sent_total\"\n| extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n| where target has \"Upstream\"\n| order by device, TimeGenerated asc\n| serialize\n| extend\n    next_device = next(device),\n    next_time = next(TimeGenerated),\n    next_val = next(Val)\n| project\n    device,\n    Val,\n    next_val,\n    next_device,\n    TimeGenerated,\n    next_time,\n    messageFrequency = case(next_device == device, (next_val - Val) / datetime_diff('minute', next_time, TimeGenerated), double(null))\n| where isnotnull(messageFrequency)        \n| summarize minMessageFrequency = min(messageFrequency) by device\n| summarize freshness=100 * countif(minMessageFrequency >= messageFrequencyThreshold) / count()\n\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "freshness",
+                            "dimensions": [],
+                            "operator": "LessThan",
+                            "threshold": 99,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Ddevices Coverage is close to SLO",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Ddevices Coverage is close to SLO",
+                "description": "Less than 95% of devices reported metrics no longer than 10 mins ago (were online) for the last day",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let offlineThresholdMins = 10;\nInsightsMetrics\n| extend iotresource = split(_ResourceId, \"/\")[-1]\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| where Name == \"edgehub_gettwin_total\" or Name == \"edgeAgent_total_time_running_correctly_seconds\"\n| order by device, TimeGenerated asc\n| serialize\n| extend next_device = next(device), next_time = next(TimeGenerated)\n| project\n    device,\n    next_device,\n    next_time,\n    offlineTime = case(next_device == device, datetime_diff('minute', next_time, TimeGenerated), datetime_diff('minute', now(), TimeGenerated))\n| summarize maxOfflineTime = max(offlineTime) by device\n| summarize coverage=100 * countif(maxOfflineTime <= offlineThresholdMins) / count()\n| where coverage<95\n",
+                            "timeAggregation": "Count",
+                            "dimensions": [],
+                            "operator": "GreaterThanOrEqual",
+                            "threshold": 1,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Devices Coverage is below SLO",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Devices Coverage is below SLO",
+                "description": "Leess than 90% of devices reported metrics no longer than 10 mins ago (were online) for the observation interval",
+                "severity": 0,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let offlineThresholdMins = 10;\nInsightsMetrics\n| extend iotresource = split(_ResourceId, \"/\")[-1]\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| where Name == \"edgehub_gettwin_total\" or Name == \"edgeAgent_total_time_running_correctly_seconds\"\n| order by device, TimeGenerated asc\n| serialize\n| extend next_device = next(device), next_time = next(TimeGenerated)\n| project\n    device,\n    next_device,\n    next_time,\n    offlineTime = case(next_device == device, datetime_diff('minute', next_time, TimeGenerated), datetime_diff('minute', now(), TimeGenerated))\n| summarize maxOfflineTime = max(offlineTime) by device\n| summarize coverage=100 * countif(maxOfflineTime <= offlineThresholdMins) / count()\n\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "coverage",
+                            "dimensions": [],
+                            "operator": "LessThan",
+                            "threshold": 90,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Devices with heavy CPU usage",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Devices with heavy CPU usage",
+                "description": "More than 20% of devices use more than 80% CPU",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let cpuThreshold = 80;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgeAgent_used_cpu_percent\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend cpu = toint(Val)\n| project device, cpu\n| summarize cpu=percentile(cpu, 95) by device\n| summarize heavyCpu=100 * countif(cpu >= cpuThreshold) / count()\n\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "heavyCpu",
+                            "dimensions": [],
+                            "operator": "GreaterThan",
+                            "threshold": 20,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Devices with high RAM consumption",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Devices with high RAM consumption",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let availRAMThreshold=80;\nlet totalBytesByDevice = InsightsMetrics\n    | where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n    | where Name == \"edgeAgent_total_memory_bytes\"\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device)\n    | extend module = tostring(dimensions.module_name)\n    | extend value = tolong(Val)\n    | summarize totalAvailBytes=sum(value) by device, module, TimeGenerated;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgeAgent_used_memory_bytes\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend module = tostring(dimensions.module_name)\n| extend value = tolong(Val)\n| summarize totalUsedBytes=sum(value) by device, module, TimeGenerated\n| join totalBytesByDevice on device, module, TimeGenerated\n| summarize totalUsage = percentile(100 * totalUsedBytes / totalAvailBytes, 95) by device\n| summarize heavyUsage=100 * countif(totalUsage > availRAMThreshold) / count()\n\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "heavyUsage",
+                            "dimensions": [],
+                            "operator": "GreaterThan",
+                            "threshold": 20,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Devices with long messages Queue Len",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Devices with long messages Queue Len",
+                "description": "More than 20% of devices have Qlen greater than 100",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let qlenThreshold = 100;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgehub_queue_length\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend ep = tostring(dimensions.endpoint)\n| extend qlen = toint(Val)\n| project device, qlen, ep, TimeGenerated, _ResourceId\n| summarize qlen=percentile(qlen,95) by device\n| summarize longQlen=100*countif(qlen >= qlenThreshold)/count()\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "longQlen",
+                            "dimensions": [],
+                            "operator": "GreaterThan",
+                            "threshold": 20,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Dropped messages",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Dropped messages",
+                "description": "There are more than 20 dropped messages",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize":  "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "InsightsMetrics\n| extend iotresource = split(_ResourceId, \"/\")[-1]\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| where Name == \"edgehub_messages_dropped_total\"\n| extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n| where target has \"Upstream\"\n| summarize  minVal = min(Val), maxVal = max(Val) by device\n| extend device, messagesDropped = maxVal - minVal\n",
+                            "timeAggregation": "Count",
+                            "dimensions": [],
+                            "operator": "GreaterThan",
+                            "threshold": 20,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Low available disk space on devices",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Low available disk space on devices",
+                "description": "More than 20% of devices have less than 20% disk space available",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let availSpaseThreshold=80;\nlet totalBytesByDevice = InsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgeAgent_total_disk_space_bytes\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend iothub = tostring(dimensions.iothub)\n| extend value = tolong(Val)\n| extend diskname = tostring(dimensions.disk_name)\n| extend id = strcat(iothub, \"::\", device)\n| project device, id, diskname, value, TimeGenerated, _ResourceId\n| top-nested of id by Ignore0=max(1),\ntop-nested 1 of TimeGenerated by Ignore1=max(TimeGenerated),\ntop-nested of diskname by Ignore2=max(1),\ntop-nested of value by Ignore3=max(1)\n| project-away Ignore*\n| summarize Bytes=max(value) by id, diskname\n| summarize totalBytes=sum(Bytes) by id;\nInsightsMetrics\n| where Origin == \"iot.azm.ms\" and Namespace == \"metricsmodule\"\n| where Name == \"edgeAgent_available_disk_space_bytes\"\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| extend iothub = tostring(dimensions.iothub)\n| extend value = tolong(Val)\n| extend diskname = tostring(dimensions.disk_name)\n| extend id = strcat(iothub, \"::\", device)\n| project device, id, diskname, value, TimeGenerated, _ResourceId\n| summarize Bytes=max(value) by device, diskname, TimeGenerated, id, \n_ResourceId\n| summarize availBytes=sum(Bytes) by id, device, TimeGenerated, _ResourceId\n| join kind=leftouter totalBytesByDevice\non $left.id == $right.id\n| extend percentUsed = round((todouble(totalBytes) - todouble(availBytes)) / \ntodouble(totalBytes) * 100, 0)\n| project TimeGenerated, device, percentUsed, _ResourceId\n| summarize AggregatedValue = percentile(percentUsed,96) by device\n| summarize lowDiskDevices=100*countif(AggregatedValue > availSpaseThreshold)/count()\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "lowDiskDevices",
+                            "dimensions": [],
+                            "operator": "GreaterThan",
+                            "threshold": 20,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Throughput is below SLO",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Throughput is below SLO",
+                "description": "Less than 95% of online devices deliver 90th percentile of messages within 200ms for the last day",
+                "severity": 0,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let latencyThresholdMs = 200;\nInsightsMetrics\n| extend iotresource = split(_ResourceId, \"/\")[-1]\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| where Name == 'edgehub_message_send_duration_seconds'\n| extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n| where target has \"Upstream\"\n| extend quantile = tostring(dimensions.quantile)\n| where quantile == '0.9'\n| where Val != 'NaN' and isnotnull(Val)\n| extend val = todouble(Val)\n| summarize maxLatency = max(val*1000) by device\n| summarize throughput=100*countif(maxLatency<=latencyThresholdMs)/count()\n\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "throughput",
+                            "dimensions": [],
+                            "operator": "LessThan",
+                            "threshold": 95,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        },
+        {
+            "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2021-08-01",
+            "name": "Throughput is close to SLO",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "Throughput is close to SLO",
+                "description": "Less than 99% of online devices deliver 90th percentile of messages within 200ms for the observation interval",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "[variables('evaluationFrequency')]",
+                "scopes": [
+                    "[variables('iot_hub_scope_resource_id')]"
+                ],
+                "targetResourceTypes": [
+                    "Microsoft.Devices/IotHubs"
+                ],
+                "windowSize": "[variables('aggregationPeriod')]",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "query": "let latencyThresholdMs = 200;\nInsightsMetrics\n| extend iotresource = split(_ResourceId, \"/\")[-1]\n| extend dimensions=parse_json(Tags)\n| extend device = tostring(dimensions.edge_device)\n| where Name == 'edgehub_message_send_duration_seconds'\n| extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string)))    \n| where target has \"Upstream\"\n| extend quantile = tostring(dimensions.quantile)\n| where quantile == '0.9'\n| where Val != 'NaN' and isnotnull(Val)\n| extend val = todouble(Val)\n| summarize maxLatency = max(val*1000) by device\n| summarize throughput=100*countif(maxLatency<=latencyThresholdMs)/count()\n\n",
+                            "timeAggregation": "Average",
+                            "metricMeasureColumn": "throughput",
+                            "dimensions": [],
+                            "operator": "LessThan",
+                            "threshold": 99,
+                            "failingPeriods": {
+                                "numberOfEvaluationPeriods": 1,
+                                "minFailingPeriodsToAlert": 1
+                            }
+                        }
+                    ]
+                },
+                "autoMitigate": false,
+                "actions": {}
+            }
+        }                                                                           
+    ]
+}

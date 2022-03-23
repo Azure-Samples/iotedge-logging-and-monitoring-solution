@@ -1,6 +1,8 @@
+param($deployment_profile, $deployment_parameters)
+
 $root_path = Split-Path $PSScriptRoot -Parent
 Import-Module "$root_path/Scripts/PS-Library"
-$github_repo_url = "https://raw.githubusercontent.com/Azure-Samples/iotedge-logging-and-monitoring-solution"
+$github_repo_url = "https://raw.githubusercontent.com/eedorenko/iotedge-logging-and-monitoring-solution"
 
 function Set-EnvironmentHash {
     param(
@@ -303,6 +305,8 @@ function Set-LogAnalyticsWorkspace {
         $script:workspace_name = "$($prefix)-$($script:env_hash)"
     }
 }
+
+# function Set-ApplicationInsights!!!!! {
 
 function Set-EventHubsNamespace {
     param(
@@ -703,6 +707,8 @@ function New-ELMSEnvironment() {
     $script:deployment_condition = "tags.logPullEnabled='true'"
     $script:device_query = "SELECT * FROM devices WHERE $($script:deployment_condition)"
     $script:function_app_name = "iotedgelogsapp-$($script:env_hash)"
+    $script:function_app_dotnet_backend_name = "iot-dotnet-backend-$($script:env_hash)"
+    $script:function_app_java_backend_name = "iot-java-backend-$($script:env_hash)"
     $script:logs_regex = "\b(WRN?|ERR?|CRIT?)\b"
     $script:logs_since = "15m"
     $script:logs_encoding = "gzip"
@@ -712,6 +718,8 @@ function New-ELMSEnvironment() {
     $script:alert_function_name = "MonitorAlerts"
     $script:zip_package_name = "deploy.zip"
     $script:zip_package_path = "$($root_path)/FunctionApp/FunctionApp/$($zip_package_name)"
+    $script:zip_package_app_dotnet_backend_path = "$($root_path)/Backend/dotnetfunction/iot-dotnet-backend.zip"
+    $script:zip_package_app_java_backend_path = "$($root_path)/Backend/javafunction/iot-java-backend.zip"
     #endregion
 
     #region greetings
@@ -743,17 +751,36 @@ function New-ELMSEnvironment() {
     # set azure susbcription
     Set-AzureAccount
 
-    #region deployment option
-    $deployment_options = @(
-        "Create a sandbox environment for testing (fastest)",
-        "Custom deployment (most flexible)",
-        "Deploy Monitoring alerts (requires an existing ELMS deployment with metrics collection enabled)"
-    )
+    if ($deployment_profile -eq 'e2e') {
+      $option = 1
+    }
+    else {
+        $option = Get-InputSelection `
+            -options @("End-to-End Sample", "Cloud Workflow Sample") `
+            -text @("Do you want to deploy End-to-End Sample or Cloud Workflow Sample? Choose an option from the list (using its Index):") `
+            -default_index 1
+    }
+            
+    $script:enable_e2e_sample = ($option -eq 1)
 
-    $deployment_option = Get-InputSelection `
-        -options $deployment_options `
-        -text "Choose a deployment option from the list (using its Index):"
-    #endregion
+    if ($script:enable_e2e_sample) {
+        $deployment_option = 1
+    }   
+    else {
+        #region deployment option
+        $deployment_options = @(
+            "Create a sandbox environment for testing (fastest)",
+            "Custom deployment (most flexible)",
+            "Deploy Monitoring alerts (requires an existing ELMS deployment with metrics collection enabled)"
+        )
+
+        $deployment_option = Get-InputSelection `
+            -options $deployment_options `
+            -text "Choose a deployment option from the list (using its Index):"
+        #endregion
+    }    
+    
+    
 
     #region obtain resource group name
     if ($deployment_option -eq 1 -or $deployment_option -eq 2) {
@@ -854,13 +881,14 @@ function New-ELMSEnvironment() {
     else {
         $option = Get-InputSelection `
             -options @("Yes", "No") `
-            -text @("In addition to logging, ELMS can enable IoT Edge monitoring with Azure Monitor. It will let you monitor your edge fleet at scale by using Azure Monitor to collect, store, visualize and generate alerts from metrics emitted by the IoT Edge runtime.", "Do you want to enable IoT Edge monitoring? Choose an option from the list (using its Index):") `
+            -text @("ELMS can enable IoT Edge monitoring with Azure Monitor. It will let you monitor your edge fleet at scale by using Azure Monitor to collect, store, visualize and generate alerts from metrics emitted by the IoT Edge runtime.", "Do you want to enable IoT Edge monitoring? Choose an option from the list (using its Index):") `
             -default_index 1
         
         if ($option -eq 1) {
             $script:enable_monitoring = $true
         }
     }
+        
 
     #region select monitoring type
     if ($script:enable_monitoring -and $null -eq $script:monitoring_mode) {
@@ -961,7 +989,9 @@ function New-ELMSEnvironment() {
         "workspaceLocation"           = @{ "value" = $script:workspace_location }
         "workspaceName"               = @{ "value" = $script:workspace_name }
         "workspaceResourceGroup"      = @{ "value" = $script:workspace_resource_group }
-        "functionAppName"             = @{ "value" = $script:function_app_name }
+        "functionAppName"             = @{ "value" = $script:function_app_name } 
+        "functionAppDotNetName"       = @{ "value" = $script:function_app_dotnet_backend_name }
+        "functionAppJavaName"         = @{ "value" = $script:function_app_java_backend_name }        
         "httpTriggerFunction"         = @{ "value" = $script:invoke_log_upload_function_name }
         "logsRegex"                   = @{ "value" = $script:logs_regex }
         "logsSince"                   = @{ "value" = $script:logs_since }
@@ -969,6 +999,7 @@ function New-ELMSEnvironment() {
         "metricsEncoding"             = @{ "value" = $script:metrics_encoding }
         "templateUrl"                 = @{ "value" = $github_repo_url }
         "branchName"                  = @{ "value" = $(git rev-parse --abbrev-ref HEAD) }
+        "createE2ESample"        = @{ "value" = $script:enable_e2e_sample }
     }
 
     if ($script:create_iot_hub) {
@@ -1025,6 +1056,19 @@ function New-ELMSEnvironment() {
 
     #region generate monitoring deployment manifest
     if ($script:enable_monitoring) {
+        if ($script:enable_e2e_sample) {
+            $e2e_template = "$($root_path)/EdgeSolution/e2e.deployment.template.json"
+            $e2e_manifest = "$($root_path)/EdgeSolution/e2e.deployment.manifest.json"
+            Remove-Item -Path $e2e_manifest -ErrorAction Ignore
+
+            (Get-Content -Path $e2e_template -Raw) | ForEach-Object {
+                $_  -replace '\$\{APPINSIGHTS_INSTRUMENTATION_KEY\}', $script:deployment_output.properties.outputs.appInsightsInstrumentationKey.value `
+                    -replace '\$\{IOTHUB_ARM_RESOURCEID\}', $script:deployment_output.properties.outputs.iotHubResourceId.value `
+                    -replace '\$\{LOG_ANALYTICS_WSID\}', $script:deployment_output.properties.outputs.workspaceId.value `
+                    -replace '\$\{LOG_ANALYTICS_SHARED_KEY\}', $script:deployment_output.properties.outputs.workspaceSharedKey.value
+
+            } | Set-Content -Path $e2e_manifest    
+        } 
         $script:scrape_frequency = 300
         if ($script:metrics_encoding -eq "gzip") {
             $script:compress_for_upload = "true"
@@ -1042,54 +1086,87 @@ function New-ELMSEnvironment() {
                 -replace '__HUB_RESOURCE_ID__', $script:deployment_output.properties.outputs.iotHubResourceId.value `
                 -replace '__UPLOAD_TARGET__', $script:monitoring_mode `
                 -replace '__SCRAPE_FREQUENCY__', $script:scrape_frequency `
+                -replace '__COMPRESS_FOR_UPLOAD__', $script:compress_for_upload `
                 -replace '__COMPRESS_FOR_UPLOAD__', $script:compress_for_upload
-        } | Set-Content -Path $monitoring_manifest
+        } | Set-Content -Path $monitoring_manifest    
+        
     }
     #endregion
 
     #region edge deployments
     if ($script:create_iot_hub) {
 
-        # Create main deployment
-        Write-Host "`r`nCreating main IoT edge device deployment"
 
-        az iot edge deployment create `
-            -d "main-deployment" `
-            --hub-name $script:iot_hub_name `
-            --content "$($root_path)/EdgeSolution/deployment.manifest.json" `
-            --target-condition=$script:deployment_condition | Out-Null
 
-        $priority = 0
-
-        # Create monitoring deployment
-        if ($script:enable_monitoring) {
-            $deployment_name = "edge-monitoring"
-            $priority += 1
+        if ($script:enable_e2e_sample) {
+            # Create logging deployment
+            $deployment_name = "e2e-sample"
+            $priority = 0
             
-            Write-Host "`r`nCreating IoT edge monitoring layered deployment $deployment_name"
+            Write-Host "`r`nCreating end-to-end IoT edge sample deployment $deployment_name"
 
             az iot edge deployment create `
                 --layered `
                 -d "$deployment_name" `
                 --hub-name $script:iot_hub_name `
-                --content $monitoring_manifest `
+                --content $e2e_manifest `
+                --target-condition=$script:deployment_condition `
+                --priority $priority | Out-Null  
+
+            az deployment group create `
+                --resource-group $script:resource_group_name `
+                --template-file "$($root_path)/MonitoringInstruments/alerts.json" `
+                --parameters iotHubName=$script:iot_hub_name             
+
+            az deployment group create `
+                --resource-group $script:resource_group_name `
+                --template-file "$($root_path)/MonitoringInstruments/workbook.json" `
+                --parameters iotHubName=$script:iot_hub_name             
+
+        } else {
+            # Create main deployment
+            Write-Host "`r`nCreating main IoT edge device deployment"
+
+            az iot edge deployment create `
+                -d "main-deployment" `
+                --hub-name $script:iot_hub_name `
+                --content "$($root_path)/EdgeSolution/deployment.manifest.json" `
+                --target-condition=$script:deployment_condition | Out-Null
+
+            $priority = 0
+
+            # Create monitoring deployment
+            if ($script:enable_monitoring) {
+                $deployment_name = "edge-monitoring"
+                $priority += 1
+                
+                Write-Host "`r`nCreating IoT edge monitoring layered deployment $deployment_name"
+
+                az iot edge deployment create `
+                    --layered `
+                    -d "$deployment_name" `
+                    --hub-name $script:iot_hub_name `
+                    --content $monitoring_manifest `
+                    --target-condition=$script:deployment_condition `
+                    --priority $priority | Out-Null
+            }
+
+            # Create logging deployment
+            $deployment_name = "sample-logging"
+            $priority += 1
+            
+            Write-Host "`r`nCreating IoT edge logging layered deployment $deployment_name"
+
+            az iot edge deployment create `
+                --layered `
+                -d "$deployment_name" `
+                --hub-name $script:iot_hub_name `
+                --content "$($root_path)/EdgeSolution/logging.deployment.json" `
                 --target-condition=$script:deployment_condition `
                 --priority $priority | Out-Null
         }
-
-        # Create logging deployment
-        $deployment_name = "sample-logging"
-        $priority += 1
         
-        Write-Host "`r`nCreating IoT edge logging layered deployment $deployment_name"
 
-        az iot edge deployment create `
-            --layered `
-            -d "$deployment_name" `
-            --hub-name $script:iot_hub_name `
-            --content "$($root_path)/EdgeSolution/logging.deployment.json" `
-            --target-condition=$script:deployment_condition `
-            --priority $priority | Out-Null
     }
     #endregion
 
@@ -1102,6 +1179,18 @@ function New-ELMSEnvironment() {
     if (!$script:create_event_hubs) {
 
         az functionapp config appsettings set --resource-group $script:resource_group_name --name $script:function_app_name --settings "AzureWebJobs.CollectMetrics.Disabled=true" | Out-Null
+    }
+    #endregion
+
+    #region backend apps
+    if ($script:enable_e2e_sample) {
+        Write-Host
+        Write-Host "Deploying code to dotnet backend app $script:function_app_dotnet_backend_name"            
+        az functionapp deployment source config-zip -g $script:resource_group_name -n $script:function_app_dotnet_backend_name --src $script:zip_package_app_dotnet_backend_path | Out-Null
+
+        Write-Host
+        Write-Host "Deploying code to java backend app $script:function_app_java_backend_name"            
+        az functionapp deployment source config-zip -g $script:resource_group_name -n $script:function_app_java_backend_name --src $script:zip_package_app_java_backend_path | Out-Null
     }
     #endregion
 
@@ -1205,3 +1294,15 @@ function New-ELMSEnvironment() {
 }
 
 New-ELMSEnvironment
+# Set-EnvironmentHash
+
+# Write-Host $deployment_option
+
+$output_parameters = @{
+    "environmentHashId"           = @{ "value" = $script:env_hash }
+    "iotHubName"                  = @{ "value" = $script:iot_hub_name }
+    "iotHubResourceGroup"         = @{ "value" = $script:iot_hub_resource_group }
+    "edgeVmName"                  = @{ "value" = $script:vm_name }
+}
+
+Set-Variable -Name $deployment_parameters -Value $output_parameters -Scope 1 

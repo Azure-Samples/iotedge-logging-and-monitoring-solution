@@ -1,0 +1,36 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+      grpc:
+
+
+exporters:
+  azuremonitor:
+    instrumentation_key: {{APPINSIGHTS_INSTRUMENTATION_KEY}}
+  logging:
+    loglevel: debug
+  jaeger_thrift:
+    endpoint: {{JAEGER_ENDPOINT}}
+
+processors:
+  batch:
+
+extensions:
+  health_check:
+  pprof:
+    endpoint: :1888
+  zpages:
+    endpoint: :55679
+
+service:
+  extensions: [pprof, zpages, health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [azuremonitor]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, azuremonitor]

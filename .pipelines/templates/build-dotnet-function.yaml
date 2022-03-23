@@ -1,0 +1,21 @@
+
+parameters:
+- name: function_name
+  type: string
+
+steps:
+  - script: |
+      dotnet restore
+      dotnet build --configuration Release
+    workingDirectory: Backend/${{ parameters.function_name }}
+    displayName: Build Function
+  - task: DotNetCoreCLI@2    
+    displayName: Publish Function
+    inputs:
+      workingDirectory: $(System.DefaultWorkingDirectory)/Backend/${{ parameters.function_name }}
+      command: publish
+      arguments: '--configuration Release -o $(Build.ArtifactStagingDirectory)/drop/${{ parameters.function_name }}'
+      packDirectory: '$(Build.ArtifactStagingDirectory)'
+      publishWebProjects: false
+      modifyOutputPath: true
+      zipAfterPublish: true

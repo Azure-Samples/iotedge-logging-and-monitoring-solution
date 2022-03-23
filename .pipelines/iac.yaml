@@ -1,0 +1,33 @@
+name: End to end IoT Observability Sample
+
+trigger: none
+
+variables:
+  - group: iot-monitoring
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Validation
+    displayName: "Validation of ARM templates"
+    jobs:
+      - job: ARM_Validation
+        displayName: "Validation of ARM templates"      
+        steps:
+        - template: templates/iac-template.yaml
+          parameters:
+            deployment_mode: Validation            
+
+  - stage: Deployment
+    displayName: "Deployment of ARM templates"
+    dependsOn: Validation
+    jobs:
+      - job: ARM_Deployment
+        displayName: "Deployment of ARM templates"
+        steps:
+        - template: templates/iac-template.yaml
+          parameters:
+            deployment_mode: Incremental
+
+    

@@ -31,18 +31,21 @@
       },
       "iotHubName": {
         "type": "string",
+        "defaultValue": "[concat('iothub-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Name for IoT Hub resource."
         }
       },
       "iotHubResourceGroup": {
         "type": "string",
+        "defaultValue": "[resourceGroup().name]",
         "metadata": {
           "description": "IoT Hub resource group."
         }
       },
       "iotHubServicePolicyName": {
         "type": "string",
+        "defaultValue": "iotedge",
         "metadata": {
           "description": "IoT hub policy policy name."
         }
@@ -143,7 +146,7 @@
       },
       "adminPassword": {
         "type": "secureString",
-        "defaultValue": "",
+        "defaultValue": "Azurepassword1!",
         "metadata": {
           "description": "Specifies the username password for the Virtual Machine."
         }
@@ -190,24 +193,28 @@
       },
       "storageAccountName": {
         "type": "string",
+        "defaultValue": "[concat('storage', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Logs storage account name."
         }
       },
       "storageAccountResourceGroup": {
         "type": "string",
+        "defaultValue": "[resourceGroup().name]",
         "metadata": {
           "description": "Logs storage account resource group."
         }
       },
       "storageContainerName": {
         "type": "string",
+        "defaultValue": "[concat('container-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Logs storage container name."
         }
       },
       "storageQueueName": {
         "type": "string",
+        "defaultValue": "[concat('queue-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Logs storage queue name."
         }
@@ -235,6 +242,7 @@
       },
       "eventGridSystemTopicName": {
         "type": "string",
+        "defaultValue": "[concat('topic-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Event grid system topic name for the logs storage account."
         }
@@ -262,12 +270,14 @@
       },
       "workspaceName": {
         "type": "string",
+        "defaultValue": "[concat('workspace-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Log analytics Workspace name."
         }
       },
       "workspaceResourceGroup": {
         "type": "string",
+        "defaultValue": "[resourceGroup().name]",
         "metadata": {
           "description": "Log analytics Workspace resource group."
         }
@@ -304,28 +314,28 @@
       },
       "eventHubResourceGroup": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[resourceGroup().name]",
         "metadata": {
           "description": "Event hubs namespace resource group."
         }
       },
       "eventHubsLocation": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[resourceGroup().location]",
         "metadata": {
           "description": "Event hubs namespace location."
         }
       },
       "eventHubsNamespace": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[concat('iot-ns-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Event hubs namespace name."
         }
       },
       "eventHubsName": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[concat('eventhub-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Event hubs name."
         }
@@ -346,21 +356,21 @@
       },
       "eventHubsEndpointName": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[concat('iot-endpoint-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "IoT hub custom endpoint name to event hubs."
         }
       },
       "eventHubsRouteName": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "[concat('iot-route-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "IoT hub event hubs route name."
         }
       },
       "eventHubsRouteCondition": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "id = 'origin-iotedge-metrics-collector'",
         "metadata": {
           "description": "Condition to route IoT hub event messages to event hubs route."
         }
@@ -421,9 +431,23 @@
       },
       "functionAppName": {
         "type": "string",
-        "defaultValue": "test",
+        "defaultValue": "[concat('iotedgelogsapp-', parameters('environmentHashId'))]",
         "metadata": {
           "description": "Name for the Function App resource."
+        }
+      },
+      "functionAppDotNetName": {
+        "type": "string",
+        "defaultValue": "[concat('iot-dotnet-backend-', parameters('environmentHashId'))]",
+        "metadata": {
+          "description": "Name for the Function App DotNet Backend resource."
+        }
+      },
+      "functionAppJavaName": {
+        "type": "string",
+        "defaultValue": "[concat('iot-java-backend-', parameters('environmentHashId'))]",
+        "metadata": {
+          "description": "Name for the Function App Java Backend resource."
         }
       },
       "httpTriggerFunction": {
@@ -495,7 +519,14 @@
         "metadata": {
           "description": "GitHub repo branch name."
         }
-      }
+      },
+      "createE2ESample": {
+        "type": "bool",
+        "defaultValue": true,
+        "metadata": {
+          "description": "Create end-to-end sample"
+        }
+      }            
     },
   "variables": {
     "dpsName": "[concat('dps-', parameters('environmentHashId'))]",
@@ -504,15 +535,18 @@
     "eventGridSubscriptionName": "[concat('iotedgemodulelogs', parameters('environmentHashId'))]",
     "eventGridSubscriptionFilter": "[concat('/blobServices/default/containers/', parameters('storageContainerName'), '/')]",
     "functionAppHostingPlanName": "[concat(parameters('functionAppName'), '-plan')]",
+    "functionAppDotNetHostingPlanName": "[concat(parameters('functionAppDotNetName'), '-plan')]",
+    "functionAppJavaHostingPlanName": "[concat(parameters('functionAppJavaName'), '-plan')]",
     "functionStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'function')]",
     "functionStorageAccountSku": "Standard_LRS",
     "storageAccountEndpointSuffix": "[if(startsWith(resourceGroup().location, 'usgov'), 'core.usgovcloudapi.net', if(startsWith(resourceGroup().location, 'usdod'), 'core.usgovcloudapi.net', 'core.windows.net'))]",
     "functionFileShareName": "[substring(replace(concat(toLower(parameters('functionAppName')), parameters('environmentHashId')), '-', ''), 0, 25)]",
     "functionAppResourceId": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
     "functionApiVersion": "2018-11-01",
-    "appInsightsName": "[parameters('functionAppName')]",
+    "appInsightsName": "[concat('appinsights-', parameters('environmentHashId'))]",
     "workspaceId": "[resourceId(parameters('workspaceResourceGroup'), 'Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
-    "workspaceApiVersion": "[providers('microsoft.operationalinsights', 'workspaces').apiVersions[0]]",
+    "workspaceApiVersion": "[providers('Microsoft.OperationalInsights', 'workspaces').apiVersions[0]]",
+    // "workspaceApiVersion": "2016-04-01",
     "workspaceDomainSuffix": "[if(or(startsWith(resourceGroup().location, 'usgov'), startsWith(resourceGroup().location, 'usdod')), 'azure.us', if(contains(resourceGroup().location, 'china'), 'azure.cn', 'azure.com'))]",
     "iotHubDeploymentNames": {
       "true": "[concat('iothub-with-route-', parameters('environmentHashId'))]",
@@ -888,6 +922,36 @@
         }
       },
       {
+        "type": "Microsoft.Web/serverfarms",
+        "apiVersion": "[variables('functionApiVersion')]",
+        "name": "[variables('functionAppDotNetHostingPlanName')]",
+        "condition": "[parameters('createE2ESample')]",
+        "location": "[parameters('location')]",
+        "sku": {
+          "name": "Y1",
+          "tier": "Dynamic"
+        },
+        "properties": {
+          "name": "[variables('functionAppDotNetHostingPlanName')]",
+          "computeMode": "Dynamic"
+        }
+      },     
+      {
+        "type": "Microsoft.Web/serverfarms",
+        "apiVersion": "[variables('functionApiVersion')]",
+        "name": "[variables('functionAppJavaHostingPlanName')]",
+        "condition": "[parameters('createE2ESample')]",
+        "location": "[parameters('location')]",
+        "sku": {
+          "name": "Y1",
+          "tier": "Dynamic"
+        },
+        "properties": {
+          "name": "[variables('functionAppJavaHostingPlanName')]",
+          "computeMode": "Dynamic"
+        }
+      },        
+      {
         "type": "microsoft.insights/components",
         "apiVersion": "2020-02-02-preview",
         "name": "[variables('appInsightsName')]",
@@ -1074,6 +1138,130 @@
         "resources": []
       },
       {
+        "type": "Microsoft.Web/sites",
+        "apiVersion": "[variables('functionApiVersion')]",
+        "name": "[parameters('functionAppDotNetName')]",           
+        "condition": "[parameters('createE2ESample')]",
+        "location": "[parameters('location')]",
+        "kind": "functionapp",
+        "identity": {
+          "type": "SystemAssigned"
+        },            
+        "dependsOn": [
+          "[resourceId('Microsoft.Web/serverfarms', variables('functionAppDotNetHostingPlanName'))]",
+          "[variables('iotHubDeploymentName')]"
+        ],
+        "properties": {
+          "name": "[parameters('functionAppDotNetName')]",
+          "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionAppDotNetHostingPlanName'))]",
+          "clientAffinityEnabled": false,
+          "siteConfig": {
+            "cors": {
+              "allowedOrigins": [
+                "*"
+              ]
+            },
+            "appSettings": [
+              {
+                "name": "AzureWebJobsStorage",
+                "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2018-11-01').keys[0].value, ';EndpointSuffix=', variables('storageAccountEndpointSuffix'))]"
+              },
+              {
+                "name": "AI_CONNECTION_STRING",
+                "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').connectionString]"
+              },
+              {
+                "name": "FUNCTIONS_EXTENSION_VERSION",
+                "value": "~3"
+              },
+              {
+                "name": "FUNCTIONS_WORKER_RUNTIME",
+                "value": "dotnet-isolated"
+              },
+              {
+                "name": "INSTRUMENTATION_KEY",
+                "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').InstrumentationKey]"
+              },
+              {
+                "name": "IoTHubConnection",
+                "value": "[reference(variables('iotHubDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.endpoint.value]"                
+              },
+              {
+                "name": "JAVA_FUNCTION_URI",
+                "value": "[concat('https://', parameters('functionAppJavaName'), '.azurewebsites.net/api/process-by-java')]"
+              }
+            ]
+          }
+        },
+        "resources": []
+      },      
+      {
+        "type": "Microsoft.Web/sites",
+        "apiVersion": "[variables('functionApiVersion')]",
+        "name": "[parameters('functionAppJavaName')]",           
+        "condition": "[parameters('createE2ESample')]",
+        "location": "[parameters('location')]",
+        "kind": "functionapp",
+        "identity": {
+          "type": "SystemAssigned"
+        },            
+        "dependsOn": [
+          "[resourceId('Microsoft.Web/serverfarms', variables('functionAppJavaHostingPlanName'))]"
+        ],
+        "properties": {
+          "name": "[parameters('functionAppJavaName')]",
+          "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionAppJavaHostingPlanName'))]",
+          "clientAffinityEnabled": false,          
+          "siteConfig": {
+            "cors": {
+              "allowedOrigins": [
+                "*"
+              ]
+            },
+            "javaVersion": "11",
+            "appSettings": [
+              {
+                "name": "AzureWebJobsStorage",
+                "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('functionStorageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2018-11-01').keys[0].value, ';EndpointSuffix=', variables('storageAccountEndpointSuffix'))]"
+              },
+              {
+                "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').connectionString]"
+              },
+              {
+                "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+                "value": "2"
+              },
+              {
+                "name": "XDT_MicrosoftApplicationInsights_Java",
+                "value": "1"
+              },
+              {
+                "name": "STORAGE_CONTAINER_NAME",
+                "value": "iot"
+              },
+              {
+                "name": "STORAGE_ENDPOINT",
+                "value": "[concat('https://',variables('functionStorageAccountName'), '.blob.core.windows.net/')]"
+              },
+              {
+                "name": "FUNCTIONS_EXTENSION_VERSION",
+                "value": "~3"
+              },
+              {
+                "name": "FUNCTIONS_WORKER_RUNTIME",
+                "value": "java"
+              },
+              {
+                "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').InstrumentationKey]"
+              }
+            ]
+          }
+        },
+        "resources": []
+      },        
+      {
         "type": "Microsoft.Resources/deployments",
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
         "name": "[variables('iotHubRoleAssignmentDeploymentName')]",
@@ -1209,7 +1397,77 @@
             }
           }
         }
-      }                  
+      },
+      {
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+        "name": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]",
+        "resourceGroup": "[parameters('storageAccountResourceGroup')]",
+        "condition": "[parameters('createE2ESample')]",
+        "dependsOn": [
+            "[variables('eventGridDeploymentName')]",
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"            
+        ],
+        "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+            "contentVersion": "1.0.0.0",
+            "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/roleassignments-deploy.json')]"
+          },
+          "parameters": {
+            "name": {
+              "value": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]"
+            },
+            "scope": {
+              "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', variables('functionStorageAccountName'))]"
+            },
+            "roleDefinitionId": {
+              "value": "[variables('storageBlobDataContributor')]"
+            },
+            "principalId": {
+              "value": "[if(parameters('createE2ESample'),reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId,'')]"
+            },
+            "principalType": {
+              "value": "ServicePrincipal"
+            }
+          }
+        }
+      },    
+      {
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "[variables('linkedDeploymentApiVersion')]",
+        "name": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]",
+        "resourceGroup": "[parameters('storageAccountResourceGroup')]",
+        "condition": "[parameters('createE2ESample')]",
+        "dependsOn": [
+            "[variables('eventGridDeploymentName')]",
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppJavaName'))]"            
+        ],
+        "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+            "contentVersion": "1.0.0.0",
+            "uri": "[concat(parameters('templateUrl'), '/', parameters('branchName'), '/Templates/roleassignments-deploy.json')]"
+          },
+          "parameters": {
+            "name": {
+              "value": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]"
+            },
+            "scope": {
+              "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', variables('functionStorageAccountName'))]"
+            },
+            "roleDefinitionId": {
+              "value": "[variables('storageQueueDataContributor')]"
+            },
+            "principalId": {
+              "value": "[if(parameters('createE2ESample'),reference(resourceId('Microsoft.Web/sites', parameters('functionAppJavaName')),'2019-08-01', 'full').identity.principalId,'')]"
+            },
+            "principalType": {
+              "value": "ServicePrincipal"
+            }
+          }
+        }
+      }                            
     ],
     "outputs": {
       "iotHubResourceId": {
@@ -1247,6 +1505,14 @@
       "eventHubsSendKey": {
         "type": "string",
         "value": "[if(parameters('createEventHubs'), reference(variables('eventHubsDeploymentName'), variables('linkedDeploymentApiVersion')).outputs.instanceSendKey.value, '')]"
-      }
+      },
+      "appInsightsInstrumentationKey": {
+        "type": "string",
+        "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').InstrumentationKey]"
+      },
+      "appInsightsConnectionString": {
+        "type": "string",
+        "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02-preview').connectionString]"
+      }      
     }
   }

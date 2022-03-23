@@ -1,0 +1,969 @@
+{
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workbookDisplayName": {
+      "type": "string",
+      "defaultValue": "LaNina SLO/SLI",
+      "metadata": {
+        "description": "The friendly name for the workbook that is used in the Gallery or Saved List.  This name must be unique within a resource group."
+      }
+    },
+    "workbookType": {
+      "type": "string",
+      "defaultValue": "workbook",
+      "metadata": {
+        "description": "The gallery that the workbook will been shown under. Supported values include workbook, tsg, etc. Usually, this is 'workbook'"
+      }
+    },
+    "iotHubName": {
+      "type": "string",      
+      "metadata": {
+        "description": "IoT Hub Name"
+      }
+    },
+    "workbookSourceId": {
+      "type": "string",
+      "defaultValue": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name, '/providers/Microsoft.Devices/IotHubs/',parameters('iotHubName'))]",
+      "metadata": {
+        "description": "The id of resource instance to which the workbook will be associated"
+      }
+    },
+    "workbookId": {
+      "type": "string",
+      "defaultValue": "[guid('workbookName', parameters('workbookDisplayName'))]",
+      "metadata": {
+        "description": "The unique guid for this workbook instance"
+      }
+    }
+  },
+  "variables": {
+    "workbookContent": {
+      "version": "Notebook/1.0",
+      "items": [
+        {
+          "type": 11,
+          "content": {
+            "version": "LinkItem/1.0",
+            "style": "tabs",
+            "links": [
+              {
+                "id": "ddecb561-f068-4f01-80a3-935c976f3c73",
+                "cellValue": "selectedTab",
+                "linkTarget": "parameter",
+                "linkLabel": "Summary Report",
+                "subTarget": "summary",
+                "style": "link"
+              },
+              {
+                "id": "d5163480-e0c2-400f-83a3-672835102909",
+                "cellValue": "selectedTab",
+                "linkTarget": "parameter",
+                "linkLabel": "Settings",
+                "subTarget": "settings",
+                "style": "link"
+              }
+            ]
+          },
+          "name": "links - 3"
+        },
+        {
+          "type": 9,
+          "content": {
+            "version": "KqlParameterItem/1.0",
+            "parameters": [
+              {
+                "id": "a5d21fd5-07b2-4170-a449-d31046ae50b6",
+                "version": "KqlParameterItem/1.0",
+                "name": "timerange",
+                "label": "Observation interval",
+                "type": 4,
+                "isRequired": true,
+                "value": {
+                  "durationMs": 900000
+                },
+                "typeSettings": {
+                  "selectableValues": [
+                    {
+                      "durationMs": 300000
+                    },
+                    {
+                      "durationMs": 900000
+                    },
+                    {
+                      "durationMs": 1800000
+                    },
+                    {
+                      "durationMs": 3600000
+                    },
+                    {
+                      "durationMs": 14400000
+                    },
+                    {
+                      "durationMs": 43200000
+                    },
+                    {
+                      "durationMs": 86400000
+                    },
+                    {
+                      "durationMs": 172800000
+                    },
+                    {
+                      "durationMs": 259200000
+                    },
+                    {
+                      "durationMs": 604800000
+                    },
+                    {
+                      "durationMs": 1209600000
+                    },
+                    {
+                      "durationMs": 2419200000
+                    },
+                    {
+                      "durationMs": 2592000000
+                    },
+                    {
+                      "durationMs": 5184000000
+                    },
+                    {
+                      "durationMs": 7776000000
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "77529745-bb34-4f6f-90d4-756965ea6e33",
+                "version": "KqlParameterItem/1.0",
+                "name": "offlineThresholdMins",
+                "label": "Device Offline Threshold (minutes)",
+                "type": 1,
+                "description": "Device is online if it reported metrics not longer than X minutes ago",
+                "isRequired": true,
+                "query": "print dynamic(10);",
+                "timeContext": {
+                  "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.devices/iothubs"
+              },
+              {
+                "id": "fe279379-3e20-40a5-aaba-803e6ed31c0c",
+                "version": "KqlParameterItem/1.0",
+                "name": "sloCoverage",
+                "label": "Coverge SLO value (%)",
+                "type": 1,
+                "description": "X% of devices were online for the observation interval",
+                "isRequired": true,
+                "query": "print dynamic(90);",
+                "timeContext": {
+                  "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.devices/iothubs"
+              },
+              {
+                "id": "66f0d20f-9015-446d-8215-1ff7b1d98c2b",
+                "version": "KqlParameterItem/1.0",
+                "name": "latencyThresholdMs",
+                "label": "Latency Threshold (milliseconds)",
+                "type": 1,
+                "description": "Device delivers messages fast if the 90th percentile latency is less than X",
+                "isRequired": true,
+                "query": "print dynamic(200);",
+                "timeContext": {
+                  "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.devices/iothubs",
+                "value": "50"
+              },
+              {
+                "id": "01f3d078-9e1c-4786-acf7-c548084d99ef",
+                "version": "KqlParameterItem/1.0",
+                "name": "sloThroughput",
+                "label": "Throughput SLO value (%)",
+                "type": 1,
+                "description": "X% of online devices deliver messages fast",
+                "isRequired": true,
+                "query": "print dynamic(95);",
+                "timeContext": {
+                  "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.devices/iothubs"
+              },
+              {
+                "id": "3cf23305-a4d2-47a3-9b57-840f4d74f70c",
+                "version": "KqlParameterItem/1.0",
+                "name": "messageFrequencyThreshold",
+                "label": "Message Frequency Threshold (messaages per minute)",
+                "type": 1,
+                "isRequired": true,
+                "query": "print dynamic(10);",
+                "timeContext": {
+                  "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.devices/iothubs"
+              },
+              {
+                "id": "c4c17eb6-9eb3-4a05-a225-bc3c260b55aa",
+                "version": "KqlParameterItem/1.0",
+                "name": "sloFreshness",
+                "label": "Freshness SLO value (%)",
+                "type": 1,
+                "description": "X% of online devices send temperature ",
+                "isRequired": true,
+                "query": "print dynamic(95);",
+                "timeContext": {
+                  "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.devices/iothubs"
+              },
+              {
+                "id": "ccaddda4-96a3-41db-94ca-536679cd5ec4",
+                "version": "KqlParameterItem/1.0",
+                "name": "errorsThreshold",
+                "label": "Errors Threshold (%)",
+                "type": 1,
+                "description": "Device is working correctly if less than X% meessages are dropped",
+                "isRequired": true,
+                "query": "print dynamic(5);",
+                "timeContext": {
+                  "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.devices/iothubs"
+              },
+              {
+                "id": "d56d3d83-74b4-4f41-8f02-98e4a1fea37f",
+                "version": "KqlParameterItem/1.0",
+                "name": "sloCorrectness",
+                "label": "Correctness SLO value (%)",
+                "type": 1,
+                "description": "X % of online devices work correctly",
+                "isRequired": true,
+                "query": "print dynamic(99);",
+                "timeContext": {
+                  "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.devices/iothubs"
+              }
+            ],
+            "style": "formVertical",
+            "queryType": 0,
+            "resourceType": "microsoft.devices/iothubs"
+          },
+          "conditionalVisibility": {
+            "parameterName": "selectedTab",
+            "comparison": "isEqualTo",
+            "value": "settings"
+          },
+          "name": "parameters - 2"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let offlineThresholdMins = {offlineThresholdMins};\nlet messageFrequencyThreshold = {messageFrequencyThreshold};\nlet latencyThresholdMs = {latencyThresholdMs};\nlet errorsThreshold = {errorsThreshold};\nlet sloCoverage = {sloCoverage};\nlet sloFreshness = {sloFreshness};\nlet sloThroughput = {sloThroughput};\nlet sloCorrectness = {sloCorrectness};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} \n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\nlet device_number = toscalar(_data | summarize by device | summarize countif(strlen(device)>0));\n\n//_data\nlet offlineTimeByDevice = _data\n    | where Name == \"edgehub_gettwin_total\" or Name == \"edgeAgent_total_time_running_correctly_seconds\"\n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated)\n    | project device, next_device, next_time, offlineTime = case(next_device == device, datetime_diff('minute', next_time, TimeGenerated), datetime_diff('minute', now(), TimeGenerated))\n    | summarize maxOfflineTime = max(offlineTime) by device;\n\n\nlet deviceCoverage = offlineTimeByDevice\n  | summarize coverage=100*countif(maxOfflineTime<=offlineThresholdMins)/device_number;\n\n\nlet messageFrequencyByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"    \n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated), next_val = next(Val)\n    | project device, Val, next_val, next_device, TimeGenerated, next_time, messageFrequency = case(next_device == device, (next_val - Val)/datetime_diff('minute', next_time, TimeGenerated), double(null))\n    | where isnotnull(messageFrequency) and not(isnan(messageFrequency))       \n    | summarize minMessageFrequency = min(messageFrequency) by device;\n\nlet messageFreshness = messageFrequencyByDevice\n    | summarize freshness=100*countif(minMessageFrequency >= messageFrequencyThreshold)/count();\n\nlet latencyByDevice = _data\n    | where Name == 'edgehub_message_send_duration_seconds'\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"    \n    | extend quantile = tostring(dimensions.quantile)\n    | where quantile == '0.9'\n    | where not(isnan(Val)) and isnotnull(Val)\n    | extend val = todouble(Val)\n    | summarize maxLatency = max(val*1000) by device;\n\n\nlet meessageThroughput = latencyByDevice\n  | summarize throughput=100*countif(maxLatency<=latencyThresholdMs)/count();\n\nlet messagesSentByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"        \n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesSent = maxVal - minVal;\n\nlet messagesDroppedByDevice = _data\n    | where Name == \"edgehub_messages_dropped_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"    \n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesDropped = maxVal - minVal;\n    \nlet messageCorrectness = messagesSentByDevice\n    | join kind=leftouter messagesDroppedByDevice on device\n    | extend device, messagesSent, messagesDropped = coalesce(messagesDropped,double(0))\n    | extend errorsRatio = case(messagesSent == 0, double(0), messagesDropped/messagesSent)\n    | summarize correctness=100*countif(errorsRatio <= errorsThreshold)/count();\n\n\ndeviceCoverage\n| project sliTitle = \"Device Coverage\", sliValue = coalesce(coverage,0), sloValue = sloCoverage,\n          sloText = strcat(sloCoverage,\"% of devices reported metrics no longer than \", offlineThresholdMins, \" mins ago (were online) for the observation interval\")\n| extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n         resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n         goodSliValue = case(sloValue > sliValue, 0, sliValue),\n         badSliValue = case(sloValue > sliValue, sliValue, 0)\n| union (messageFreshness \n        |project sliTitle = \"Data Freshness\", sliValue = coalesce(freshness,0), sloValue = sloFreshness,\n                 sloText = strcat(sloFreshness,\"% of online devices send temperature \", messageFrequencyThreshold, \" times per minute for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n               resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)\n)\n| union (meessageThroughput\n        |project sliTitle = \"Throughput\", sliValue = coalesce(throughput,0), sloValue = sloThroughput,\n                 sloText = strcat(sloThroughput, \"% of online devices deliver 90th percentile of messages within \", latencyThresholdMs, \"ms for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n                resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)\n)\n| union (messageCorrectness\n        |project sliTitle = \"Correctness\", sliValue = coalesce(correctness,0), sloValue = sloCorrectness,\n                 sloText = strcat(sloCorrectness, \"% of online devices deliver messages successfully with less than \", errorsThreshold, \"% of errors for the observation interval\")\n        |extend toGoValue = case(sloValue > sliValue, sloValue - sliValue, 0),\n                resultText = case(sloValue >= sliValue, strcat(\"< \",sloValue,\"% SLO\"), strcat(\">= \",sloValue,\"% SLO\")),\n                goodSliValue = case(sloValue > sliValue, 0, sliValue),\n                badSliValue = case(sloValue > sliValue, sliValue, 0)                 \n                 );\n\n\n",
+            "size": 4,
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "exportFieldName": "sliTitle",
+            "exportParameterName": "selectedSLI",
+            "queryType": 0,
+            "resourceType": "microsoft.devices/iothubs",
+            "visualization": "tiles",
+            "tileSettings": {
+              "titleContent": {
+                "columnMatch": "sliTitle",
+                "formatter": 1,
+                "tooltipFormat": {
+                  "tooltip": "[[\"sloText\"]"
+                }
+              },
+              "leftContent": {
+                "columnMatch": "sliValue",
+                "formatter": 18,
+                "formatOptions": {
+                  "thresholdsOptions": "icons",
+                  "thresholdsGrid": [
+                    {
+                      "operator": "<",
+                      "thresholdValue": "[[\"sloValue\"]",
+                      "representation": "3",
+                      "text": "{1}"
+                    },
+                    {
+                      "operator": "Default",
+                      "thresholdValue": null,
+                      "representation": "success",
+                      "text": ""
+                    }
+                  ]
+                }
+              },
+              "rightContent": {
+                "columnMatch": "sliValue",
+                "formatter": 12,
+                "formatOptions": {
+                  "palette": "none"
+                },
+                "numberFormat": {
+                  "unit": 1,
+                  "options": {
+                    "style": "decimal"
+                  },
+                  "emptyValCustomText": "-"
+                },
+                "tooltipFormat": {
+                  "tooltip": "{0}"
+                }
+              },
+              "secondaryContent": {
+                "columnMatch": "sloValue",
+                "formatter": 22,
+                "formatOptions": {
+                  "compositeBarSettings": {
+                    "labelText": "[[\"resultText\"]",
+                    "columnSettings": [
+                      {
+                        "columnName": "goodSliValue",
+                        "color": "green"
+                      },
+                      {
+                        "columnName": "badSliValue",
+                        "color": "redBright"
+                      },
+                      {
+                        "columnName": "toGoValue",
+                        "color": "blueDarkDark"
+                      }
+                    ]
+                  }
+                }
+              },
+              "showBorder": false,
+              "sortCriteriaField": "sliTitle",
+              "sortOrderField": 2
+            }
+          },
+          "conditionalVisibility": {
+            "parameterName": "selectedTab",
+            "comparison": "isEqualTo",
+            "value": "summary"
+          },
+          "showPin": true,
+          "name": "query - 0"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let errorsThreshold = {errorsThreshold};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\n\nlet messagesSentByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"\n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesSent = maxVal - minVal;\n\nlet messagesDroppedByDevice = _data\n    | where Name == \"edgehub_messages_dropped_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"    \n    | summarize  minVal = min(Val), maxVal = max(Val) by device\n    | extend device, messagesDropped = maxVal - minVal;\n    \nlet messageCorrectness = messagesSentByDevice\n    | join kind=leftouter messagesDroppedByDevice on device\n    | extend device, messagesSent, messagesDropped = coalesce(messagesDropped,double(0))\n    | extend errorsRatio = case(messagesSent == 0, double(0), messagesDropped/messagesSent), messagesTotal = messagesSent + messagesDropped\n    | extend GroupName = case(errorsRatio >= errorsThreshold, \"Faulty\", \"Correct\")\n    | project device, messagesSent, messagesDropped, errorsRatio, GroupName, messagesTotal;\n\nmessageCorrectness;\n\n",
+            "size": 0,
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 0,
+            "resourceType": "microsoft.devices/iothubs",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "$gen_group",
+                  "formatter": 18,
+                  "formatOptions": {
+                    "thresholdsOptions": "icons",
+                    "thresholdsGrid": [
+                      {
+                        "operator": "==",
+                        "thresholdValue": "Faulty",
+                        "representation": "3",
+                        "text": "{0}{1}"
+                      },
+                      {
+                        "operator": "Default",
+                        "thresholdValue": null,
+                        "representation": "success",
+                        "text": "{0}{1}"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "columnMatch": "device",
+                  "formatter": 7,
+                  "formatOptions": {
+                    "linkTarget": "WorkbookTemplate",
+                    "workbookContext": {
+                      "componentIdSource": "workbook",
+                      "resourceIdsSource": "workbook",
+                      "templateIdSource": "static",
+                      "templateId": "Community-Workbooks/IoTHub/IoT Edge device details",
+                      "typeSource": "workbook",
+                      "gallerySource": "workbook",
+                      "locationSource": "workbook",
+                      "passSpecificParams": true,
+                      "templateParameters": [
+                        {
+                          "name": "SelectedDevice",
+                          "source": "cell",
+                          "value": ""
+                        },
+                        {
+                          "name": "timeRange",
+                          "source": "parameter",
+                          "value": "timerange"
+                        },
+                        {
+                          "name": "invokedFromFleetViewWorkbook",
+                          "source": "static",
+                          "value": "yes"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "columnMatch": "messagesSent",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "palette": "green"
+                  }
+                },
+                {
+                  "columnMatch": "messagesDropped",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "palette": "redBright"
+                  }
+                },
+                {
+                  "columnMatch": "GroupName",
+                  "formatter": 5
+                },
+                {
+                  "columnMatch": "messagesTotal",
+                  "formatter": 22,
+                  "formatOptions": {
+                    "compositeBarSettings": {
+                      "labelText": "[[\"errorsRatio\"]",
+                      "columnSettings": [
+                        {
+                          "columnName": "messagesSent",
+                          "color": "green"
+                        },
+                        {
+                          "columnName": "messagesDropped",
+                          "color": "redBright"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "hierarchySettings": {
+                "treeType": 1,
+                "groupBy": [
+                  "GroupName"
+                ],
+                "expandTopLevel": true,
+                "finalBy": "GroupName"
+              },
+              "labelSettings": [
+                {
+                  "columnId": "device",
+                  "label": "Device"
+                },
+                {
+                  "columnId": "messagesSent",
+                  "label": "Messages Sent"
+                },
+                {
+                  "columnId": "messagesDropped",
+                  "label": "Messages Dropped"
+                },
+                {
+                  "columnId": "errorsRatio",
+                  "label": "Errors Ratio"
+                },
+                {
+                  "columnId": "GroupName",
+                  "label": "Correct/Faulty"
+                },
+                {
+                  "columnId": "messagesTotal",
+                  "label": "Errors Ratio"
+                }
+              ]
+            }
+          },
+          "conditionalVisibilities": [
+            {
+              "parameterName": "selectedTab",
+              "comparison": "isEqualTo",
+              "value": "summary"
+            },
+            {
+              "parameterName": "selectedSLI",
+              "comparison": "isEqualTo",
+              "value": "Correctness"
+            }
+          ],
+          "name": "query - 6"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let messageFrequencyThreshold = {messageFrequencyThreshold};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\n\nlet messageFrequencyByDevice = _data\n    | where Name == \"edgehub_messages_sent_total\"\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"\n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = next(TimeGenerated), next_val = next(Val)\n    | project device, Val, next_val, next_device, TimeGenerated, next_time, messageFrequency = case(next_device == device, (next_val - Val)/datetime_diff('minute', next_time, TimeGenerated), double(null))\n    | where isnotnull(messageFrequency) and not(isnan(messageFrequency));  \n\n//messageFrequencyByDevice\n//| order by TimeGenerated desc;\nmessageFrequencyByDevice\n  | make-series Trend = min(messageFrequency) default = 0 on TimeGenerated step 10m by device\n  | project-away TimeGenerated\n  | join kind = inner (messageFrequencyByDevice\n                       | summarize minMessageFrequency = arg_min(messageFrequency,*), \n                                   maxMessageFrequency = max(messageFrequency),\n                                   p90MessageFrequency = percentile(messageFrequency, 90) by device \n                   ) on device\n  | project device, minMessageFrequency,\n            time_range = strcat(format_datetime(TimeGenerated, 'M/d H:m'), \" - \", format_datetime(next_time, 'M/d H:m')),\n            maxMessageFrequency, p90MessageFrequency,\n            GroupName = case(minMessageFrequency >= messageFrequencyThreshold, \"Frequent\", \"Rare\"), Trend\n  | order by minMessageFrequency asc;\n\n",
+            "size": 0,
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 0,
+            "resourceType": "microsoft.devices/iothubs",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "$gen_group",
+                  "formatter": 18,
+                  "formatOptions": {
+                    "thresholdsOptions": "icons",
+                    "thresholdsGrid": [
+                      {
+                        "operator": "==",
+                        "thresholdValue": "Rare",
+                        "representation": "3",
+                        "text": "{0}{1}"
+                      },
+                      {
+                        "operator": "Default",
+                        "thresholdValue": null,
+                        "representation": "success",
+                        "text": "{0}{1}"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "columnMatch": "device",
+                  "formatter": 7,
+                  "formatOptions": {
+                    "linkTarget": "WorkbookTemplate",
+                    "workbookContext": {
+                      "componentIdSource": "workbook",
+                      "resourceIdsSource": "workbook",
+                      "templateIdSource": "static",
+                      "templateId": "Community-Workbooks/IoTHub/IoT Edge device details",
+                      "typeSource": "workbook",
+                      "gallerySource": "workbook",
+                      "locationSource": "workbook",
+                      "passSpecificParams": true,
+                      "templateParameters": [
+                        {
+                          "name": "SelectedDevice",
+                          "source": "cell",
+                          "value": ""
+                        },
+                        {
+                          "name": "timeRange",
+                          "source": "parameter",
+                          "value": "timerange"
+                        },
+                        {
+                          "name": "invokedFromFleetViewWorkbook",
+                          "source": "static",
+                          "value": "yes"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "columnMatch": "minMessageFrequency",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "min": 10,
+                    "palette": "redGreen"
+                  },
+                  "numberFormat": {
+                    "unit": 17,
+                    "options": {
+                      "style": "decimal"
+                    }
+                  }
+                },
+                {
+                  "columnMatch": "GroupName",
+                  "formatter": 5
+                },
+                {
+                  "columnMatch": "Trend",
+                  "formatter": 10,
+                  "formatOptions": {
+                    "min": 0,
+                    "max": 10,
+                    "palette": "redGreen"
+                  }
+                }
+              ],
+              "hierarchySettings": {
+                "treeType": 1,
+                "groupBy": [
+                  "GroupName"
+                ],
+                "expandTopLevel": true,
+                "finalBy": "GroupName"
+              },
+              "labelSettings": [
+                {
+                  "columnId": "device",
+                  "label": "Device"
+                }
+              ]
+            }
+          },
+          "conditionalVisibilities": [
+            {
+              "parameterName": "selectedTab",
+              "comparison": "isEqualTo",
+              "value": "summary"
+            },
+            {
+              "parameterName": "selectedSLI",
+              "comparison": "isEqualTo",
+              "value": "Data Freshness"
+            }
+          ],
+          "name": "query - 5"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let latencyThresholdMs = {latencyThresholdMs};\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\nlet latencyByDevice = _data\n    | where Name == 'edgehub_message_send_duration_seconds'\n    | extend target = trim_start(@\"[^/]+/\", extract(\"to.:.([^,]+).,\", 1, Tags, typeof(string))),\n             source = trim_start(@\"[^/]+/\", extract(\"from.:.([^,]+).,\", 1, Tags, typeof(string)))    \n    | where target has \"Upstream\" and source has \"filtermodule\"\n    | extend quantile = tostring(dimensions.quantile)\n    | where quantile == '0.9'\n    | where Val != 'NaN' and isnotnull(Val)\n    | extend val = todouble(Val);\n\n\nlatencyByDevice\n| make-series Trend = max(val*1000) default = 0 on TimeGenerated step 10m by device\n| project-away TimeGenerated\n| join kind = inner (latencyByDevice\n                     | summarize maxLatency = arg_max(val*1000,*),\n                                 minLatency = min(val) by device\n    ) on device\n| extend isSlow = maxLatency > latencyThresholdMs\n| project device, maxLatency, TimeGenerated, GroupName = case(isSlow, \"Slow\", \"Fast\"), minLatency, Trend\n| order by maxLatency desc;\n\n\n",
+            "size": 0,
+            "title": "Message Latency",
+            "timeContext": {
+              "durationMs": 2592000000
+            },
+            "queryType": 0,
+            "resourceType": "microsoft.devices/iothubs",
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "$gen_group",
+                  "formatter": 18,
+                  "formatOptions": {
+                    "thresholdsOptions": "icons",
+                    "thresholdsGrid": [
+                      {
+                        "operator": "==",
+                        "thresholdValue": "Slow",
+                        "representation": "3",
+                        "text": "{0}{1}"
+                      },
+                      {
+                        "operator": "Default",
+                        "thresholdValue": null,
+                        "representation": "success",
+                        "text": "{0}{1}"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "columnMatch": "device",
+                  "formatter": 7,
+                  "formatOptions": {
+                    "linkTarget": "WorkbookTemplate",
+                    "linkLabel": "",
+                    "workbookContext": {
+                      "componentIdSource": "workbook",
+                      "resourceIdsSource": "workbook",
+                      "templateIdSource": "static",
+                      "templateId": "Community-Workbooks/IoTHub/IoT Edge device details",
+                      "typeSource": "workbook",
+                      "gallerySource": "workbook",
+                      "locationSource": "workbook",
+                      "passSpecificParams": true,
+                      "templateParameters": [
+                        {
+                          "name": "SelectedDevice",
+                          "source": "cell",
+                          "value": ""
+                        },
+                        {
+                          "name": "timeRange",
+                          "source": "parameter",
+                          "value": "timerange"
+                        },
+                        {
+                          "name": "invokedFromFleetViewWorkbook",
+                          "source": "static",
+                          "value": "yes"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "columnMatch": "maxLatency",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "max": 50,
+                    "palette": "greenRed"
+                  },
+                  "numberFormat": {
+                    "unit": 23,
+                    "options": {
+                      "style": "decimal"
+                    }
+                  }
+                },
+                {
+                  "columnMatch": "GroupName",
+                  "formatter": 5
+                },
+                {
+                  "columnMatch": "minLatency",
+                  "formatter": 0,
+                  "numberFormat": {
+                    "unit": 23,
+                    "options": {
+                      "style": "decimal"
+                    }
+                  }
+                },
+                {
+                  "columnMatch": "Trend",
+                  "formatter": 9,
+                  "formatOptions": {
+                    "palette": "blue",
+                    "customColumnWidthSetting": "30%"
+                  },
+                  "numberFormat": {
+                    "unit": 23,
+                    "options": {
+                      "style": "decimal"
+                    }
+                  }
+                },
+                {
+                  "columnMatch": "isSlow",
+                  "formatter": 5
+                }
+              ],
+              "hierarchySettings": {
+                "treeType": 1,
+                "groupBy": [
+                  "GroupName"
+                ],
+                "expandTopLevel": true,
+                "finalBy": "GroupName"
+              },
+              "labelSettings": [
+                {
+                  "columnId": "device",
+                  "label": "Device"
+                },
+                {
+                  "columnId": "maxLatency",
+                  "label": "Max Latency"
+                },
+                {
+                  "columnId": "TimeGenerated",
+                  "label": "Max Latency Time"
+                },
+                {
+                  "columnId": "GroupName",
+                  "label": "Fast/Slow"
+                },
+                {
+                  "columnId": "minLatency",
+                  "label": "Min Latency"
+                },
+                {
+                  "columnId": "Trend",
+                  "label": "Latency Trend"
+                }
+              ]
+            }
+          },
+          "conditionalVisibilities": [
+            {
+              "parameterName": "selectedTab",
+              "comparison": "isEqualTo",
+              "value": "summary"
+            },
+            {
+              "parameterName": "selectedSLI",
+              "comparison": "isEqualTo",
+              "value": "Throughput"
+            }
+          ],
+          "name": "query - 4"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let offlineThresholdMins = {offlineThresholdMins};\n\nlet _data = InsightsMetrics\n    | where TimeGenerated {timerange} // restrict the time window\n    | extend iotresource = split(_ResourceId, \"/\")[-1]\n    | extend dimensions=parse_json(Tags)\n    | extend device = tostring(dimensions.edge_device);\n\nlet device_number = toscalar(_data | summarize by device | summarize countif(strlen(device)>0));\n\n//_data\nlet offlineTimeByDevice = _data\n    | where Name == \"edgehub_gettwin_total\" or Name == \"edgeAgent_total_time_running_correctly_seconds\"\n    | order by device, TimeGenerated asc\n    | extend next_device = next(device), next_time = case(next(device) == device, next(TimeGenerated), now()), inPast = next(device) == device             \n    | project device, time_range = strcat(format_datetime(TimeGenerated, 'M/d H:m'), \" - \", format_datetime(next_time, 'M/d H:m')),\n              offlineTime = datetime_diff('minute', next_time, TimeGenerated), inPast\n    | extend nowOfflineTime = case(inPast, 0, offlineTime)              \n    | summarize arg_max(offlineTime, *), currentOfflineTime = max(nowOfflineTime) by device\n    | extend severity = case(offlineTime <= offlineThresholdMins, \"Online\", case(currentOfflineTime <= offlineThresholdMins, \"Were offline\", \"Offline\"));\n\nofflineTimeByDevice;\n\n",
+            "size": 0,
+            "title": "Devices reporting delays",
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "showRefreshButton": true,
+            "queryType": 0,
+            "resourceType": "microsoft.devices/iothubs",
+            "visualization": "graph",
+            "sortBy": [],
+            "graphSettings": {
+              "type": 2,
+              "topContent": {
+                "columnMatch": "device",
+                "formatter": 1,
+                "formatOptions": {
+                  "linkTarget": "WorkbookTemplate",
+                  "workbookContext": {
+                    "componentIdSource": "workbook",
+                    "resourceIdsSource": "workbook",
+                    "templateIdSource": "static",
+                    "templateId": "Community-Workbooks/IoTHub/IoT Edge device details",
+                    "typeSource": "workbook",
+                    "gallerySource": "workbook",
+                    "locationSource": "workbook",
+                    "passSpecificParams": true,
+                    "templateParameters": [
+                      {
+                        "name": "SelectedDevice",
+                        "source": "cell",
+                        "value": ""
+                      },
+                      {
+                        "name": "timeRange",
+                        "source": "parameter",
+                        "value": "timerange"
+                      },
+                      {
+                        "name": "invokedFromFleetViewWorkbook",
+                        "source": "static",
+                        "value": "yes"
+                      }
+                    ]
+                  }
+                }
+              },
+              "centerContent": {
+                "columnMatch": "offlineTime",
+                "formatter": 1,
+                "numberFormat": {
+                  "unit": 25,
+                  "options": {
+                    "style": "decimal",
+                    "maximumFractionDigits": 2,
+                    "maximumSignificantDigits": 3
+                  }
+                },
+                "tooltipFormat": {
+                  "tooltip": "Maximum device reporting delay"
+                }
+              },
+              "bottomContent": {
+                "columnMatch": "time_range",
+                "tooltipFormat": {
+                  "tooltip": "Delay timeframe"
+                }
+              },
+              "hivesContent": {
+                "columnMatch": "severity",
+                "formatter": 1
+              },
+              "nodeIdField": "device",
+              "graphOrientation": 3,
+              "showOrientationToggles": false,
+              "nodeSize": null,
+              "staticNodeSize": 100,
+              "colorSettings": {
+                "nodeColorField": "severity",
+                "type": 3,
+                "thresholdsGrid": [
+                  {
+                    "operator": "==",
+                    "thresholdValue": "Offline",
+                    "representation": "redBright"
+                  },
+                  {
+                    "operator": "==",
+                    "thresholdValue": "Were Offline",
+                    "representation": "orange"
+                  },
+                  {
+                    "operator": "Default",
+                    "thresholdValue": null,
+                    "representation": "green"
+                  }
+                ]
+              },
+              "groupByField": "severity",
+              "hivesMargin": 5
+            }
+          },
+          "conditionalVisibilities": [
+            {
+              "parameterName": "selectedTab",
+              "comparison": "isEqualTo",
+              "value": "summary"
+            },
+            {
+              "parameterName": "selectedSLI",
+              "comparison": "isEqualTo",
+              "value": "Device Coverage"
+            }
+          ],
+          "name": "OnLineDevices"
+        }
+      ],
+      "isLocked": false,
+      "fallbackResourceIds": [
+        "/subscriptions/XXX/resourceGroups/XXX/providers/Microsoft.Devices/IotHubs/XXX"
+      ]
+    },
+    "updatedWorkbookContent": {
+      "version": "[variables('workbookContent')['version']]",
+      "items": "[variables('workbookContent')['items']]",
+      "isLocked": "[variables('workbookContent')['isLocked']]",
+      "fallbackResourceIds": ["[parameters('workbookSourceId')]"]
+    }
+  },
+  "resources": [
+    {
+      "name": "[parameters('workbookId')]",
+      "type": "microsoft.insights/workbooks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2021-03-08",
+      "dependsOn": [],
+      "kind": "shared",
+      "properties": {
+        "displayName": "[parameters('workbookDisplayName')]",
+        "serializedData": "[string(variables('updatedWorkbookContent'))]",
+        "version": "1.0",
+        "sourceId": "[parameters('workbookSourceId')]",
+        "category": "[parameters('workbookType')]"
+      }
+    }
+  ],
+  "outputs": {
+    "workbookId": {
+      "type": "string",
+      "value": "[resourceId( 'microsoft.insights/workbooks', parameters('workbookId'))]"
+    }
+  },
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#"
+}
