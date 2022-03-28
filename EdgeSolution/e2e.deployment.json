@@ -50,10 +50,10 @@
                   "value": "http://opentelemetrycollector:4317"
                 },
                 "LOGGING_LEVEL": {
-                  "value": "Debug"
+                  "value": "Information"
                 },
                 "TRACE_SAMPLE_RATIO": {
-                  "value": "1"
+                  "value": "0"
                 }                                
               },
               "status": "running",
@@ -71,10 +71,10 @@
                   "value": "http://opentelemetrycollector:4317"
                 },
                 "LOGGING_LEVEL": {
-                  "value": "Debug"
+                  "value": "Information"
                 },
                 "TRACE_SAMPLE_RATIO": {
-                  "value": "1"
+                  "value": "0"
                 }                                                              
               },
               "status": "running",
@@ -83,7 +83,7 @@
             },
             "Opentelemetrycollector": {
               "settings": {
-                "image": "${MODULES.SimulatedTemperatureSensor}",
+                "image": "${MODULES.OpenTelemetryCollector}",
                 "createOptions": {}
               },
               "type": "docker",

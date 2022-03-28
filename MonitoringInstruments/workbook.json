@@ -79,7 +79,7 @@
                 "type": 4,
                 "isRequired": true,
                 "value": {
-                  "durationMs": 86400000
+                  "durationMs": 900000
                 },
                 "typeSettings": {
                   "selectableValues": [
@@ -405,7 +405,7 @@
                       "templateId": "Community-Workbooks/IoTHub/IoT Edge device details",
                       "typeSource": "workbook",
                       "gallerySource": "workbook",
-                      "locationSource": "default",
+                      "locationSource": "workbook",
                       "passSpecificParams": true,
                       "templateParameters": [
                         {
@@ -419,9 +419,9 @@
                           "value": "timerange"
                         },
                         {
-                          "name": "IoTResources",
+                          "name": "invokedFromFleetViewWorkbook",
                           "source": "static",
-                          "value": "value::all"
+                          "value": "yes"
                         }
                       ]
                     }
@@ -561,11 +561,11 @@
                       "templateId": "Community-Workbooks/IoTHub/IoT Edge device details",
                       "typeSource": "workbook",
                       "gallerySource": "workbook",
-                      "locationSource": "default",
+                      "locationSource": "workbook",
                       "passSpecificParams": true,
                       "templateParameters": [
                         {
-                          "name": " SelectedDevice",
+                          "name": "SelectedDevice",
                           "source": "cell",
                           "value": ""
                         },
@@ -575,9 +575,9 @@
                           "value": "timerange"
                         },
                         {
-                          "name": "IoTResources",
+                          "name": "invokedFromFleetViewWorkbook",
                           "source": "static",
-                          "value": "value::all"
+                          "value": "yes"
                         }
                       ]
                     }
@@ -690,11 +690,11 @@
                       "templateId": "Community-Workbooks/IoTHub/IoT Edge device details",
                       "typeSource": "workbook",
                       "gallerySource": "workbook",
-                      "locationSource": "default",
+                      "locationSource": "workbook",
                       "passSpecificParams": true,
                       "templateParameters": [
                         {
-                          "name": " SelectedDevice",
+                          "name": "SelectedDevice",
                           "source": "cell",
                           "value": ""
                         },
@@ -702,6 +702,11 @@
                           "name": "timeRange",
                           "source": "parameter",
                           "value": "timerange"
+                        },
+                        {
+                          "name": "invokedFromFleetViewWorkbook",
+                          "source": "static",
+                          "value": "yes"
                         }
                       ]
                     }
@@ -833,11 +838,11 @@
                     "templateId": "Community-Workbooks/IoTHub/IoT Edge device details",
                     "typeSource": "workbook",
                     "gallerySource": "workbook",
-                    "locationSource": "default",
+                    "locationSource": "workbook",
                     "passSpecificParams": true,
                     "templateParameters": [
                       {
-                        "name": " SelectedDevice",
+                        "name": "SelectedDevice",
                         "source": "cell",
                         "value": ""
                       },
@@ -845,6 +850,11 @@
                         "name": "timeRange",
                         "source": "parameter",
                         "value": "timerange"
+                      },
+                      {
+                        "name": "invokedFromFleetViewWorkbook",
+                        "source": "static",
+                        "value": "yes"
                       }
                     ]
                   }
@@ -922,7 +932,7 @@
       ],
       "isLocked": false,
       "fallbackResourceIds": [
-        "/subscriptions/XXX/resourceGroups/XXX"
+        "/subscriptions/XXX/resourceGroups/XXX/providers/Microsoft.Devices/IotHubs/XXX"
       ]
     },
     "updatedWorkbookContent": {

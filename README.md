@@ -62,7 +62,7 @@ Service Level Indicators are measured by the means of **_Metrics_**. An IoT Hub 
 
 _Note_: Alternatively, metrics can be delivered to the cloud through IoT Hub messages channel and then submitted to the Log Analytics with a cloud workflow. See [Cloud Workflow Sample](docs/CloudWorkflow.md#monitoring-architecture-reference) for the details on this architecture pattern. 
 
-SLOs and corresponding SLIs are monitored with Azure Monitor Workbooks. To achieve the best user experience the workbooks system follows he **_glance -> scan -> commit_** concept:
+SLOs and corresponding SLIs are monitored with Azure Monitor Workbooks. To achieve the best user experience the workbooks system follows the **_glance -> scan -> commit_** concept:
 
  - **_Glance_**. SLIs at the fleet level
  - **_Scan_**. Details on how devices contribute to SLIs. Easy to identify "problematic" devices.
