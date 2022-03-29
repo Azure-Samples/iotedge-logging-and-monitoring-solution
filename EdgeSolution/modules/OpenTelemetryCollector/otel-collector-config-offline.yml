@@ -6,8 +6,8 @@ receivers:
 
 
 exporters:
-  azuremonitor:
-    instrumentation_key: {{APPINSIGHTS_INSTRUMENTATION_KEY}}
+  azureblob:
+    connection_string: {{CONNECTION_STRING}}
   logging:
     loglevel: debug
   jaeger_thrift:
@@ -29,8 +29,8 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [azuremonitor]
+      exporters: [azureblob]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, azuremonitor]
+      exporters: [logging, azureblob]

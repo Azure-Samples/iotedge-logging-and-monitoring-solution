@@ -7,21 +7,14 @@
           "type": "docker",
           "settings": {
             "minDockerVersion": "v1.25",
-            "loggingOptions": "",
-            "registryCredentials": {
-              "my_acr": {
-                "username": "${ACR_USER}",
-                "password": "${ACR_PASSWORD}",
-                "address": "${ACR_ADDRESS}"
-              }
-            }
+            "loggingOptions": ""
           }
         },
         "systemModules": {
           "edgeAgent": {
             "type": "docker",
             "settings": {
-              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.1.2",
               "createOptions": "{}"
             }
           },
@@ -30,7 +23,7 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.1.2",
               "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"5671/tcp\":[{\"HostPort\":\"5671\"}],\"8883/tcp\":[{\"HostPort\":\"8883\"}],\"443/tcp\":[{\"HostPort\":\"443\"}]}}}"
             }
           }
@@ -42,7 +35,7 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "simulatedtemperaturesensor:0.0.test-amd64",
+              "image": "kaizentm/iotsample-simulatedtemperaturesensor:1.0.0",
               "createOptions": "{}"
             },
             "env": {
@@ -51,7 +44,13 @@
               },
               "OTLP_ENDPOINT": {
                 "value": "http://opentelemetrycollector:4317"
-              }  
+              },
+              "LOGGING_LEVEL": {
+                "value": "Information"
+              },
+              "TRACE_SAMPLE_RATIO": {
+                "value": "0"
+              }                                
             }
           },
           "FilterModule": {
@@ -60,14 +59,20 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "filtermodule:0.0.test-amd64",
+              "image": "kaizentm/iotsample-filtermodule:1.0.0",
               "createOptions": "{}"
             },
             "env": {
               "OTLP_ENDPOINT": {
                 "value": "http://opentelemetrycollector:4317"
-              }  
-            }
+              },
+              "LOGGING_LEVEL": {
+                "value": "Information"
+              },
+              "TRACE_SAMPLE_RATIO": {
+                "value": "0"
+              }                                                              
+            }            
           },
           "OpenTelemetryCollector": {
             "version": "1.0",
@@ -75,13 +80,13 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "kaizentm/iotsample-opentelemetrycollector:1.0.1"
+              "image": "kaizentm/iotsample-opentelemetrycollector:1.0.3"
             },
             "env": {
               "CONNECTION_STRING": {
                 "value": "DefaultEndpointsProtocol=https;BlobEndpoint=http://azureblobstorageoniotedge:11002/otel;AccountName=otel;AccountKey=<ANY KEY. https://generate.plus/en/base64>"
-              }  
-            }
+              }                
+            }              
           },
           "azureblobstorageoniotedge": {
             "settings": {
@@ -110,15 +115,27 @@
             "restartPolicy": "always",
             "version": "1.0"
           },          
-          "prometheus": {
+          "IoTEdgeMetricsCollector": {
             "settings": {
-              "image": "kaizentm/iot-prometheus",
-              "createOptions": ""
+              "image": "mcr.microsoft.com/azureiotedge-metrics-collector:1.0",
+              "createOptions": "{}"
             },
             "type": "docker",
             "env": {
-              "SERVER_URL": {
-                "value": "${PROMETHEUS_SERVER_URL}"
+              "ResourceId": {
+                "value": "${IOTHUB_ARM_RESOURCEID}"
+              },
+              "UploadTarget": {
+                "value": "AzureMonitor"
+              },
+              "LogAnalyticsWorkspaceId": {
+                "value": "${LOG_ANALYTICS_WSID}"
+              },
+              "LogAnalyticsSharedKey": {
+                "value": "${LOG_ANALYTICS_SHARED_KEY}"
+              },
+              "OtherConfig": {
+                "value": "<See https://aka.ms/edgemon-config for details>"
               }
             },
             "status": "running",
@@ -140,20 +157,5 @@
         }
       }
     }
-    ,
-    "azureblobstorageoniotedge":{
-      "properties.desired": {
-        "deviceToCloudUploadProperties": {
-          "uploadOn": true,
-          "uploadOrder": "OldestFirst",
-          "cloudStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=<AZURE STORAGE ACCOUNT NAME>AccountKey=<AZURE STORAGE ACCOUNT KEY>;EndpointSuffix=core.windows.net",
-          "storageContainersForUpload": {
-            "logs": {},
-            "traces": {}
-          },
-          "deleteAfterUpload": true
-        }
-      }
-    }    
   }
 }
