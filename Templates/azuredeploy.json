@@ -1278,7 +1278,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('iotHubRoleAssignmentName', parameters('iotHubName'))]"
+              "value": "[guid('iotHubRoleAssignmentName', parameters('iotHubName'), parameters('environmentHashId'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/Iothubs', parameters('iotHubName'))]"
@@ -1313,7 +1313,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('eventHubRoleAssignmentName', parameters('iotHubName'))]"
+              "value": "[guid('eventHubRoleAssignmentName', parameters('iotHubName'), parameters('environmentHashId'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('eventHubResourceGroup'), 'Microsoft.EventHub/namespaces', parameters('eventHubsNamespace'))]"
@@ -1347,7 +1347,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('storageBlobRoleAssignmentName', parameters('iotHubName'))]"
+              "value": "[guid('storageBlobRoleAssignmentName', parameters('iotHubName'), parameters('environmentHashId'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
