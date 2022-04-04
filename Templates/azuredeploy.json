@@ -563,6 +563,8 @@
     "eventHubRoleAssignmentDeploymentName": "[concat('eventhub-roleassignments-', parameters('environmentHashId'))]",
     "storageQueueRoleAssignmentDeploymentName": "[concat('queue-roleassignments-', parameters('environmentHashId'))]",
     "storageBlobRoleAssignmentDeploymentName": "[concat('blob-roleassignments-', parameters('environmentHashId'))]",
+    "e2eStorageQueueRoleAssignmentDeploymentName": "[concat('e2e-queue-roleassignments-', parameters('environmentHashId'))]",
+    "e2eStorageBlobRoleAssignmentDeploymentName": "[concat('e2e-blob-roleassignments-', parameters('environmentHashId'))]",
     "eventHubsConsumerGroup": "$default",
     "linkedDeploymentApiVersion": "2020-10-01",
     "managedIdentityName": "monitoringIdentity",
@@ -1278,7 +1280,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('iotHubRoleAssignmentName', parameters('iotHubName'), parameters('environmentHashId'))]"
+              "value": "[guid(variables('iotHubRoleAssignmentDeploymentName'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('iotHubResourceGroup'), 'Microsoft.Devices/Iothubs', parameters('iotHubName'))]"
@@ -1298,7 +1300,7 @@
       {
         "type": "Microsoft.Resources/deployments",
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
-        "condition": "[not(empty(parameters('eventHubsNamespace')))]",
+        "condition": "[parameters('createEventHubsNamespace')]",
         "name": "[variables('eventHubRoleAssignmentDeploymentName')]",
         "resourceGroup": "[parameters('eventHubResourceGroup')]",
         "dependsOn": [
@@ -1313,7 +1315,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('eventHubRoleAssignmentName', parameters('iotHubName'), parameters('environmentHashId'))]"
+              "value": "[guid(variables('eventHubRoleAssignmentDeploymentName'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('eventHubResourceGroup'), 'Microsoft.EventHub/namespaces', parameters('eventHubsNamespace'))]"
@@ -1347,7 +1349,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('storageBlobRoleAssignmentName', parameters('iotHubName'), parameters('environmentHashId'))]"
+              "value": "[guid(variables('storageBlobRoleAssignmentDeploymentName'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
@@ -1381,7 +1383,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('storageQueueRoleAssignmentName', parameters('iotHubName'))]"
+              "value": "[guid(variables('storageQueueRoleAssignmentDeploymentName'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
@@ -1401,7 +1403,7 @@
       {
         "type": "Microsoft.Resources/deployments",
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
-        "name": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]",
+        "name": "[variables('e2eStorageBlobRoleAssignmentDeploymentName')]",
         "resourceGroup": "[parameters('storageAccountResourceGroup')]",
         "condition": "[parameters('createE2ESample')]",
         "dependsOn": [
@@ -1416,7 +1418,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('storageBlobRoleAssignmentName', variables('functionStorageAccountName'))]"
+              "value": "[guid(variables('e2eStorageBlobRoleAssignmentDeploymentName'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', variables('functionStorageAccountName'))]"
@@ -1436,7 +1438,7 @@
       {
         "type": "Microsoft.Resources/deployments",
         "apiVersion": "[variables('linkedDeploymentApiVersion')]",
-        "name": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]",
+        "name": "[variables('e2eStorageQueueRoleAssignmentDeploymentName')]",
         "resourceGroup": "[parameters('storageAccountResourceGroup')]",
         "condition": "[parameters('createE2ESample')]",
         "dependsOn": [
@@ -1451,7 +1453,7 @@
           },
           "parameters": {
             "name": {
-              "value": "[guid('storageQueueRoleAssignmentName', variables('functionStorageAccountName'))]"
+              "value": "[guid(variables('e2eStorageQueueRoleAssignmentDeploymentName'))]"
             },
             "scope": {
               "value": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', variables('functionStorageAccountName'))]"
