@@ -1208,7 +1208,8 @@
           "type": "SystemAssigned"
         },            
         "dependsOn": [
-          "[resourceId('Microsoft.Web/serverfarms', variables('functionAppJavaHostingPlanName'))]"
+          "[resourceId('Microsoft.Web/serverfarms', variables('functionAppJavaHostingPlanName'))]",
+          "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('functionStorageAccountName'), 'default', variables('functionFileShareName'))]"
         ],
         "properties": {
           "name": "[parameters('functionAppJavaName')]",
