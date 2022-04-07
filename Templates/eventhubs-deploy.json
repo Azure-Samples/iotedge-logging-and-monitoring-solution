@@ -100,7 +100,7 @@
         "namespaceListenRuleId": "[resourceId('Microsoft.EventHub/namespaces/AuthorizationRules', parameters('namespaceName'), parameters('listenPolicyName'))]",
         "instanceSendRuleId": "[resourceId('Microsoft.EventHub/namespaces/eventhubs/AuthorizationRules', parameters('namespaceName'), parameters('eventHubsName'), parameters('sendPolicyName'))]",
         "namespaceApiVersion": "[providers('Microsoft.EventHub', 'namespaces').apiVersions[0]]",
-        "namespaceAuthRulesApiVersion": "[providers('Microsoft.EventHub', 'namespaces/authorizationRules').apiVersions[0]]",
+        "namespaceAuthRulesApiVersion": "2021-11-01",
         "instanceApiVersion": "[providers('Microsoft.EventHub', 'namespaces/eventhubs').apiVersions[0]]",
         "instanceAuthRulesApiVersion": "[providers('Microsoft.EventHub', 'namespaces/eventhubs/authorizationRules').apiVersions[0]]"
     },
