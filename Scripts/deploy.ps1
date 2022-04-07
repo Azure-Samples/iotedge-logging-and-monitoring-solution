@@ -1,4 +1,4 @@
-param($deployment_profile, $deployment_parameters)
+param($deployment_profile)
 
 $root_path = Split-Path $PSScriptRoot -Parent
 Import-Module "$root_path/Scripts/PS-Library"
@@ -1294,9 +1294,6 @@ function New-ELMSEnvironment() {
 }
 
 New-ELMSEnvironment
-# Set-EnvironmentHash
-
-# Write-Host $deployment_option
 
 $output_parameters = @{
     "environmentHashId"           = @{ "value" = $script:env_hash }
@@ -1305,4 +1302,4 @@ $output_parameters = @{
     "edgeVmName"                  = @{ "value" = $script:vm_name }
 }
 
-Set-Variable -Name $deployment_parameters -Value $output_parameters -Scope 1 
+Set-Variable -Name "output_parameters" -Value $output_parameters -Scope 1 

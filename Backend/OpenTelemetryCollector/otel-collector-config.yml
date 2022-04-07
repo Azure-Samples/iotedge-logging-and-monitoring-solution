@@ -1,0 +1,29 @@
+receivers:
+  azureblob:
+    connection_string: {{AZURE_BLOB_CONNECTION_STRING}}
+    event_hub_end_point: {{EVENT_HUB_ENDPOINT}}
+
+
+exporters:
+  logging:
+    loglevel: debug
+  azuremonitor:
+    instrumentation_key: {{APPINSIGHTS_INSTRUMENTATION_KEY}}
+
+
+processors:
+  batch:
+
+service:
+  telemetry:
+      logs:
+        level: "debug"
+  pipelines:
+    traces:
+      receivers: [azureblob]
+      processors: [batch]
+      exporters: [logging, azuremonitor]
+    logs:
+      receivers: [azureblob]
+      processors: [batch]
+      exporters: [logging, azuremonitor]
