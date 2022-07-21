@@ -4,7 +4,7 @@
 		<AzureFunctionsVersion>v3</AzureFunctionsVersion>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.17.0" />
 		<PackageReference Include="Microsoft.Azure.Devices" Version="1.36.0" />
