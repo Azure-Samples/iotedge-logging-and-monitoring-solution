@@ -96,7 +96,7 @@ The script will ask some questions regarding deployment options. Depending on th
 
 ### Use Terraform
 
-Refer to [this documentation](docs/provision-elms-with-terraform.md) for information on how to provision the ELMS infrastructure using terraform.
+Refer to [this documentation](provision-elms-with-terraform.md) for information on how to provision the ELMS infrastructure using terraform.
 
 > Note: [Monitor alert architecture](#monitor-alerts-architecture-reference) and Device Provisioning Service are not supported with the Terraform deployment.
 
