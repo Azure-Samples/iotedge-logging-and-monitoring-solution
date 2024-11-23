@@ -56,26 +56,23 @@ resource "azurerm_eventgrid_system_topic_event_subscription" "elms" {
   }
 }
 
-resource "azurerm_app_service_plan" "elms" {
+resource "azurerm_service_plan" "elms" {
   name                = "plan-${var.name_identifier}-${var.random_id}"
   resource_group_name = var.rg_name
   location            = var.location
-  kind                = "functionapp"
 
-  sku {
-    tier = "Dynamic"
-    size = "Y1"
-  }
+  os_type  = "Windows"
+  sku_name = "Y1"
 }
 
-resource "azurerm_function_app" "elms" {
+resource "azurerm_windows_function_app" "elms" {
   name                       = "func-${var.name_identifier}-${var.random_id}"
   location                   = var.location
   resource_group_name        = var.rg_name
-  app_service_plan_id        = azurerm_app_service_plan.elms.id
+  service_plan_id            = azurerm_service_plan.elms.id
   storage_account_name       = azurerm_storage_account.elmsfunc.name
   storage_account_access_key = azurerm_storage_account.elmsfunc.primary_access_key
-  version                    = "~3"
+  functions_extension_version = "~3"
 
   identity {
     type = "SystemAssigned"
@@ -125,10 +122,10 @@ resource "azurerm_function_app" "elms" {
 }
 
 data "azurerm_function_app_host_keys" "elms" {
-  name                = azurerm_function_app.elms.name
+  name                = azurerm_windows_function_app.elms.name
   resource_group_name = var.rg_name
 
-  depends_on = [azurerm_function_app.elms]
+  depends_on = [azurerm_windows_function_app.elms]
 }
 
 resource "null_resource" "check_key" {
@@ -137,7 +134,7 @@ resource "null_resource" "check_key" {
   }
 
   provisioner "local-exec" {
-    command     = "az functionapp config appsettings set --name ${azurerm_function_app.elms.name} --resource-group ${var.rg_name} --settings \"HostKey=${data.azurerm_function_app_host_keys.elms.default_function_key}\" --output none"
+    command     = "az functionapp config appsettings set --name ${azurerm_windows_function_app.elms.name} --resource-group ${var.rg_name} --settings \"HostKey=${data.azurerm_function_app_host_keys.elms.default_function_key}\" --output none"
     interpreter = ["/bin/bash", "-c"]
   }
 }
@@ -222,7 +219,7 @@ resource "azurerm_eventhub_authorization_rule" "elms" {
 resource "azurerm_iothub_endpoint_eventhub" "elms" {
   count               = var.send_metrics_device_to_cloud == true ? 1 : 0
   resource_group_name = var.rg_name
-  iothub_name         = var.iothub_name
+  iothub_id           = var.iothub_id
   name                = "metricscollector-${var.name_identifier}"
 
   connection_string = azurerm_eventhub_authorization_rule.elms[0].primary_connection_string
@@ -265,7 +262,7 @@ resource "azurerm_role_definition" "elms-iothub" {
 resource "azurerm_role_assignment" "elms-iothub" {
   scope              = "${data.azurerm_subscription.primary.id}/resourcegroups/${var.rg_name}/providers/Microsoft.Devices/IotHubs/${var.iothub_name}"
   role_definition_id = azurerm_role_definition.elms-iothub.role_definition_resource_id
-  principal_id       = azurerm_function_app.elms.identity.0.principal_id
+  principal_id       = azurerm_windows_function_app.elms.identity.0.principal_id
   description        = "IoT Hub read and direct method invocation permissions for Function App"
 }
 
@@ -273,7 +270,7 @@ resource "azurerm_role_assignment" "elms-eventhub" {
   count                = var.send_metrics_device_to_cloud == true ? 1 : 0
   scope                = "${data.azurerm_subscription.primary.id}/resourcegroups/${var.rg_name}/providers/Microsoft.EventHub/namespaces/${azurerm_eventhub_namespace.elms[0].name}"
   role_definition_name = "Azure Event Hubs Data Receiver"
-  principal_id         = azurerm_function_app.elms.identity.0.principal_id
+  principal_id         = azurerm_windows_function_app.elms.identity.0.principal_id
   description          = "Azure Event Hubs Data Receiver for Function App"
 }
 
@@ -281,13 +278,13 @@ resource "azurerm_role_assignment" "elms-eventhub" {
 resource "azurerm_role_assignment" "elms-storagequeue" {
   scope                = "${data.azurerm_subscription.primary.id}/resourcegroups/${var.rg_name}/providers/Microsoft.Storage/storageAccounts/${azurerm_storage_account.elmslogs.name}"
   role_definition_name = "Storage Queue Data Contributor"
-  principal_id         = azurerm_function_app.elms.identity.0.principal_id
+  principal_id         = azurerm_windows_function_app.elms.identity.0.principal_id
   description          = "Storage Queue Data Contributor for Function App"
 }
 
 resource "azurerm_role_assignment" "elms-storageblob" {
   scope                = "${data.azurerm_subscription.primary.id}/resourcegroups/${var.rg_name}/providers/Microsoft.Storage/storageAccounts/${azurerm_storage_account.elmslogs.name}"
   role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = azurerm_function_app.elms.identity.0.principal_id
+  principal_id         = azurerm_windows_function_app.elms.identity.0.principal_id
   description          = "Storage Blob Data Contributor for Function App"
 }
